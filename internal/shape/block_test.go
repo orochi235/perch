@@ -205,3 +205,48 @@ func TestInferKeyEscapes(t *testing.T) {
 		}
 	}
 }
+
+// JSON allows a key twice. YAML's simple-key form does not, so the two
+// occurrences unify into one field rather than being printed twice.
+func TestInferUnifiesARepeatedKey(t *testing.T) {
+	cases := []struct{ doc, want string }{
+		{`{"a": 1, "a": 2}`, "a: int\n"},
+		{`{"a": 1, "a": "x"}`, "a: any\n"},
+		{`{"a": 1, "b": 2, "a": 1.5}`, "a: double\nb: int\n"},
+		{`{"a": {"x": 1}, "a": {"y": 2}}`, "a: {x: int, y: int}\n"},
+	}
+	for _, c := range cases {
+		got, err := Infer([]byte(c.doc))
+		if err != nil {
+			t.Errorf("%s: %v", c.doc, err)
+			continue
+		}
+		if got != c.want {
+			t.Errorf("%s\n got %q\nwant %q", c.doc, got, c.want)
+		}
+	}
+}
+
+// A name perch build refuses is still printed, bare or quoted as the key
+// requires, so the refusal lands on the line the author is looking at rather
+// than on a field that silently went missing.
+func TestInferPrintsNamesPerchBuildWillRefuse(t *testing.T) {
+	for _, c := range []struct{ doc, want string }{
+		{`{"_": 1}`, "_: int\n"},
+		{`{"package": 1}`, "package: int\n"},
+		{`{"in": 1}`, "in: int\n"},
+		{`{"content-type": 1}`, `"content-type": int` + "\n"},
+	} {
+		got, err := Infer([]byte(c.doc))
+		if err != nil {
+			t.Errorf("%s: %v", c.doc, err)
+			continue
+		}
+		if got != c.want {
+			t.Errorf("%s\n got %q\nwant %q", c.doc, got, c.want)
+		}
+		if _, err := reparse(t, got); err == nil {
+			t.Errorf("%s: perch build accepted a name it should refuse", c.doc)
+		}
+	}
+}

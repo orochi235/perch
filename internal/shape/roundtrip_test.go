@@ -1,6 +1,7 @@
 package shape
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -56,37 +57,72 @@ func TestInferredShapeSurvivesARoundTrip(t *testing.T) {
 }
 
 // perch shape runs a command and prints whatever comes back, so the input is
-// never trusted: a panic here is perch crashing on a command's output.
+// never trusted. The block it prints has to be YAML that says exactly what was
+// inferred: a nested list written as a bare `-`, a control character left raw,
+// or a key repeated all read back as something else, several lines from the
+// cause.
+//
+// Whether perch build then accepts the names is a separate question. It refuses
+// _, a hyphen and CEL's reserved words, and shape prints those on purpose so the
+// refusal lands on the line the author is looking at.
 func FuzzInfer(f *testing.F) {
 	for _, seed := range []string{
 		`{}`, `{"a": 1}`, `{"a": [1, "x", null]}`, `[]`, `null`, `not json`,
-		`{"a": {"b": {"c": [[[1]]]}}}`, `{"": 1}`, `{"a": 1e999}`,
+		`{"a": {"b": {"c": [[[1]]]}}}`, `{"": 1}`, `{"_": ""}`, `{"a": 1e999}`,
 		`{"a": 1} {"b": 2}`, `{"a": 1}]`, "\x00", `{"a": "\ud800"}`,
+		`{"a": 1, "a": "x"}`, `{"content-type": [{"a-b": 1}]}`,
 		`{"n": 9223372036854775808}`, `{"n": -0.0}`,
 	} {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, doc string) {
-		body, err := Infer([]byte(doc))
-		if err != nil {
+		ty, err := parseDocument([]byte(doc))
+		if err != nil || ty.Kind != spec.TypeObject {
 			return
 		}
-		var node yaml.Node
-		if err := yaml.Unmarshal([]byte(body), &node); err != nil {
+		body := renderObject(ty)
+		var back any
+		if err := yaml.Unmarshal([]byte(body), &back); err != nil {
 			t.Fatalf("inferred a shape that is not YAML:\ninput %q\nshape %q\nerror %v", doc, body, err)
 		}
-		// A key perch cannot use as an identifier is quoted on purpose, so the
-		// block still parses and perch build names the line. Those do not
-		// round-trip, and are covered by TestInferQuotesKeysThatAreNotIdentifiers.
-		if strings.Contains(body, `"`) {
-			return
-		}
-		got, err := reparse(t, body)
-		if err != nil {
-			t.Fatalf("inferred a shape perch build rejects:\ninput  %q\nshape  %q\nerror  %v", doc, body, err)
-		}
-		if again := renderObject(got); again != body {
-			t.Fatalf("shape does not round-trip:\ninput  %q\n first %q\nsecond %q", doc, body, again)
-		}
+		sameShape(t, ty, back, doc, body, "shape")
 	})
+}
+
+// sameShape checks that the YAML read back out says what was inferred.
+func sameShape(t *testing.T, want *spec.Type, got any, doc, body, path string) {
+	t.Helper()
+	fail := func(why string, args ...any) {
+		t.Fatalf("%s %s\ninput %q\nshape %q", path, fmt.Sprintf(why, args...), doc, body)
+	}
+	switch want.Kind {
+	case spec.TypeObject:
+		m, ok := got.(map[string]any)
+		if !ok {
+			fail("came back as %T, not a mapping", got)
+		}
+		if len(m) != len(want.Fields) {
+			fail("came back with %d keys, want %d", len(m), len(want.Fields))
+		}
+		for _, f := range want.Fields {
+			v, ok := m[f.Name]
+			if !ok {
+				fail("lost the key %q", f.Name)
+			}
+			sameShape(t, f.Type, v, doc, body, path+"."+f.Name)
+		}
+	case spec.TypeList:
+		l, ok := got.([]any)
+		if !ok {
+			fail("came back as %T, not a list", got)
+		}
+		if len(l) != 1 {
+			fail("came back with %d elements, want the one that names the type", len(l))
+		}
+		sameShape(t, want.Elem, l[0], doc, body, path+"[]")
+	default:
+		if got != want.Kind.String() {
+			fail("came back as %#v, want %q", got, want.Kind.String())
+		}
+	}
 }

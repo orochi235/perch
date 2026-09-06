@@ -231,12 +231,14 @@ func TestSchemaWritesTheFileTheSpecHeaderNames(t *testing.T) {
 	if !strings.Contains(string(body), `"menubar.yaml"`) {
 		t.Errorf("the schema does not describe menubar.yaml:\n%.200s", body)
 	}
+	// The yaml-language-server header points an editor at a path beside the
+	// spec, so the name -o is given and the name in the header have to match.
 	spec, err := os.ReadFile(filepath.Join(dir, "menubar.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(spec), "./menubar.schema.json") {
-		t.Skip("this project's spec has no schema header")
+	if !strings.Contains(string(spec), "$schema=./menubar.schema.json") {
+		t.Errorf("the spec's header does not name the file schema -o wrote:\n%.120s", spec)
 	}
 }
 

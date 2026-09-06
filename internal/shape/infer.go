@@ -136,6 +136,7 @@ func parse(dec *json.Decoder) (*spec.Type, error) {
 
 func parseObject(dec *json.Decoder) (*spec.Type, error) {
 	t := &spec.Type{Kind: spec.TypeObject}
+	seen := map[string]int{}
 	for dec.More() {
 		key, err := dec.Token()
 		if err != nil {
@@ -155,6 +156,14 @@ func parseObject(dec *json.Decoder) (*spec.Type, error) {
 		if err != nil {
 			return nil, err
 		}
+		// JSON allows a key twice; YAML's simple-key form does not, and emitting
+		// it twice puts the whole shape out of reach. Two occurrences are two
+		// observations of the same position, so they unify.
+		if i, ok := seen[name]; ok {
+			t.Fields[i].Type = unify(t.Fields[i].Type, ft)
+			continue
+		}
+		seen[name] = len(t.Fields)
 		t.Fields = append(t.Fields, spec.Field{Name: name, Type: ft})
 	}
 	_, err := dec.Token() // closing }

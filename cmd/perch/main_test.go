@@ -419,10 +419,20 @@ func TestShapeIndentsForPasting(t *testing.T) {
 	if got := run([]string{"shape", "-from", `echo {"a":{"b":1}}`}, h.env); got != 0 {
 		t.Fatalf("status = %d, want 0\n%s", got, h.stderr())
 	}
-	for _, line := range strings.Split(strings.TrimRight(h.stdout(), "\n"), "\n")[1:] {
-		if !strings.HasPrefix(line, "  ") {
-			t.Errorf("line %q is not indented for pasting", line)
-		}
+	want := "shape:\n  a: {b: int}\n"
+	if h.stdout() != want {
+		t.Errorf("\n got %q\nwant %q", h.stdout(), want)
+	}
+
+	// A block that does not fit on one line is indented under its own key, so
+	// every line past the first still lands under a watch at two spaces.
+	h.out.Reset()
+	if got := run([]string{"shape", "-from", `echo {"a":{"b":{"c":1}},"d":2}`}, h.env); got != 0 {
+		t.Fatalf("status = %d, want 0\n%s", got, h.stderr())
+	}
+	want = "shape:\n  a:\n    b: {c: int}\n  d: int\n"
+	if h.stdout() != want {
+		t.Errorf("\n got %q\nwant %q", h.stdout(), want)
 	}
 }
 

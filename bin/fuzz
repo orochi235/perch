@@ -4,18 +4,29 @@
 # the build cache and is not committed.
 #
 #   bin/fuzz [seconds per target]   (default 60)
-set -eu
+#
+# One target failing does not stop the rest: an overnight run should report
+# everything it found, not the first thing.
+set -u
 secs="${1:-60}"
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 
 targets=$(grep -rho '^func \(Fuzz[A-Za-z0-9_]*\)' --include='*_test.go' . | sed 's/^func //')
 total=$(printf '%s\n' "$targets" | wc -l | tr -d ' ')
+failed=""
 i=0
 for target in $targets; do
     i=$((i + 1))
     pkg=$(grep -rl "func $target(" --include='*_test.go' . | head -1 | xargs dirname)
     printf '%s/%s %s %ss (%s)\n' "$i" "$total" "$target" "$secs" "$pkg"
-    go test "$pkg" -run "^$target\$" -fuzz "^$target\$" -fuzztime "${secs}s"
+    if ! go test "$pkg" -run "^$target\$" -fuzz "^$target\$" -fuzztime "${secs}s"; then
+        failed="$failed $target"
+    fi
 done
+
+if [ -n "$failed" ]; then
+    echo "failed:$failed"
+    exit 1
+fi
 echo "all $total targets clean at ${secs}s each"

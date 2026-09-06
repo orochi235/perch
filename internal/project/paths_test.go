@@ -147,3 +147,25 @@ func TestSwiftSourcesSaysToBuildFirst(t *testing.T) {
 		t.Errorf("error = %q, want it to say what to run", err)
 	}
 }
+
+// WriteGenerated removes the directory before writing it, so a failure there
+// has to surface rather than leave a half-written build behind.
+func TestWriteGeneratedReportsAnUnusableDirectory(t *testing.T) {
+	p := scratch(t)
+	// A file where the directory goes: neither RemoveAll's replacement nor the
+	// files under it can be created.
+	if err := os.MkdirAll(filepath.Dir(p.GeneratedDir()), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p.GeneratedDir(), []byte("not a directory"), 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Dir(p.GeneratedDir()), 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(filepath.Dir(p.GeneratedDir()), 0o755) })
+
+	if err := p.WriteGenerated([]backend.File{{Name: "main.swift", Body: []byte("//")}}); err == nil {
+		t.Error("want an error when the generated directory cannot be replaced")
+	}
+}

@@ -2,9 +2,7 @@ package swiftappkit
 
 import (
 	"context"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +13,8 @@ import (
 // what this covers: a wedged poll freezes the menu at the last good results,
 // and a trap takes the whole status item down.
 const runtimeProbe = `
+import Foundation
+
 // A child that fills the stderr pipe before it finishes writing stdout.
 let noisy = Watcher.run(["sh", "-c", "head -c 300000 /dev/zero | tr '\\0' 'x' >&2; echo done"])
 print("noisy ok=\(noisy.ok) out=\(noisy.out.trimmingCharacters(in: .whitespacesAndNewlines)) err=\(noisy.err.count)")
@@ -34,25 +34,36 @@ print("garbage=\(JSONValue.parse("not json").exists)")
 print("outofrange=\(JSONValue.parse("[1]")[7].exists)")
 
 print("exists=\(Watcher.exists("~"))|\(Watcher.exists("/no/such/path"))")
+
+// Every lowered expression bottoms out in one of these, so a coercion that is
+// wrong shows as a widget quietly displaying the wrong thing. asInt rounds
+// rather than truncating: 2.5 is 3.
+let vals = ["null", "true", "false", "0", "7", "0.0", "2.5", "\"\"", "\"x\"", "[]", "[1]", "{}", "{\"a\":1}"]
+for v in vals {
+    let j = JSONValue.parse(v)
+    print("\(v) bool=\(j.asBool) int=\(j.asInt) double=\(j.asDouble) string=\(j.asString) size=\(j.size) array=\(j.asArray.count)")
+}
+print("contains=\(JSONValue.parse("[1,2]").contains(JSONValue(2)))|\(JSONValue.parse("[1,2]").contains(JSONValue(3)))|\(JSONValue.parse("{}").contains(JSONValue(1)))")
+
+// An action item carries its own closure; a menu built from one that never
+// fires opens and does nothing.
+var fired = 0
+let item = ActionItem(title: "Go") { fired += 1 }
+_ = item.target?.perform(item.action)
+print("item title=\(item.title) fired=\(fired)")
+
+// run dispatches and repolls, so acting on the menu visibly changes it.
+var repolled = false
+Act.run(["echo", "hi"]) { repolled = true }
+let until = Date().addingTimeInterval(20)
+while !repolled && Date() < until {
+    RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
+}
+print("run repolled=\(repolled)")
 `
 
 func TestRuntimeBehavior(t *testing.T) {
-	swiftc, err := exec.LookPath("swiftc")
-	if err != nil {
-		t.Skip("swiftc not on PATH")
-	}
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Runtime.swift"), runtimeSwift, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "main.swift"), []byte(runtimeProbe), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	bin := filepath.Join(dir, "probe")
-	build := exec.Command(swiftc, "-o", bin, filepath.Join(dir, "Runtime.swift"), filepath.Join(dir, "main.swift"))
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("compiling the probe: %v\n%s", err, out)
-	}
+	bin := buildProbe(t, runtimeProbe)
 
 	// A deadlocked drain shows up as a test that never returns, so bound it.
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -76,6 +87,22 @@ func TestRuntimeBehavior(t *testing.T) {
 		"garbage=false",
 		"outofrange=false",
 		"exists=true|false",
+		"null bool=false int=0 double=0.0 string= size=0 array=0",
+		"true bool=true int=1 double=1.0 string=true size=0 array=0",
+		"false bool=false int=0 double=0.0 string=false size=0 array=0",
+		"0 bool=false int=0 double=0.0 string=0 size=0 array=0",
+		"7 bool=true int=7 double=7.0 string=7 size=0 array=0",
+		"0.0 bool=false int=0 double=0.0 string=0 size=0 array=0",
+		"2.5 bool=true int=3 double=2.5 string=2.5 size=0 array=0",
+		`"" bool=false int=0 double=0.0 string= size=0 array=0`,
+		`"x" bool=true int=0 double=0.0 string=x size=1 array=0`,
+		"[] bool=false int=0 double=0.0 string= size=0 array=0",
+		"[1] bool=true int=0 double=0.0 string= size=1 array=1",
+		"{} bool=false int=0 double=0.0 string= size=0 array=0",
+		`{"a":1} bool=true int=0 double=0.0 string= size=1 array=0`,
+		"contains=true|false|false",
+		"item title=Go fired=1",
+		"run repolled=true",
 	}
 	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 	if len(got) != len(want) {
