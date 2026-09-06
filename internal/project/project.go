@@ -22,17 +22,21 @@ type Project struct {
 
 // Load reads and validates root/menubar.yaml.
 func Load(root string) (*Project, error) {
-	path := filepath.Join(root, SpecFile)
-	src, err := os.ReadFile(path)
+	p := &Project{Root: root}
+	src, err := os.ReadFile(p.SpecPath())
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", path, err)
+		return nil, fmt.Errorf("reading %s: %w", p.SpecPath(), err)
 	}
 	s, err := spec.Parse(src)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, fmt.Errorf("%s: %w", p.SpecPath(), err)
 	}
-	return &Project{Root: root, Spec: s}, nil
+	p.Spec = s
+	return p, nil
 }
+
+// SpecPath is the file every build error is reported against.
+func (p *Project) SpecPath() string { return filepath.Join(p.Root, SpecFile) }
 
 func (p *Project) GeneratedDir() string { return filepath.Join(p.Root, "menubar", "Generated") }
 func (p *Project) SourcesDir() string   { return filepath.Join(p.Root, "menubar", "Sources") }

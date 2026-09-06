@@ -1,6 +1,7 @@
 package spec
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -150,5 +151,138 @@ menu:
 `)
 	if !strings.Contains(got, "submenu") {
 		t.Errorf("error = %q, want it to explain a submenu supersedes an action", got)
+	}
+}
+
+func TestValidateRejectsWatchNameThatIsNotAnIdentifier(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {my-fleet: {run: [x]}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "my-fleet") {
+		t.Errorf("error = %q, want it to quote the unusable name", got)
+	}
+}
+
+func TestValidateRejectsWatchNamedIt(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {it: {run: [x]}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "each:") {
+		t.Errorf("error = %q, want it to explain that each: binds it", got)
+	}
+}
+
+func TestValidateRejectsWatchNameReservedInCEL(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {package: {run: [x]}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "reserved") {
+		t.Errorf("error = %q, want it to say the name is reserved", got)
+	}
+}
+
+func TestValidateRejectsShapeFieldThatIsNotAnIdentifier(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {w: {run: [x], json: true, shape: {content-type: string}}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "content-type") {
+		t.Errorf("error = %q, want it to quote the unusable field", got)
+	}
+}
+
+func TestValidateRejectsDuplicateShapeField(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {w: {run: [x], json: true, shape: {n: [{id: string, id: int}]}}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "twice") {
+		t.Errorf("error = %q, want it to report the repeated field", got)
+	}
+}
+
+func TestValidateRejectsEmptyWatchRun(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {w: {run: []}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "watch.w.run") {
+		t.Errorf("error = %q, want it to name watch.w.run", got)
+	}
+}
+
+func TestValidateRejectsEmptyItemRun(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+menu: [{text: Go, run: []}]
+`)
+	if !strings.Contains(got, "menu[0].run") {
+		t.Errorf("error = %q, want it to name menu[0].run", got)
+	}
+}
+
+func TestValidateRejectsPostWithoutURL(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+menu: [{text: Ping, post: {body: {a: 1}}}]
+`)
+	if !strings.Contains(got, "url") {
+		t.Errorf("error = %q, want it to say post needs a url", got)
+	}
+}
+
+func TestValidateRejectsUnknownWatchKey(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {w: {run: [x], jsno: true}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "jsno") {
+		t.Errorf("error = %q, want it to quote the misspelled key", got)
+	}
+}
+
+func TestUnknownKeyErrorNamesOnlyThePathAndTheKey(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+menu: [{text: T, txet: no}]
+`)
+	if got != `menu[0]: unknown key "txet"` {
+		t.Errorf("error = %q, want it to name just the item and the key", got)
+	}
+}
+
+// install joins app.name onto ~/Applications and uninstall calls RemoveAll on
+// the result, so a name that walks out of that directory removes something else.
+func TestValidateRejectsAppNameThatEscapesItsDirectory(t *testing.T) {
+	for _, name := range []string{"../../tmp/x", `a\b`, ".", "..", ".hidden"} {
+		got := parseErr(t, `
+app: {name: `+strconv.Quote(name)+`, id: dev.a, icon: circle, interval: 1s}
+menu: [{text: Quit, quit: true}]
+`)
+		if !strings.Contains(got, "app.name") {
+			t.Errorf("name %q: error = %q, want it to name app.name", name, got)
+		}
+	}
+}
+
+func TestValidateRejectsAppIDThatIsNotABundleIdentifier(t *testing.T) {
+	for _, id := range []string{"../evil", "dev/a", "", ".dev.a"} {
+		got := parseErr(t, `
+app: {name: a, id: `+strconv.Quote(id)+`, icon: circle, interval: 1s}
+menu: [{text: Quit, quit: true}]
+`)
+		if !strings.Contains(got, "app.id") {
+			t.Errorf("id %q: error = %q, want it to name app.id", id, got)
+		}
 	}
 }

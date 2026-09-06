@@ -116,10 +116,10 @@ menu:
   - {text: Quit, quit: true}
 ```
 
-Two shapes the schema refuses, because both would otherwise fail silently: a
-`status:` rule with no `when:` must be last, since nothing after it can ever
-match; and an item cannot carry both an action and a `menu:`, since opening a
-submenu supersedes the action.
+Two of the shapes the schema refuses, because both would otherwise fail
+silently: a `status:` rule with no `when:` must be last, since nothing after it
+can ever match; and an item cannot carry both an action and a `menu:`, since
+opening a submenu supersedes the action.
 
 ### Watches
 

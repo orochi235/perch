@@ -7,10 +7,27 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/orochi235/perch/internal/spec"
 )
+
+// plainKey is the shape of a JSON key that can be written bare in YAML. Anything
+// else is quoted, so a key holding a colon or a leading digit still parses, and
+// perch build can then reject it against the line it came from.
+var plainKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+func yamlKey(name string) string {
+	if plainKey.MatchString(name) {
+		return name
+	}
+	q, err := json.Marshal(name)
+	if err != nil {
+		return `""`
+	}
+	return string(q)
+}
 
 // Infer reads one JSON document and renders the YAML body of a shape: block.
 func Infer(doc []byte) (string, error) { return InferAll([][]byte{doc}) }
@@ -184,7 +201,7 @@ func flow(t *spec.Type) string {
 	case spec.TypeObject:
 		parts := make([]string, 0, len(t.Fields))
 		for _, f := range t.Fields {
-			parts = append(parts, f.Name+": "+flow(f.Type))
+			parts = append(parts, yamlKey(f.Name)+": "+flow(f.Type))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
 	case spec.TypeList:
@@ -196,17 +213,17 @@ func flow(t *spec.Type) string {
 func writeField(b *strings.Builder, f spec.Field, indent int) {
 	pad := strings.Repeat(" ", indent)
 	if flowable(f.Type) {
-		fmt.Fprintf(b, "%s%s: %s\n", pad, f.Name, flow(f.Type))
+		fmt.Fprintf(b, "%s%s: %s\n", pad, yamlKey(f.Name), flow(f.Type))
 		return
 	}
 	switch f.Type.Kind {
 	case spec.TypeObject:
-		fmt.Fprintf(b, "%s%s:\n", pad, f.Name)
+		fmt.Fprintf(b, "%s%s:\n", pad, yamlKey(f.Name))
 		for _, sub := range f.Type.Fields {
 			writeField(b, sub, indent+2)
 		}
 	case spec.TypeList:
-		fmt.Fprintf(b, "%s%s:\n", pad, f.Name)
+		fmt.Fprintf(b, "%s%s:\n", pad, yamlKey(f.Name))
 		writeElement(b, f.Type.Elem, indent+2)
 	}
 }

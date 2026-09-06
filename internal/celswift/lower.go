@@ -31,7 +31,15 @@ func (v value) shown() string {
 
 func typ(k spec.TypeKind) *spec.Type { return &spec.Type{Kind: k} }
 
-var parser, _ = cel.NewEnv()
+var parser = newParser()
+
+func newParser() *cel.Env {
+	e, err := cel.NewEnv()
+	if err != nil {
+		panic("celswift: cel.NewEnv: " + err.Error())
+	}
+	return e
+}
 
 // LowerExpr lowers src to a Swift expression, keeping perch's own idea of its
 // type. It is the entry point the boundary lowerings share.
@@ -58,7 +66,7 @@ func (e *Env) LowerText(src string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return asString(v, src), nil
+	return asString(v, src)
 }
 
 // LowerList lowers src to a Swift sequence expression and reports its element
@@ -91,6 +99,9 @@ func (e *Env) lower(x celast.Expr, src string) (value, error) {
 		name := x.AsIdent()
 		b, ok := e.lookup(name)
 		if !ok {
+			if len(e.vars) == 0 {
+				return value{}, fmt.Errorf("%q: unknown name %q; no watches are declared", src, name)
+			}
 			return value{}, fmt.Errorf("%q: unknown name %q; bound here: %s", src, name, strings.Join(e.names(), ", "))
 		}
 		return value{swift: b.swift, typ: b.typ, display: b.name}, nil
@@ -125,7 +136,7 @@ func literal(v any, src string) (value, error) {
 	case types.Double:
 		return value{swift: strconv.FormatFloat(float64(l), 'g', -1, 64), typ: typ(spec.TypeDouble)}, nil
 	case types.String:
-		return value{swift: swiftString(string(l)), typ: typ(spec.TypeString)}, nil
+		return value{swift: SwiftString(string(l)), typ: typ(spec.TypeString)}, nil
 	case types.Bool:
 		return value{swift: strconv.FormatBool(bool(l)), typ: typ(spec.TypeBool)}, nil
 	}
@@ -327,7 +338,11 @@ func (e *Env) lowerStringCast(c celast.CallExpr, args []celast.Expr, src string)
 	if err != nil {
 		return value{}, err
 	}
-	return value{swift: asString(target, src), typ: typ(spec.TypeString)}, nil
+	s, err := asString(target, src)
+	if err != nil {
+		return value{}, err
+	}
+	return value{swift: s, typ: typ(spec.TypeString)}, nil
 }
 
 func (e *Env) lowerStringMethod(name string, c celast.CallExpr, args []celast.Expr, src string) (value, error) {
@@ -346,8 +361,16 @@ func (e *Env) lowerStringMethod(name string, c celast.CallExpr, args []celast.Ex
 	if name == "startsWith" {
 		swiftName = "hasPrefix"
 	}
+	rs, err := asString(recv, src)
+	if err != nil {
+		return value{}, err
+	}
+	as, err := asString(arg, src)
+	if err != nil {
+		return value{}, err
+	}
 	return value{
-		swift: fmt.Sprintf("%s.%s(%s)", asString(recv, src), swiftName, asString(arg, src)),
+		swift: fmt.Sprintf("%s.%s(%s)", rs, swiftName, as),
 		typ:   typ(spec.TypeBool),
 	}, nil
 }
@@ -425,15 +448,19 @@ func asBool(v value, src string) (string, error) {
 	return "", fmt.Errorf("%q: want a bool, got %v", src, v.typ.Kind)
 }
 
-func asString(v value, src string) string {
+// asString refuses the two kinds with no text form. Lowering them anyway would
+// emit Swift that does not compile, which reports the mistake against generated
+// source instead of against the expression that caused it.
+func asString(v value, src string) (string, error) {
 	switch v.typ.Kind {
 	case spec.TypeString:
-		return v.swift
+		return v.swift, nil
 	case spec.TypeAny:
-		return v.swift + ".asString"
-	default:
-		return "String(" + v.swift + ")"
+		return v.swift + ".asString", nil
+	case spec.TypeObject, spec.TypeList:
+		return "", fmt.Errorf("%q: a %v has no text form; select a field of it", src, v.typ.Kind)
 	}
+	return "String(" + v.swift + ")", nil
 }
 
 func asJSON(v value) string {
@@ -459,7 +486,5 @@ func displayName(fn string) string {
 	return fn + "()"
 }
 
-func swiftString(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`, "\t", `\t`, "\r", `\r`)
-	return `"` + r.Replace(s) + `"`
-}
+// SwiftString renders s as a Swift string literal.
+func SwiftString(s string) string { return `"` + escapeInterpolated(s) + `"` }

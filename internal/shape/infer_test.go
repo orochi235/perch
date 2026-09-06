@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/orochi235/perch/internal/spec"
+	"gopkg.in/yaml.v3"
 )
 
 func TestInferScalars(t *testing.T) {
@@ -155,5 +156,22 @@ func TestInferAllWidensDisagreementAcrossSamples(t *testing.T) {
 func TestInferAllNeedsAtLeastOneSample(t *testing.T) {
 	if _, err := InferAll(nil); err == nil {
 		t.Fatal("want an error for no samples, got nil")
+	}
+}
+
+// A key perch cannot use as an identifier still has to come out as valid YAML,
+// so perch build reports it against the line the author is looking at.
+func TestInferQuotesKeysThatAreNotIdentifiers(t *testing.T) {
+	got, err := Infer([]byte(`{"content-type": "json", "a: b": 1, "": 2, "ok": true}`))
+	if err != nil {
+		t.Fatalf("Infer: %v", err)
+	}
+	want := "\"content-type\": string\n\"a: b\": int\n\"\": int\nok: bool\n"
+	if got != want {
+		t.Errorf("\n got %q\nwant %q", got, want)
+	}
+	var into map[string]any
+	if err := yaml.Unmarshal([]byte(got), &into); err != nil {
+		t.Fatalf("inferred shape is not valid YAML: %v", err)
 	}
 }

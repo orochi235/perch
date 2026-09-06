@@ -1,6 +1,7 @@
 package celswift
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/orochi235/perch/internal/spec"
@@ -72,5 +73,34 @@ func TestPrefixedSpellsWatchesThroughTheResultsRecord(t *testing.T) {
 	}
 	if got != "self.results.fleet.ok" {
 		t.Errorf("got %q", got)
+	}
+}
+
+// typedWatch declares a shape, so .data and its fields have concrete types.
+func typedWatch(t *testing.T) *Env {
+	return env(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {fleet: {run: [x], json: true, shape: {jobs: [{id: string}]}}}
+menu: [{text: Quit, quit: true}]
+`)
+}
+
+func TestLowerTextRefusesAnObject(t *testing.T) {
+	_, err := typedWatch(t).LowerText("fleet")
+	if err == nil {
+		t.Fatal("want an error; String(<struct>) does not compile")
+	}
+	if !strings.Contains(err.Error(), "no text form") {
+		t.Errorf("error = %q, want it to say an object has no text form", err)
+	}
+}
+
+func TestLowerTextRefusesAList(t *testing.T) {
+	_, err := typedWatch(t).LowerText("fleet.data.jobs")
+	if err == nil {
+		t.Fatal("want an error; String(<array>) does not compile")
+	}
+	if !strings.Contains(err.Error(), "no text form") {
+		t.Errorf("error = %q, want it to say a list has no text form", err)
 	}
 }

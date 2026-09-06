@@ -27,10 +27,11 @@ func (*Backend) Name() string { return "swift-appkit" }
 func (*Backend) Emit(s *spec.Spec) ([]backend.File, error) {
 	files := []backend.File{{Name: "Runtime.swift", Body: runtimeSwift}}
 
-	if shapes := emitShapes(s); shapes != "" {
+	n := nameStructs(s)
+	if shapes := emitShapes(s, n); shapes != "" {
 		files = append(files, backend.File{Name: "Shapes.swift", Body: []byte(shapes)})
 	}
-	main, err := emitMain(s)
+	main, err := emitMain(s, n)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +53,9 @@ func (b *buf) line(format string, args ...any) {
 	b.sb.WriteByte('\n')
 }
 
+// raw appends already-indented source, for a block rendered separately.
+func (b *buf) raw(s string) { b.sb.WriteString(s) }
+
 func (b *buf) in()  { b.depth++ }
 func (b *buf) out() { b.depth-- }
 
@@ -67,7 +71,8 @@ var swiftKeywords = map[string]bool{
 	"for": true, "guard": true, "if": true, "in": true, "repeat": true, "return": true,
 	"switch": true, "where": true, "while": true, "as": true, "catch": true, "false": true,
 	"is": true, "nil": true, "super": true, "self": true, "throw": true, "throws": true,
-	"true": true, "try": true,
+	"true": true, "try": true, "precedencegroup": true, "Any": true, "Self": true,
+	"Protocol": true, "Type": true,
 }
 
 // decl escapes a name for a Swift declaration site. Member access does not need
@@ -89,11 +94,6 @@ func exported(name string) string {
 		sb.WriteString(strings.ToUpper(p[:1]) + p[1:])
 	}
 	return sb.String()
-}
-
-func swiftString(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`, "\t", `\t`, "\r", `\r`)
-	return `"` + r.Replace(s) + `"`
 }
 
 // env is the lowering environment for emitted code: watches are reached through

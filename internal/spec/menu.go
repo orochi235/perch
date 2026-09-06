@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -171,7 +174,62 @@ func decodeStrict(n *yaml.Node, into any, path string) error {
 	dec := yaml.NewDecoder(&buf)
 	dec.KnownFields(true)
 	if err := dec.Decode(into); err != nil {
-		return fmt.Errorf("%s: %w", path, err)
+		if path == "" {
+			return fmt.Errorf("%s", readable(err))
+		}
+		return fmt.Errorf("%s: %s", path, readable(err))
 	}
 	return nil
+}
+
+// yaml.v3 reports both of these by naming the Go type and counting lines in the
+// re-encoded copy. Neither is something the author of a menubar.yaml can act on,
+// so readable says the same thing in the document's own vocabulary.
+var (
+	unknownField = regexp.MustCompile("field (\\S+) not found in type \\S+")
+	wrongType    = regexp.MustCompile("cannot unmarshal !!(\\w+)(?: `[^`]*`)? into (\\S+)")
+)
+
+var goTypes = map[string]string{
+	"[]string": "a list of strings",
+	"string":   "a string",
+	"bool":     "true or false",
+	"int":      "a number",
+}
+
+var yamlTags = map[string]string{
+	"seq": "a list", "map": "a mapping", "str": "a string",
+	"int": "a number", "float": "a number", "bool": "true or false", "null": "nothing",
+}
+
+func readable(err error) string {
+	msg := err.Error()
+
+	var keys []string
+	for _, m := range unknownField.FindAllStringSubmatch(msg, -1) {
+		keys = append(keys, strconv.Quote(m[1]))
+	}
+	if len(keys) == 1 {
+		return "unknown key " + keys[0]
+	}
+	if len(keys) > 1 {
+		return "unknown keys " + strings.Join(keys, ", ")
+	}
+	if m := wrongType.FindStringSubmatch(msg); m != nil {
+		got := yamlTags[m[1]]
+		if got == "" {
+			got = m[1]
+		}
+		return fmt.Sprintf("want %s, got %s", want(m[2]), got)
+	}
+	return msg
+}
+
+// want names what one of the parser's own structs takes. Everything not in
+// goTypes is a struct, so it takes a mapping of keys.
+func want(goType string) string {
+	if s, ok := goTypes[goType]; ok {
+		return s
+	}
+	return "a mapping"
 }

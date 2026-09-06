@@ -49,7 +49,8 @@ func Parse(src []byte) (*Spec, error) {
 		return nil, fmt.Errorf("empty document")
 	}
 	var raw rawSpec
-	if err := decodeStrict(doc.Content[0], &raw, "menubar.yaml"); err != nil {
+	// No path: project.Load has already named the file.
+	if err := decodeStrict(doc.Content[0], &raw, ""); err != nil {
 		return nil, err
 	}
 	s := &Spec{App: App{

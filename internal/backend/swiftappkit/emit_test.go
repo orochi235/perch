@@ -76,3 +76,38 @@ func keys(m map[string]string) []string {
 	}
 	return out
 }
+
+// collidingNames is the spec that broke the old path-concatenated naming: field
+// a_b and field b under a both flattened to FleetDataAB, and so did watches a_b
+// and aB.
+const collidingNames = `
+app: {name: clash, id: dev.clash.menubar, icon: circle, interval: 3s}
+watch:
+  a_b: {run: [echo, x]}
+  aB:
+    run: [echo, y]
+    json: true
+    shape:
+      a_b: {x: int}
+      a: {b: {x: int}}
+menu: [{text: "{{aB.data.a_b.x}}"}]
+`
+
+func TestEmitGivesEveryGeneratedStructItsOwnName(t *testing.T) {
+	files := emit(t, collidingNames)
+	seen := map[string]bool{}
+	for _, body := range []string{files["Shapes.swift"], files["main.swift"]} {
+		for _, line := range strings.Split(body, "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "struct ") {
+				continue
+			}
+			name := strings.Fields(line)[1]
+			name = strings.TrimSuffix(name, ":")
+			if seen[name] {
+				t.Errorf("struct %s declared twice", name)
+			}
+			seen[name] = true
+		}
+	}
+}

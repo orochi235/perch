@@ -129,11 +129,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
         })
         if self.results.agent.ok {
             menu.addItem(ActionItem(title: "Restart") { [weak self] in
-                Act.run(["launchctl", "kickstart", "-k", "gui/501/dev.brainhouse"]) { self?.poll() }
+                guard let self else { return }
+                Act.run(["launchctl", "kickstart", "-k", "gui/501/dev.brainhouse"]) { self.poll() }
             })
         }
         menu.addItem(ActionItem(title: "Ping") { [weak self] in
-            Act.post("http://127.0.0.1:8765/api/ping", body: "{\"source\":\"menubar\"}") { self?.poll() }
+            guard let self else { return }
+            Act.post("http://127.0.0.1:8765/api/ping", body: "{\"source\":\"menubar\"}") { self.poll() }
         })
         menu.addItem(NSMenuItem.separator())
         menu.addItem(ActionItem(title: "Quit") {

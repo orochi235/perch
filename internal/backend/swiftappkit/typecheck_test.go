@@ -74,6 +74,22 @@ menu:
   - {text: Quit, quit: true}
 `
 
+// watchInAction reaches a watch from inside an action, which the two examples
+// above never do: they only ever interpolate the each: element.
+const watchInAction = `
+app: {name: reach, id: dev.reach.menubar, icon: circle, interval: 3s}
+watch:
+  w:
+    run: [echo, x]
+    json: true
+    shape: {id: string, host: string}
+menu:
+  - {text: Logs, run: [echo, "{{w.data.id}}"]}
+  - {text: Site, open: "https://{{w.data.host}}"}
+  - {text: Ping, post: {url: "https://{{w.data.host}}/ping", body: {id: "{{w.data.id}}"}}}
+  - {text: Quit, quit: true}
+`
+
 // TestEmittedSwiftTypechecks is the check a golden test alone cannot make: a
 // golden stays green while emitting Swift that does not compile.
 func TestEmittedSwiftTypechecks(t *testing.T) {
@@ -82,9 +98,11 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		t.Skip("swiftc not on PATH")
 	}
 	for name, doc := range map[string]string{
-		"minimal":      minimal,
-		"designDoc":    designDocExample,
-		"everyFeature": everyFeature,
+		"minimal":        minimal,
+		"designDoc":      designDocExample,
+		"everyFeature":   everyFeature,
+		"collidingNames": collidingNames,
+		"watchInAction":  watchInAction,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

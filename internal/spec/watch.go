@@ -57,8 +57,8 @@ func parseWatches(n *yaml.Node) ([]Watch, error) {
 	for i := 0; i+1 < len(n.Content); i += 2 {
 		name := n.Content[i].Value
 		var raw rawWatch
-		if err := n.Content[i+1].Decode(&raw); err != nil {
-			return nil, fmt.Errorf("watch.%s: %w", name, err)
+		if err := decodeStrict(n.Content[i+1], &raw, "watch."+name); err != nil {
+			return nil, err
 		}
 		w, err := watchFromRaw(name, raw)
 		if err != nil {

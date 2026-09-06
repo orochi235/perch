@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -22,7 +23,7 @@ const usage = `perch generates a macOS menu bar app from a menubar.yaml.
   perch run           build, compile, run in the foreground
   perch install       build, compile, bundle, write the plist, bootstrap
   perch uninstall     bootout and remove
-  perch shape         run a command and write its shape declaration
+  perch shape         run a command once and write its shape declaration
   perch schema        write the JSON Schema for menubar.yaml
 
 Flags come after the command; -C sets the project directory.
@@ -62,7 +63,7 @@ func main() {
 	}
 }
 
-func flags(name string, args []string) (*flag.FlagSet, *string) {
+func flags(name string) (*flag.FlagSet, *string) {
 	fs := flag.NewFlagSet(name, flag.ExitOnError)
 	dir := fs.String("C", ".", "project directory holding menubar.yaml")
 	return fs, dir
@@ -76,7 +77,7 @@ func emit(dir string) (*project.Project, error) {
 	}
 	files, err := swiftappkit.New().Emit(p.Spec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", p.SpecPath(), err)
 	}
 	if err := p.WriteGenerated(files); err != nil {
 		return nil, err
@@ -88,7 +89,7 @@ func emit(dir string) (*project.Project, error) {
 }
 
 func runBuild(args []string) error {
-	fs, dir := flags("build", args)
+	fs, dir := flags("build")
 	_ = fs.Parse(args)
 	p, err := emit(*dir)
 	if err != nil {
@@ -99,7 +100,7 @@ func runBuild(args []string) error {
 }
 
 func runRun(args []string) error {
-	fs, dir := flags("run", args)
+	fs, dir := flags("run")
 	_ = fs.Parse(args)
 	p, err := emit(*dir)
 	if err != nil {
@@ -129,7 +130,7 @@ func runRun(args []string) error {
 }
 
 func runInstall(args []string) error {
-	fs, dir := flags("install", args)
+	fs, dir := flags("install")
 	_ = fs.Parse(args)
 	p, err := emit(*dir)
 	if err != nil {
@@ -179,7 +180,7 @@ func runInstall(args []string) error {
 }
 
 func runUninstall(args []string) error {
-	fs, dir := flags("uninstall", args)
+	fs, dir := flags("uninstall")
 	_ = fs.Parse(args)
 	p, err := project.Load(*dir)
 	if err != nil {
@@ -225,7 +226,10 @@ func runShape(args []string) error {
 	var docs [][]byte
 	for _, cmd := range from {
 		argv := strings.Fields(cmd)
-		out, err := exec.Command(argv[0], argv[1:]...).Output()
+		if len(argv) == 0 {
+			return fmt.Errorf("--from: empty; it takes the argv of a command")
+		}
+		out, err := runOnce(argv)
 		if err != nil {
 			return fmt.Errorf("running %s: %w", cmd, err)
 		}
@@ -248,6 +252,22 @@ func runShape(args []string) error {
 		fmt.Printf("  %s\n", line)
 	}
 	return nil
+}
+
+// runOnce captures a sample. stderr goes into the error because a command that
+// prints its complaint there is the usual reason shape has nothing to read.
+func runOnce(argv []string) ([]byte, error) {
+	var stderr bytes.Buffer
+	c := exec.Command(argv[0], argv[1:]...)
+	c.Stderr = &stderr
+	out, err := c.Output()
+	if err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return nil, fmt.Errorf("%w: %s", err, msg)
+		}
+		return nil, err
+	}
+	return out, nil
 }
 
 func runSchema(args []string) error {

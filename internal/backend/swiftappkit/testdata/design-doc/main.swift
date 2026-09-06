@@ -87,13 +87,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let item2 = NSMenuItem(title: "\(it1.node) — \(it1.cmd)", action: nil, keyEquivalent: "")
             let sub3 = NSMenu()
             sub3.addItem(ActionItem(title: "Logs") { [weak self] in
-                Act.run(["onto", "logs", "\(it1.id)"]) { self?.poll() }
+                guard let self else { return }
+                Act.run(["onto", "logs", "\(it1.id)"]) { self.poll() }
             })
             sub3.addItem(ActionItem(title: "Prune") { [weak self] in
-                Act.run(["onto", "prune", "\(it1.id)"]) { self?.poll() }
+                guard let self else { return }
+                Act.run(["onto", "prune", "\(it1.id)"]) { self.poll() }
             })
             sub3.addItem(ActionItem(title: "Kill") { [weak self] in
-                Act.run(["onto", "kill", "\(it1.id)"]) { self?.poll() }
+                guard let self else { return }
+                Act.run(["onto", "kill", "\(it1.id)"]) { self.poll() }
             })
             item2.submenu = sub3
             menu.addItem(item2)
