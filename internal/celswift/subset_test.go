@@ -117,3 +117,36 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+// The loop variable in generated Swift is an emitter detail. A diagnostic must
+// quote the name the author wrote.
+func TestDiagnosticsInsideEachNameItNotTheLoopVariable(t *testing.T) {
+	e := shaped(t)
+	_, elem, err := e.LowerList("fleet.data.jobs")
+	if err != nil {
+		t.Fatalf("LowerList: %v", err)
+	}
+	_, err = e.WithEach(elem, "it2").LowerExpr("it.cmdd")
+	if err == nil {
+		t.Fatal("want an error for a field the element type lacks")
+	}
+	if contains(err.Error(), "it2") {
+		t.Errorf("error leaks the generated loop variable: %q", err)
+	}
+	if !contains(err.Error(), `it has no field "cmdd"`) {
+		t.Errorf("error = %q, want it to name it and the bad field", err)
+	}
+}
+
+func TestDiagnosticsNameTheWatchPathNotItsSwiftSpelling(t *testing.T) {
+	_, err := shaped(t).Prefixed("self.results.").LowerExpr("fleet.data.jbos")
+	if err == nil {
+		t.Fatal("want an error")
+	}
+	if contains(err.Error(), "self.results.") {
+		t.Errorf("error leaks the emitted spelling: %q", err)
+	}
+	if !contains(err.Error(), "fleet.data has no field") {
+		t.Errorf("error = %q, want it to name fleet.data", err)
+	}
+}

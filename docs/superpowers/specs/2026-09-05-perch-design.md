@@ -210,9 +210,14 @@ over a comment:
 - The emitted Swift decodes into a generated struct rather than subscripting
   `JSONValue`, so the shim shrinks to the untyped watches and Swift's own
   compiler checks the lowering.
-- `perch shape --from '<command>'` runs the command once and writes the
-  declaration from what came back. Optional typing normally goes unused because
-  authoring it is a chore; here the chore is one command.
+- `perch shape --from '<command>'` runs the command and writes the declaration
+  from what came back. Optional typing normally goes unused because authoring it
+  is a chore; here the chore is one command.
+
+An inferred shape is a starting point, not an answer. It describes only what the
+samples contained, and a healthy sample omits every field that appears only when
+something is wrong — disproportionately the ones a widget branches on. `--from`
+and `--sample` both repeat, and several samples union.
 
 ## Files, in a consuming repo
 
@@ -245,6 +250,19 @@ absolute paths is not a fix: `menubar.yaml` and everything in `Generated/` are
 committed, and a home-directory path in a committed file is exactly what must
 not happen. The plist is the right home because it is written per machine and
 never committed.
+
+macOS 15 gates local-network access per app identity, and a denial is silent: a
+connection to a LAN address or a `.local` host fails, nothing logs, and the
+command still exits 0. `.ok` therefore stays true and the widget looks idle
+rather than broken. A copy started from a terminal inherits the terminal's
+grant and works, so the two disagree and it reads as a perch bug until they are
+run side by side. `install` prints a reminder; the grant itself is the user's,
+in System Settings, Privacy & Security, Local Network.
+
+perch does not model this, and should not. `.ok` means the command exited 0,
+which is the honest thing for it to mean. "Ran fine, learned nothing" is a fact
+about what a command printed rather than about running it, so it belongs in the
+watch's own output — the way `onto` carries it in `nodes[].up`.
 
 `install` owns the bundle identity, `LSUIElement`, and the
 bootout-wait-bootstrap loop. That loop exists because `bootout` returns before

@@ -122,3 +122,38 @@ func TestInferredShapeParsesBackAsASpec(t *testing.T) {
 		}
 	}
 }
+
+// One healthy sample misses exactly the fields a widget most needs: the
+// failure-path ones, omitted when nothing is wrong.
+func TestInferAllUnionsFieldsAcrossSamples(t *testing.T) {
+	got, err := InferAll([][]byte{
+		[]byte(`{"jobs": [{"id": "j1"}]}`),
+		[]byte(`{"jobs": [{"id": "j2", "error": "boom"}], "pruned": 3}`),
+	})
+	if err != nil {
+		t.Fatalf("InferAll: %v", err)
+	}
+	want := "jobs: [{id: string, error: string}]\npruned: int\n"
+	if got != want {
+		t.Errorf("\n got %q\nwant %q", got, want)
+	}
+}
+
+func TestInferAllWidensDisagreementAcrossSamples(t *testing.T) {
+	got, err := InferAll([][]byte{
+		[]byte(`{"n": 1}`),
+		[]byte(`{"n": "one"}`),
+	})
+	if err != nil {
+		t.Fatalf("InferAll: %v", err)
+	}
+	if got != "n: any\n" {
+		t.Errorf("got %q, want the field widened to any", got)
+	}
+}
+
+func TestInferAllNeedsAtLeastOneSample(t *testing.T) {
+	if _, err := InferAll(nil); err == nil {
+		t.Fatal("want an error for no samples, got nil")
+	}
+}

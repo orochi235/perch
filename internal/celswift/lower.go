@@ -11,10 +11,22 @@ import (
 	"github.com/orochi235/perch/internal/spec"
 )
 
-// value is a lowered subexpression: Swift source and the type it has there.
+// value is a lowered subexpression: Swift source, the type it has there, and
+// the way the author spelled it. Diagnostics quote display, never swift — the
+// emitted spelling carries a results prefix and generated loop variables that
+// mean nothing to whoever wrote the YAML.
 type value struct {
-	swift string
-	typ   *spec.Type
+	swift   string
+	typ     *spec.Type
+	display string
+}
+
+// shown is the spelling to put in a diagnostic.
+func (v value) shown() string {
+	if v.display != "" {
+		return v.display
+	}
+	return v.swift
 }
 
 func typ(k spec.TypeKind) *spec.Type { return &spec.Type{Kind: k} }
@@ -81,7 +93,7 @@ func (e *Env) lower(x celast.Expr, src string) (value, error) {
 		if !ok {
 			return value{}, fmt.Errorf("%q: unknown name %q; bound here: %s", src, name, strings.Join(e.names(), ", "))
 		}
-		return value{swift: b.swift, typ: b.typ}, nil
+		return value{swift: b.swift, typ: b.typ, display: b.name}, nil
 
 	case celast.LiteralKind:
 		return literal(x.AsLiteral(), src)
@@ -134,16 +146,17 @@ func (e *Env) lowerSelect(s celast.SelectExpr, src string) (value, error) {
 					// A declared shape always has the field, so has() is constant.
 					return value{swift: "true", typ: typ(spec.TypeBool)}, nil
 				}
-				return value{swift: recv.swift + "." + name, typ: f.Type}, nil
+				return value{swift: recv.swift + "." + name, typ: f.Type, display: recv.shown() + "." + name}, nil
 			}
 		}
-		return value{}, fmt.Errorf("%q: %s has no field %q; it has %s", src, recv.swift, name, fieldNames(recv.typ))
+		return value{}, fmt.Errorf("%q: %s has no field %q; it has %s", src, recv.shown(), name, fieldNames(recv.typ))
 	case spec.TypeAny:
 		acc := fmt.Sprintf("%s[%q]", recv.swift, name)
+		shown := recv.shown() + "." + name
 		if s.IsTestOnly() {
-			return value{swift: acc + ".exists", typ: typ(spec.TypeBool)}, nil
+			return value{swift: acc + ".exists", typ: typ(spec.TypeBool), display: shown}, nil
 		}
-		return value{swift: acc, typ: typ(spec.TypeAny)}, nil
+		return value{swift: acc, typ: typ(spec.TypeAny), display: shown}, nil
 	default:
 		return value{}, fmt.Errorf("%q: cannot select %q from a %v", src, name, recv.typ.Kind)
 	}
@@ -264,9 +277,9 @@ func (e *Env) lowerIndex(args []celast.Expr, src string) (value, error) {
 		if idx.typ.Kind != spec.TypeInt {
 			return value{}, fmt.Errorf("%q: a list index must be an int, got %v", src, idx.typ.Kind)
 		}
-		return value{swift: recv.swift + "[" + idx.swift + "]", typ: recv.typ.Elem}, nil
+		return value{swift: recv.swift + "[" + idx.swift + "]", typ: recv.typ.Elem, display: recv.shown() + "[" + idx.shown() + "]"}, nil
 	case spec.TypeAny:
-		return value{swift: recv.swift + "[" + idx.swift + "]", typ: typ(spec.TypeAny)}, nil
+		return value{swift: recv.swift + "[" + idx.swift + "]", typ: typ(spec.TypeAny), display: recv.shown() + "[" + idx.shown() + "]"}, nil
 	}
 	return value{}, fmt.Errorf("%q: cannot index a %v", src, recv.typ.Kind)
 }

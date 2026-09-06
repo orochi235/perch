@@ -12,16 +12,23 @@ import (
 	"github.com/orochi235/perch/internal/spec"
 )
 
-// Infer reads a JSON document and renders the YAML body of a shape: block.
-func Infer(doc []byte) (string, error) {
-	dec := json.NewDecoder(bytes.NewReader(doc))
-	dec.UseNumber()
-	t, err := parse(dec)
-	if err != nil {
-		return "", err
+// Infer reads one JSON document and renders the YAML body of a shape: block.
+func Infer(doc []byte) (string, error) { return InferAll([][]byte{doc}) }
+
+// InferAll unions several samples. One healthy sample omits every field that
+// only appears when something is wrong, which is disproportionately what a
+// widget branches on, so more samples make a better declaration.
+func InferAll(docs [][]byte) (string, error) {
+	if len(docs) == 0 {
+		return "", fmt.Errorf("need at least one sample")
 	}
-	if _, err := dec.Token(); err == nil {
-		return "", fmt.Errorf("trailing content after the JSON document")
+	var t *spec.Type
+	for _, doc := range docs {
+		one, err := parseDocument(doc)
+		if err != nil {
+			return "", err
+		}
+		t = unify(t, one)
 	}
 	if t.Kind != spec.TypeObject {
 		return "", fmt.Errorf("a shape describes an object; this command printed a %v", t.Kind)
@@ -31,6 +38,19 @@ func Infer(doc []byte) (string, error) {
 		writeField(&b, f, 0)
 	}
 	return b.String(), nil
+}
+
+func parseDocument(doc []byte) (*spec.Type, error) {
+	dec := json.NewDecoder(bytes.NewReader(doc))
+	dec.UseNumber()
+	t, err := parse(dec)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := dec.Token(); err == nil {
+		return nil, fmt.Errorf("trailing content after the JSON document")
+	}
+	return t, nil
 }
 
 func parse(dec *json.Decoder) (*spec.Type, error) {

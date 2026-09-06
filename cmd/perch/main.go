@@ -22,7 +22,7 @@ const usage = `perch generates a macOS menu bar app from a menubar.yaml.
   perch run           build, compile, run in the foreground
   perch install       build, compile, bundle, write the plist, bootstrap
   perch uninstall     bootout and remove
-  perch shape         run a command once and write its shape declaration
+  perch shape         run a command and write its shape declaration
   perch schema        write the JSON Schema for menubar.yaml
 
 Flags come after the command; -C sets the project directory.
@@ -169,6 +169,12 @@ func runInstall(args []string) error {
 		return err
 	}
 	fmt.Printf("%s is running\n", app.Name)
+	if len(p.Spec.Watches) > 0 {
+		fmt.Printf("\nIf a watch reaches the network or a .local host, grant %s access under\n"+
+			"System Settings -> Privacy & Security -> Local Network. Until you do, those\n"+
+			"connections fail silently: the command still exits 0, so .ok stays true and the\n"+
+			"widget looks idle rather than broken.\n", app.Name)
+	}
 	return nil
 }
 
@@ -200,19 +206,40 @@ func runUninstall(args []string) error {
 	return nil
 }
 
+// repeated collects a flag given more than once.
+type repeated []string
+
+func (r *repeated) String() string     { return strings.Join(*r, ", ") }
+func (r *repeated) Set(v string) error { *r = append(*r, v); return nil }
+
 func runShape(args []string) error {
 	fs := flag.NewFlagSet("shape", flag.ExitOnError)
-	from := fs.String("from", "", "command to run once, as argv (no shell)")
+	var from, samples repeated
+	fs.Var(&from, "from", "command to run once, as argv (no shell); repeatable")
+	fs.Var(&samples, "sample", "JSON file to read instead of running a command; repeatable")
 	_ = fs.Parse(args)
-	if *from == "" {
-		return fmt.Errorf("shape needs --from '<command>'")
+	if len(from) == 0 && len(samples) == 0 {
+		return fmt.Errorf("shape needs --from '<command>' or --sample <file>")
 	}
-	argv := strings.Fields(*from)
-	out, err := exec.Command(argv[0], argv[1:]...).Output()
-	if err != nil {
-		return fmt.Errorf("running %s: %w", *from, err)
+
+	var docs [][]byte
+	for _, cmd := range from {
+		argv := strings.Fields(cmd)
+		out, err := exec.Command(argv[0], argv[1:]...).Output()
+		if err != nil {
+			return fmt.Errorf("running %s: %w", cmd, err)
+		}
+		docs = append(docs, out)
 	}
-	body, err := shape.Infer(out)
+	for _, path := range samples {
+		out, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		docs = append(docs, out)
+	}
+
+	body, err := shape.InferAll(docs)
 	if err != nil {
 		return err
 	}
