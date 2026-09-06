@@ -1,0 +1,95 @@
+// Package celswift lowers CEL expressions to Swift source at build time.
+// Nothing evaluates CEL in the generated app: an expression perch cannot lower
+// is a build error, not a widget that silently shows nothing.
+package celswift
+
+import "github.com/orochi235/perch/internal/spec"
+
+// Env is the type environment an expression is lowered against: one binding per
+// watch, plus `it` while inside an each:.
+type Env struct {
+	vars []binding
+}
+
+type binding struct {
+	name  string
+	typ   *spec.Type
+	swift string // how the binding is spelled in generated Swift
+}
+
+// NewEnv binds each watch to the fields its kind produces.
+func NewEnv(watches []spec.Watch) *Env {
+	e := &Env{}
+	for _, w := range watches {
+		e.vars = append(e.vars, binding{name: w.Name, typ: watchType(w), swift: w.Name})
+	}
+	return e
+}
+
+// WithEach returns a copy of e with `it` bound to elem, for lowering inside an
+// each: item.
+func (e *Env) WithEach(elem *spec.Type, swiftName string) *Env {
+	out := &Env{vars: append([]binding(nil), e.vars...)}
+	out.vars = append(out.vars, binding{name: "it", typ: elem, swift: swiftName})
+	return out
+}
+
+func (e *Env) lookup(name string) (binding, bool) {
+	// Later bindings shadow earlier ones, so `it` wins inside an each:.
+	for i := len(e.vars) - 1; i >= 0; i-- {
+		if e.vars[i].name == name {
+			return e.vars[i], true
+		}
+	}
+	return binding{}, false
+}
+
+func (e *Env) names() []string {
+	out := make([]string, 0, len(e.vars))
+	for _, v := range e.vars {
+		out = append(out, v.name)
+	}
+	return out
+}
+
+func obj(fields ...spec.Field) *spec.Type {
+	return &spec.Type{Kind: spec.TypeObject, Fields: fields}
+}
+
+func field(name string, k spec.TypeKind) spec.Field {
+	return spec.Field{Name: name, Type: &spec.Type{Kind: k}}
+}
+
+// watchType is the record a watch binds, per the design doc's table.
+func watchType(w spec.Watch) *spec.Type {
+	switch w.Kind {
+	case spec.WatchExists:
+		return obj(field("ok", spec.TypeBool))
+	case spec.WatchHTTP:
+		fs := []spec.Field{
+			field("ok", spec.TypeBool),
+			field("status", spec.TypeInt),
+			field("out", spec.TypeString),
+		}
+		return obj(append(fs, dataField(w)...)...)
+	default:
+		fs := []spec.Field{
+			field("ok", spec.TypeBool),
+			field("code", spec.TypeInt),
+			field("out", spec.TypeString),
+			field("err", spec.TypeString),
+		}
+		return obj(append(fs, dataField(w)...)...)
+	}
+}
+
+func dataField(w spec.Watch) []spec.Field {
+	if !w.JSON {
+		return nil
+	}
+	t := w.Shape
+	if t == nil {
+		t = &spec.Type{Kind: spec.TypeAny}
+	}
+	return []spec.Field{{Name: "data", Type: t}}
+}
