@@ -116,6 +116,11 @@ menu:
   - {text: Quit, quit: true}
 ```
 
+Two shapes the schema refuses, because both would otherwise fail silently: a
+`status:` rule with no `when:` must be last, since nothing after it can ever
+match; and an item cannot carry both an action and a `menu:`, since opening a
+submenu supersedes the action.
+
 ### Watches
 
 Three kinds, which is what it takes to cover all three apps:
@@ -173,6 +178,13 @@ the ternary `? :`, and the functions `size()`, `has()`, `string()`,
 `startsWith()`, `contains()`. Anything else is refused at build time with the
 offending expression quoted. perch does not claim to implement CEL; it claims
 to reject what it has not implemented.
+
+Four edges the lowering settled, none of which widen that list. A comparison
+between an `int` and a `double` is refused rather than quietly widened. Both
+arms of a `? :` must have the same type. `in` against a declared list requires
+the element type to match. And `has()` on a field a shape declares is a
+build-time constant, because the shape has already said the field is there.
+There is no `null` literal.
 
 Lowering targets a small `JSONValue` shim emitted into `Generated/` alongside
 the app.
