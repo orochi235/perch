@@ -28,9 +28,26 @@ failed `swiftc` cannot damage a working install, and it removes the bundle
 before rebuilding so a renamed or dropped resource cannot linger. A fix made in
 a copy stays in that copy.
 
+## Two languages
+
+perch is written in Go and emits Swift. They are not alternatives: Go is what
+you run, Swift is what comes out.
+
+Swift is not a preference. `NSStatusItem`, `NSMenu`, SF Symbols and
+`NSMenuDelegate`'s rebuild-on-open are AppKit, reachable first-class only from
+Swift and Objective-C. Go's alternative is `getlantern/systray`, a cgo wrapper
+over a lowest-common-denominator menu — icons as raw PNG bytes, no SF Symbols,
+and no hook to rebuild the menu as it opens, which is the mechanism both
+existing apps rely on to never offer an action that cannot work. Being cgo, it
+does not even buy a pure-Go binary.
+
+Go is right for the generator because the backend seam is real: a Linux target
+emits something that is not Swift, and a Swift program is the wrong thing to
+put in charge of that.
+
 ## Shape
 
-A Go binary. Three stages:
+Three stages:
 
     menubar.yaml  ──parse──▶  Spec  ──emit──▶  Swift  ──install──▶  running .app
 
