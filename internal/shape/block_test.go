@@ -183,6 +183,9 @@ func TestInferKeyEscapes(t *testing.T) {
 		{"del\u007f", `"del\x7f"`},
 		{"c1\u009f", `"c1\x9f"`},
 		{"noncharacter\ufffe", `"noncharacter\ufffe"`},
+		{"line\u2028sep", `"line\u2028sep"`},
+		{"para\u2029sep", `"para\u2029sep"`},
+		{"nel\u0085here", `"nel\x85here"`},
 		{"emoji \U0001F600", "\"emoji \U0001F600\""},
 	}
 	for _, c := range cases {
@@ -247,6 +250,29 @@ func TestInferPrintsNamesPerchBuildWillRefuse(t *testing.T) {
 		}
 		if _, err := reparse(t, got); err == nil {
 			t.Errorf("%s: perch build accepted a name it should refuse", c.doc)
+		}
+	}
+}
+
+// null: is a null key, not the key "null", so a shape written that way says
+// something other than what was inferred. The 1.1 forms are left bare, which is
+// what keeps a field called n from being quoted.
+func TestInferQuotesKeysYAMLWouldResolve(t *testing.T) {
+	got, err := Infer([]byte(`{"null": 1, "TRUE": 2, "False": 3, "n": 4, "yes": 5, "nullish": 6}`))
+	if err != nil {
+		t.Fatalf("Infer: %v", err)
+	}
+	want := `"null": int` + "\n" + `"TRUE": int` + "\n" + `"False": int` + "\nn: int\nyes: int\nnullish: int\n"
+	if got != want {
+		t.Errorf("\n got %q\nwant %q", got, want)
+	}
+	var into map[string]string
+	if err := yaml.Unmarshal([]byte(got), &into); err != nil {
+		t.Fatalf("not valid YAML: %v", err)
+	}
+	for _, key := range []string{"null", "TRUE", "False", "n", "yes", "nullish"} {
+		if _, ok := into[key]; !ok {
+			t.Errorf("key %q did not come back as a string key: %v", key, into)
 		}
 	}
 }

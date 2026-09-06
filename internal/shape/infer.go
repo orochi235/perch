@@ -19,11 +19,18 @@ import (
 // perch build can then reject it against the line it came from.
 var plainKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
-// yamlKey renders name as a YAML double-quoted scalar unless it can be written
-// bare. YAML refuses a raw control character even inside quotes, and a command
-// is free to print one in a key.
+// resolved are the bare words yaml.v3 takes as something other than a string,
+// so a key spelled one of them is not the key it looks like: null: reads as a
+// null key, not as the key "null". The YAML 1.1 y/n/on/off forms are left
+// alone: yaml.v3 does not resolve them, and n is an ordinary field name.
+var resolved = map[string]bool{
+	"null": true, "Null": true, "NULL": true,
+	"true": true, "True": true, "TRUE": true,
+	"false": true, "False": true, "FALSE": true,
+}
+
 func yamlKey(name string) string {
-	if plainKey.MatchString(name) {
+	if plainKey.MatchString(name) && !resolved[name] {
 		return name
 	}
 	var b strings.Builder
@@ -40,9 +47,13 @@ func yamlKey(name string) string {
 			b.WriteString(`\n`)
 		case r == '\r':
 			b.WriteString(`\r`)
+		// Not c-printable: the C0 controls, DEL, and the C1 range. NEL (0x85) is
+		// c-printable but is a line break, and falls in the same range.
 		case r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f):
 			fmt.Fprintf(&b, `\x%02x`, r)
-		case r == 0xfffe || r == 0xffff:
+		// The other two line breaks, then the two noncharacters c-printable
+		// stops short of.
+		case r == 0x2028 || r == 0x2029 || r == 0xfffe || r == 0xffff:
 			fmt.Fprintf(&b, `\u%04x`, r)
 		default:
 			b.WriteRune(r)
