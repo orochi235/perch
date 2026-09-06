@@ -126,3 +126,29 @@ menu:
 		t.Fatalf("the design doc's own example must parse: %v", err)
 	}
 }
+
+func TestValidateRejectsUnguardedStatusRuleBeforeOthers(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+status:
+  - {badge: "1"}
+  - {when: "true", icon: circle}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "last") {
+		t.Errorf("error = %q, want it to say an unguarded rule must be last", got)
+	}
+}
+
+func TestValidateRejectsActionOnAnItemWithASubmenu(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+menu:
+  - text: More
+    run: [ls]
+    menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "submenu") {
+		t.Errorf("error = %q, want it to explain a submenu supersedes an action", got)
+	}
+}

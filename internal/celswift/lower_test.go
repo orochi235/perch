@@ -64,3 +64,13 @@ func TestLowerConditionRejectsNonBool(t *testing.T) {
 		t.Fatal("want an error: a condition must be a bool, got nil")
 	}
 }
+
+func TestPrefixedSpellsWatchesThroughTheResultsRecord(t *testing.T) {
+	got, err := runWatch(t).Prefixed("self.results.").LowerCondition("fleet.ok")
+	if err != nil {
+		t.Fatalf("LowerCondition: %v", err)
+	}
+	if got != "self.results.fleet.ok" {
+		t.Errorf("got %q", got)
+	}
+}

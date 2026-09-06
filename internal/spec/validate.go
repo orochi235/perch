@@ -25,6 +25,24 @@ func (s *Spec) validate() error {
 			return err
 		}
 	}
+	for i, r := range s.Status {
+		if r.When == "" && i != len(s.Status)-1 {
+			return fmt.Errorf("status[%d]: a rule with no when: always matches, so it must be last; %d rule(s) after it can never apply", i, len(s.Status)-1-i)
+		}
+	}
+	return validateItems(s.Menu, "menu")
+}
+
+func validateItems(items []Item, path string) error {
+	for i, it := range items {
+		p := fmt.Sprintf("%s[%d]", path, i)
+		if len(it.Menu) > 0 && it.Action.Kind != ActionNone {
+			return fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", p, it.Action.Kind)
+		}
+		if err := validateItems(it.Menu, p+".menu"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

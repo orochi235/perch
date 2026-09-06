@@ -93,3 +93,16 @@ func dataField(w spec.Watch) []spec.Field {
 	}
 	return []spec.Field{{Name: "data", Type: t}}
 }
+
+// Prefixed returns a copy of e whose watch bindings are spelled with prefix in
+// generated Swift, so expressions reach them through the results record rather
+// than through locals the emitted code might never use.
+func (e *Env) Prefixed(prefix string) *Env {
+	out := &Env{vars: append([]binding(nil), e.vars...)}
+	for i := range out.vars {
+		if out.vars[i].name != "it" {
+			out.vars[i].swift = prefix + out.vars[i].swift
+		}
+	}
+	return out
+}
