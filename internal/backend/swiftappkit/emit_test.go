@@ -69,6 +69,24 @@ func TestBackendName(t *testing.T) {
 	}
 }
 
+// tryEmit is emit without the fatal, for the refusals.
+func tryEmit(t *testing.T, doc string) (map[string]string, error) {
+	t.Helper()
+	sp, err := spec.Parse([]byte(doc))
+	if err != nil {
+		t.Fatalf("spec.Parse: %v", err)
+	}
+	files, err := New().Emit(sp)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, f := range files {
+		out[f.Name] = string(f.Body)
+	}
+	return out, nil
+}
+
 func keys(m map[string]string) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {

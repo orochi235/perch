@@ -103,6 +103,7 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		"everyFeature":   everyFeature,
 		"collidingNames": collidingNames,
 		"watchInAction":  watchInAction,
+		"swiftKeywords":  swiftKeywordShape,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

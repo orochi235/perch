@@ -1,0 +1,21 @@
+#!/bin/sh
+# Run every fuzz target for a while. `go test` only replays the seed corpus, so
+# without this nothing ever generates an input; the corpus a run builds lives in
+# the build cache and is not committed.
+#
+#   bin/fuzz [seconds per target]   (default 60)
+set -eu
+secs="${1:-60}"
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root"
+
+targets=$(grep -rho '^func \(Fuzz[A-Za-z0-9_]*\)' --include='*_test.go' . | sed 's/^func //')
+total=$(printf '%s\n' "$targets" | wc -l | tr -d ' ')
+i=0
+for target in $targets; do
+    i=$((i + 1))
+    pkg=$(grep -rl "func $target(" --include='*_test.go' . | head -1 | xargs dirname)
+    printf '%s/%s %s %ss (%s)\n' "$i" "$total" "$target" "$secs" "$pkg"
+    go test "$pkg" -run "^$target\$" -fuzz "^$target\$" -fuzztime "${secs}s"
+done
+echo "all $total targets clean at ${secs}s each"

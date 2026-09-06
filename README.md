@@ -47,5 +47,10 @@ Hand-written Swift lives in `menubar/Sources/`, which perch never reads or
 writes — so ejecting is moving a file across that line and deleting the YAML
 that made it.
 
+`go test ./...` needs the Swift toolchain: the tests that matter most compile
+what perch emits, and one installs a LaunchAgent and watches the app stay up.
+The fuzz targets only replay their seed corpus under `go test`; `bin/fuzz`
+runs each of them for real.
+
 Design and the reasoning behind the schema:
 [`docs/superpowers/specs/2026-09-05-perch-design.md`](docs/superpowers/specs/2026-09-05-perch-design.md).
