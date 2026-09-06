@@ -8,7 +8,7 @@ including its author six months on. It answers: what the schema can say, what
 it deliberately cannot, and where the generated code stops and hand-written
 code begins.
 
-**Status: designed, not built.**
+**Status: built.** All six commands work, and the generated app has been installed, reloaded over a running copy, and removed on real hardware. No repo consumes it yet.
 
 ## Why
 
@@ -59,8 +59,12 @@ structure behind it.
     type Backend interface {
         Name() string
         Emit(*spec.Spec) ([]File, error)
-        Install(context.Context, InstallOpts) error
     }
+
+Installing is not on the interface. Bundling and launchd are driven by the app's
+identity rather than by the spec, so they live in `internal/install` and the
+command orchestrates them; a second backend brings its own installer the same
+way.
 
 `swift-appkit` is the only backend. Others get a name and nothing else.
 
