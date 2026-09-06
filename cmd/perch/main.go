@@ -159,7 +159,7 @@ func runInstall(args []string) error {
 		return err
 	}
 	bin := filepath.Join(bundle, "Contents", "MacOS", app.Executable)
-	if err := os.WriteFile(plistPath, []byte(install.AgentPlist(app.ID, bin)), 0o644); err != nil {
+	if err := os.WriteFile(plistPath, []byte(install.AgentPlist(app.ID, bin, install.InstallPATH())), 0o644); err != nil {
 		return err
 	}
 	fmt.Printf("  %s\n", plistPath)

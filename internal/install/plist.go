@@ -4,6 +4,7 @@
 package install
 
 import (
+	"os"
 	"strings"
 	"text/template"
 )
@@ -66,6 +67,11 @@ var agentTmpl = template.Must(template.New("agent").Parse(plistHeader + `<plist 
 	<array>
 		<string>{{.Program}}</string>
 	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>{{.Path}}</string>
+	</dict>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>KeepAlive</key>
@@ -76,11 +82,27 @@ var agentTmpl = template.Must(template.New("agent").Parse(plistHeader + `<plist 
 </plist>
 `))
 
-// AgentPlist renders the LaunchAgent that keeps the app running.
-func AgentPlist(label, program string) string {
+// AgentPlist renders the LaunchAgent that keeps the app running. It carries a
+// PATH because launchd's default cannot resolve a bare command in run:, and a
+// watch that cannot resolve its command just leaves the widget looking broken.
+func AgentPlist(label, program, path string) string {
 	var sb strings.Builder
-	_ = agentTmpl.Execute(&sb, struct{ Label, Program string }{escape(label), escape(program)})
+	_ = agentTmpl.Execute(&sb, struct{ Label, Program, Path string }{
+		escape(label), escape(program), escape(path),
+	})
 	return sb.String()
+}
+
+// fallbackPATH is only reached when the installing process has none itself.
+const fallbackPATH = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+// InstallPATH is the PATH the agent runs with: the installing process's own, so
+// that perch run and the installed agent resolve commands identically.
+func InstallPATH() string {
+	if p := os.Getenv("PATH"); p != "" {
+		return p
+	}
+	return fallbackPATH
 }
 
 func escape(s string) string {

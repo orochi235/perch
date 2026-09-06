@@ -236,6 +236,16 @@ emits, so authoring gets completion and inline errors in an editor.
     perch shape         run a watch once and write its shape declaration
     perch schema        write the JSON Schema for menubar.yaml
 
+`install` also writes the installing shell's `PATH` into the agent's
+`EnvironmentVariables`. Without it a LaunchAgent gets launchd's minimal default,
+`run: [onto, ...]` cannot resolve, and the widget sits there showing the error
+icon forever — the same silent-wrong-answer failure the build-time CEL decision
+exists to kill, arriving at install time instead. Telling authors to write
+absolute paths is not a fix: `menubar.yaml` and everything in `Generated/` are
+committed, and a home-directory path in a committed file is exactly what must
+not happen. The plist is the right home because it is written per machine and
+never committed.
+
 `install` owns the bundle identity, `LSUIElement`, and the
 bootout-wait-bootstrap loop. That loop exists because `bootout` returns before
 launchd has let go, and bootstrapping into the gap fails with `Input/output
