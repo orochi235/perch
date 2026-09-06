@@ -94,7 +94,9 @@ extension JSONValue {
     var asInt: Int {
         switch self {
         case .int(let i): return i
-        case .double(let d): return Int(d)
+        // Int(Double) traps outside Int's range, and the double came from
+        // whatever the watch printed.
+        case .double(let d): return Int(exactly: d.rounded()) ?? 0
         case .bool(let b): return b ? 1 : 0
         case .string(let s): return Int(s) ?? 0
         default: return 0
@@ -115,7 +117,9 @@ extension JSONValue {
         switch self {
         case .string(let s): return s
         case .int(let i): return String(i)
-        case .double(let d): return d == d.rounded() ? String(Int(d)) : String(d)
+        case .double(let d):
+            if d == d.rounded(), let i = Int(exactly: d) { return String(i) }
+            return String(d)
         case .bool(let b): return String(b)
         case .null: return ""
         case .array, .object: return ""
@@ -137,6 +141,29 @@ extension JSONValue {
     }
 
     func contains(_ needle: JSONValue) -> Bool { asArray.contains(needle) }
+}
+
+// MARK: - Boxes
+
+/// A value one thread fills in and another reads. Used where a completion
+/// handler outlives the call that started it.
+private final class Box<T> {
+    private var value: T
+    private let lock = NSLock()
+
+    init(_ initial: T) { value = initial }
+
+    func mutate(_ body: (inout T) -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        body(&value)
+    }
+
+    var current: T {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
 }
 
 // MARK: - Watches
@@ -171,8 +198,16 @@ enum Watcher {
         } catch {
             return RunOutcome(ok: false, code: -1, out: "", err: "\(error)")
         }
+        // Both pipes drain at once. Reading one to EOF and then the other
+        // deadlocks a child that fills the second pipe's buffer meanwhile.
+        let stderrBox = Box(Data())
+        let draining = DispatchQueue(label: "perch.run.stderr")
+        draining.async {
+            stderrBox.mutate { $0 = errPipe.fileHandleForReading.readDataToEndOfFile() }
+        }
         let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-        let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+        draining.sync {}
+        let errData = stderrBox.current
         task.waitUntilExit()
         let code = Int(task.terminationStatus)
         return RunOutcome(
@@ -185,20 +220,24 @@ enum Watcher {
 
     static func http(_ urlString: String) -> HTTPOutcome {
         guard let url = URL(string: urlString) else { return HTTPOutcome() }
-        var outcome = HTTPOutcome()
+        // Boxed because the wait below can time out while the request is still
+        // in flight, leaving the handler to write after this call has returned.
+        let box = Box(HTTPOutcome())
         let done = DispatchSemaphore(value: 0)
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
         URLSession.shared.dataTask(with: request) { data, response, _ in
-            if let http = response as? HTTPURLResponse {
-                outcome.status = http.statusCode
-                outcome.ok = (200..<300).contains(http.statusCode)
+            box.mutate { outcome in
+                if let http = response as? HTTPURLResponse {
+                    outcome.status = http.statusCode
+                    outcome.ok = (200..<300).contains(http.statusCode)
+                }
+                if let data { outcome.out = String(data: data, encoding: .utf8) ?? "" }
             }
-            if let data { outcome.out = String(data: data, encoding: .utf8) ?? "" }
             done.signal()
         }.resume()
         _ = done.wait(timeout: .now() + 10)
-        return outcome
+        return box.current
     }
 
     static func exists(_ path: String) -> Bool {
@@ -230,7 +269,10 @@ enum Act {
     }
 
     static func post(_ urlString: String, body: String, then repoll: @escaping () -> Void) {
-        guard let url = URL(string: urlString) else { return }
+        guard let url = URL(string: urlString) else {
+            alert("POST \(urlString)", "Not a URL.")
+            return
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
