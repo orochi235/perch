@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/orochi235/perch/internal/spec"
 )
@@ -18,15 +19,37 @@ import (
 // perch build can then reject it against the line it came from.
 var plainKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+// yamlKey renders name as a YAML double-quoted scalar unless it can be written
+// bare. YAML refuses a raw control character even inside quotes, and a command
+// is free to print one in a key.
 func yamlKey(name string) string {
 	if plainKey.MatchString(name) {
 		return name
 	}
-	q, err := json.Marshal(name)
-	if err != nil {
-		return `""`
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range name {
+		switch {
+		case r == '"':
+			b.WriteString(`\"`)
+		case r == '\\':
+			b.WriteString(`\\`)
+		case r == '\t':
+			b.WriteString(`\t`)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r == '\r':
+			b.WriteString(`\r`)
+		case r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f):
+			fmt.Fprintf(&b, `\x%02x`, r)
+		case r == 0xfffe || r == 0xffff:
+			fmt.Fprintf(&b, `\u%04x`, r)
+		default:
+			b.WriteRune(r)
+		}
 	}
-	return string(q)
+	b.WriteByte('"')
+	return b.String()
 }
 
 // Infer reads one JSON document and renders the YAML body of a shape: block.
@@ -50,11 +73,21 @@ func InferAll(docs [][]byte) (string, error) {
 	if t.Kind != spec.TypeObject {
 		return "", fmt.Errorf("a shape describes an object; this command printed a %v", t.Kind)
 	}
+	return renderObject(t), nil
+}
+
+// renderObject writes the YAML body of a shape: block. An object with no fields
+// is written {} rather than as nothing at all: a command whose result set is
+// empty still has to yield a block that parses.
+func renderObject(t *spec.Type) string {
+	if len(t.Fields) == 0 {
+		return "{}\n"
+	}
 	var b strings.Builder
 	for _, f := range t.Fields {
 		writeField(&b, f, 0)
 	}
-	return b.String(), nil
+	return b.String()
 }
 
 func parseDocument(doc []byte) (*spec.Type, error) {
@@ -64,8 +97,10 @@ func parseDocument(doc []byte) (*spec.Type, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := dec.Token(); err == nil {
-		return nil, fmt.Errorf("trailing content after the JSON document")
+	// Not dec.Token(): it reports trailing bytes that are not valid JSON as an
+	// error, which reads as "no more tokens" and lets them through.
+	if rest := bytes.TrimSpace(doc[dec.InputOffset():]); len(rest) > 0 {
+		return nil, fmt.Errorf("trailing content after the JSON document: %q", clip(string(rest), 40))
 	}
 	return t, nil
 }
@@ -109,6 +144,12 @@ func parseObject(dec *json.Decoder) (*spec.Type, error) {
 		name, ok := key.(string)
 		if !ok {
 			return nil, fmt.Errorf("object key is not a string")
+		}
+		// A shape: block is written in YAML's simple-key form, which tops out at
+		// 1024 characters. Rendering a longer key emits a block that does not
+		// parse back, so refuse it here and name the key.
+		if rendered := yamlKey(name); len(rendered) > 1024 {
+			return nil, fmt.Errorf("key %s… is too long for a shape field; YAML keys stop at 1024 characters", clip(rendered, 32))
 		}
 		ft, err := parse(dec)
 		if err != nil {
@@ -235,7 +276,24 @@ func writeElement(b *strings.Builder, t *spec.Type, indent int) {
 		return
 	}
 	fmt.Fprintf(b, "%s-\n", pad)
-	for _, f := range t.Fields {
-		writeField(b, f, indent+2)
+	switch t.Kind {
+	case spec.TypeObject:
+		for _, f := range t.Fields {
+			writeField(b, f, indent+2)
+		}
+	case spec.TypeList:
+		writeElement(b, t.Elem, indent+2)
 	}
+}
+
+// clip shortens a string for a diagnostic without splitting a rune, which would
+// put a broken character in the message.
+func clip(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
 }

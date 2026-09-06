@@ -15,8 +15,8 @@ struct FleetData: Decodable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        nodes = (try? c.decode([FleetDataNodes].self, forKey: .nodes)) ?? []
-        jobs = (try? c.decode([FleetDataJobs].self, forKey: .jobs)) ?? []
+        self.nodes = (try? c.decode([FleetDataNodes].self, forKey: .nodes)) ?? []
+        self.jobs = (try? c.decode([FleetDataJobs].self, forKey: .jobs)) ?? []
     }
 }
 
@@ -33,8 +33,8 @@ struct FleetDataNodes: Decodable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        name = (try? c.decode(String.self, forKey: .name)) ?? ""
-        up = (try? c.decode(Bool.self, forKey: .up)) ?? false
+        self.name = (try? c.decode(String.self, forKey: .name)) ?? ""
+        self.up = (try? c.decode(Bool.self, forKey: .up)) ?? false
     }
 }
 
@@ -53,9 +53,9 @@ struct FleetDataJobs: Decodable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = (try? c.decode(String.self, forKey: .id)) ?? ""
-        node = (try? c.decode(String.self, forKey: .node)) ?? ""
-        cmd = (try? c.decode(String.self, forKey: .cmd)) ?? ""
+        self.id = (try? c.decode(String.self, forKey: .id)) ?? ""
+        self.node = (try? c.decode(String.self, forKey: .node)) ?? ""
+        self.cmd = (try? c.decode(String.self, forKey: .cmd)) ?? ""
     }
 }
 

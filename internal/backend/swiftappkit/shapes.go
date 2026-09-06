@@ -147,7 +147,9 @@ func emitObjects(b *buf, t *spec.Type, n structNames) {
 	b.in()
 	b.line("let c = try decoder.container(keyedBy: CodingKeys.self)")
 	for _, f := range t.Fields {
-		b.line("%s = (try? c.decode(%s.self, forKey: .%s)) ?? %s",
+		// Qualified with self. because a field named self binds to the instance
+		// otherwise, backticks and all, and the assignment stops compiling.
+		b.line("self.%s = (try? c.decode(%s.self, forKey: .%s)) ?? %s",
 			decl(f.Name), n.swiftType(f.Type), decl(f.Name), n.swiftZero(f.Type))
 	}
 	b.out()
