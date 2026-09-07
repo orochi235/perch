@@ -19,6 +19,7 @@ import (
 // longer builds is worse than a stale sentence: it is followed.
 var docs = []string{
 	"../../README.md",
+	"../../docs/schema.md",
 	"../../docs/superpowers/specs/2026-09-05-perch-design.md",
 }
 

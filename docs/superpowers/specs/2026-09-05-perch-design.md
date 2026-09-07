@@ -12,18 +12,18 @@ code begins.
 
 ## Why
 
-Two menu bar apps exist — `brainhouse/menubar/main.swift` and
-`the-other-app/menubar/Sources/` — and `onto` wants a third. The two are the
-same program with the nouns swapped: matching `ServerState` and `ServiceState`
-enums, and a `menuNeedsUpdate` that agrees comment for comment.
+Two menu bar apps already existed when this was written — one in
+`brainhouse`, one in a private repo at work — and `onto` wanted a third. The
+two are the same program with the nouns swapped: matching `ServerState` and
+`ServiceState` enums, and a `menuNeedsUpdate` that agrees comment for comment.
 
 The expensive part was never the Swift. It is the wrapper: compile, fake an app
 bundle so `UNUserNotificationCenter` will run at all, set `LSUIElement`, write a
 launchd plist, and work around `bootout` returning before launchd has let go.
 That is 80 lines of bash in one repo and 97 in the other.
 
-The two are not the same 80 lines, and that is the actual argument. the other app
-carries two fixes brainhouse never got: it builds into a temp directory so a
+The two are not the same 80 lines, and that is the actual argument. The second
+carries two fixes the first never got: it builds into a temp directory so a
 failed `swiftc` cannot damage a working install, and it removes the bundle
 before rebuilding so a renamed or dropped resource cannot linger. A fix made in
 a copy stays in that copy.
@@ -166,10 +166,10 @@ build time and lowered to a plain Swift expression. **Nothing evaluates CEL at
 runtime** — no interpreter ships in the app, and a malformed expression is a
 build error rather than a widget that silently shows nothing.
 
-This is the one decision taken from `a schema engine elsewhere`, which reached for CEL
-for the same reason: an authored condition language, invented ad hoc, grows
-into a bad programming language. Reusing that engine itself was rejected — it
-models fields in a document, emits no code, and is Python.
+The choice is borrowed from another project that reached for CEL for the same
+reason: an authored condition language, invented ad hoc, grows into a bad
+programming language. Reusing that engine itself was rejected — it models
+fields in a document, emits no code, and is Python.
 
 ### The supported subset
 
