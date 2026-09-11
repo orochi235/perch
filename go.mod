@@ -4,6 +4,8 @@ go 1.26.3
 
 require gopkg.in/yaml.v3 v3.0.1
 
+require github.com/yuin/goldmark v1.8.6 // indirect
+
 require (
 	cel.dev/cel-go v0.32.0
 	cel.dev/expr v0.25.1 // indirect
