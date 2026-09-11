@@ -30,12 +30,10 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func refresh() {
         guard let button = statusItem.button else { return }
-        let icon = "circle"
+        let icon = MenuIcon.symbol("circle")
         let dim = false
         let badge = ""
-        let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
-        image?.isTemplate = true
-        button.image = image
+        button.image = icon.image()
         button.appearsDisabled = dim
         button.title = badge.isEmpty ? "" : " " + badge
     }

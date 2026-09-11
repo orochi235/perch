@@ -19,7 +19,7 @@ menu: [{text: Quit, quit: true}]
 	if len(s.Status) != 3 {
 		t.Fatalf("got %d status rules, want 3", len(s.Status))
 	}
-	if s.Status[0].When != "!fleet.ok" || s.Status[0].Icon != "exclamationmark.triangle" {
+	if s.Status[0].When != "!fleet.ok" || s.Status[0].Icon.Symbol != "exclamationmark.triangle" {
 		t.Errorf("rule 0 = %+v", s.Status[0])
 	}
 	if !s.Status[1].Dim {

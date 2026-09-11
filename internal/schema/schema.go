@@ -21,7 +21,7 @@ const body = `{
       "properties": {
         "name": {"type": "string", "pattern": "^[^./\\\\][^/\\\\]*$", "description": "Bundle and executable name; one path component under ~/Applications."},
         "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "Bundle identifier, e.g. dev.example.menubar."},
-        "icon": {"type": "string", "description": "SF Symbol name."},
+        "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
         "interval": {"type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$", "description": "Poll interval, e.g. 5s or 1m30s."}
       }
     },
@@ -54,7 +54,7 @@ const body = `{
         "additionalProperties": false,
         "properties": {
           "when": {"type": "string", "description": "CEL condition; omit to always match."},
-          "icon": {"type": "string", "description": "SF Symbol name."},
+          "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
           "dim": {"type": "boolean"},
           "badge": {"type": "string", "description": "CEL expression shown beside the icon."}
         }

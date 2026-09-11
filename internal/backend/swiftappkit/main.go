@@ -187,7 +187,7 @@ func emitRefresh(b *buf, s *spec.Spec, e *celswift.Env) error {
 	b.line("func refresh() {")
 	b.in()
 	b.line("guard let button = statusItem.button else { return }")
-	b.line("%s icon = %s", bind(anyRule(s, func(r spec.StatusRule) bool { return r.Icon != "" })), celswift.SwiftString(s.App.Icon))
+	b.line("%s icon = %s", bind(anyRule(s, func(r spec.StatusRule) bool { return !r.Icon.IsZero() })), swiftIcon(s.App.Icon))
 	b.line("%s dim = false", bind(anyRule(s, func(r spec.StatusRule) bool { return r.Dim })))
 	b.line(`%s badge = ""`, bind(anyRule(s, func(r spec.StatusRule) bool { return r.Badge != "" })))
 
@@ -209,8 +209,8 @@ func emitRefresh(b *buf, s *spec.Spec, e *celswift.Env) error {
 			}
 		}
 		b.in()
-		if rule.Icon != "" {
-			b.line("icon = %s", celswift.SwiftString(rule.Icon))
+		if !rule.Icon.IsZero() {
+			b.line("icon = %s", swiftIcon(rule.Icon))
 		}
 		if rule.Dim {
 			b.line("dim = true")
@@ -228,15 +228,22 @@ func emitRefresh(b *buf, s *spec.Spec, e *celswift.Env) error {
 		b.line("}")
 	}
 
-	b.line("let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)")
-	b.line("image?.isTemplate = true")
-	b.line("button.image = image")
+	b.line("button.image = icon.image()")
 	b.line("button.appearsDisabled = dim")
 	b.line(`button.title = badge.isEmpty ? "" : " " + badge`)
 	b.out()
 	b.line("}")
 	b.line("")
 	return nil
+}
+
+// swiftIcon writes the MenuIcon the runtime switches on. A spec that names a
+// bare symbol emits exactly what it always did.
+func swiftIcon(i spec.Icon) string {
+	if i.Asset != "" {
+		return "MenuIcon.asset(" + celswift.SwiftString(i.Asset) + ")"
+	}
+	return "MenuIcon.symbol(" + celswift.SwiftString(i.Symbol) + ")"
 }
 
 // menuGen hands out unique local names so nested submenus and each: loops do

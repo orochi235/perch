@@ -29,6 +29,9 @@ type BundleOpts struct {
 	Sources []string
 	Dest    string
 	Compile Compiler
+	// Icons is a directory whose .png files are copied into Resources. Absent
+	// or empty is ordinary: a spec using only SF Symbols needs no artwork.
+	Icons string
 }
 
 // BuildBundle stages a complete .app in a temporary directory and only then
@@ -57,6 +60,9 @@ func BuildBundle(o BundleOpts) error {
 	if err := o.Compile(o.Sources, filepath.Join(macos, o.App.Executable)); err != nil {
 		return err
 	}
+	if err := copyIcons(o.Icons, filepath.Join(staged, "Contents", "Resources")); err != nil {
+		return err
+	}
 	info := filepath.Join(staged, "Contents", "Info.plist")
 	if err := os.WriteFile(info, []byte(InfoPlist(o.App)), 0o644); err != nil {
 		return err
@@ -67,6 +73,32 @@ func BuildBundle(o BundleOpts) error {
 	}
 	if err := os.Rename(staged, o.Dest); err != nil {
 		return fmt.Errorf("installing %s: %w", o.Dest, err)
+	}
+	return nil
+}
+
+// copyIcons stages every .png beside the spec. Nothing is filtered against what
+// the spec references: an icon chosen by a status rule is still referenced, and
+// working that out here would duplicate the check Load already makes.
+func copyIcons(src, dest string) error {
+	if src == "" {
+		return nil
+	}
+	matches, err := filepath.Glob(filepath.Join(src, "*.png"))
+	if err != nil || len(matches) == 0 {
+		return err
+	}
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return err
+	}
+	for _, m := range matches {
+		body, err := os.ReadFile(m)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dest, filepath.Base(m)), body, 0o644); err != nil {
+			return err
+		}
 	}
 	return nil
 }

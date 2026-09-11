@@ -21,7 +21,7 @@ type Spec struct {
 type App struct {
 	Name     string
 	ID       string
-	Icon     string
+	Icon     Icon
 	Interval time.Duration
 }
 
@@ -33,10 +33,10 @@ type rawSpec struct {
 }
 
 type rawApp struct {
-	Name     string `yaml:"name"`
-	ID       string `yaml:"id"`
-	Icon     string `yaml:"icon"`
-	Interval string `yaml:"interval"`
+	Name     string    `yaml:"name"`
+	ID       string    `yaml:"id"`
+	Icon     yaml.Node `yaml:"icon"`
+	Interval string    `yaml:"interval"`
 }
 
 // Parse reads a menubar.yaml document into a Spec.
@@ -57,10 +57,14 @@ func Parse(src []byte) (*Spec, error) {
 	if err := decodeStrict(root, &raw, ""); err != nil {
 		return nil, err
 	}
+	appIcon, err := parseIcon(&raw.App.Icon, "app.icon")
+	if err != nil {
+		return nil, err
+	}
 	s := &Spec{App: App{
 		Name: raw.App.Name,
 		ID:   raw.App.ID,
-		Icon: raw.App.Icon,
+		Icon: appIcon,
 	}}
 	if raw.App.Interval != "" {
 		d, err := time.ParseDuration(raw.App.Interval)

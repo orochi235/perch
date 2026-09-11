@@ -191,7 +191,7 @@ func runRun(args []string, e *env) error {
 	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name}
 	dest := filepath.Join(tmp, p.Spec.App.Name+".app")
 	fmt.Fprintln(e.out, "compiling…")
-	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: dest, Compile: e.compile}); err != nil {
+	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: dest, Compile: e.compile, Icons: p.IconsDir()}); err != nil {
 		return err
 	}
 	bin := filepath.Join(dest, "Contents", "MacOS", app.Executable)
@@ -223,7 +223,7 @@ func runInstall(args []string, e *env) error {
 
 	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name}
 	fmt.Fprintln(e.out, "compiling…")
-	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: bundle, Compile: e.compile}); err != nil {
+	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: bundle, Compile: e.compile, Icons: p.IconsDir()}); err != nil {
 		return err
 	}
 	fmt.Fprintf(e.out, "  %s\n", bundle)

@@ -6,6 +6,46 @@
 import AppKit
 import Foundation
 
+// MARK: - MenuIcon
+
+/// What the status item shows. A symbol is drawn as a template, so macOS tints
+/// it for the menu bar's own appearance and for whether the bar is selected. An
+/// asset is artwork the consuming repo drew, which macOS will not tint and
+/// which therefore has to carry its own color.
+enum MenuIcon {
+    case symbol(String)
+    case asset(String)
+
+    func image() -> NSImage? {
+        switch self {
+        case .symbol(let name):
+            let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
+            image?.isTemplate = true
+            return image
+        case .asset(let name):
+            guard let image = MenuIcon.load(name), image.size.height > 0 else { return nil }
+            // The menu bar's own height, with the artwork's aspect kept: an
+            // asset is shipped at 2x and would otherwise draw at twice the bar.
+            let height: CGFloat = 18
+            image.size = NSSize(width: height * (image.size.width / image.size.height), height: height)
+            return image
+        }
+    }
+
+    /// `<name>~dark.png` where the bundle carries one. A template gets its two
+    /// appearances from macOS; artwork that keeps its own color does not, so an
+    /// asset whose outline must read against both menu bars ships both.
+    private static func load(_ name: String) -> NSImage? {
+        let dark = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        if dark, let path = Bundle.main.path(forResource: name + "~dark", ofType: "png"),
+           let image = NSImage(contentsOfFile: path) {
+            return image
+        }
+        guard let path = Bundle.main.path(forResource: name, ofType: "png") else { return nil }
+        return NSImage(contentsOfFile: path)
+    }
+}
+
 // MARK: - JSONValue
 
 /// The value an undeclared watch binds. A watch with a `shape:` decodes into a

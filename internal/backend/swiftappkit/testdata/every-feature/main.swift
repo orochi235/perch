@@ -97,20 +97,18 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func refresh() {
         guard let button = statusItem.button else { return }
-        var icon = "brain"
+        var icon = MenuIcon.symbol("brain")
         var dim = false
         var badge = ""
         if !(self.results.plist.ok) {
-            icon = "circle.dashed"
+            icon = MenuIcon.symbol("circle.dashed")
         } else if !(self.results.server.ok) {
-            icon = "exclamationmark.triangle"
+            icon = MenuIcon.asset("alarm")
             dim = true
         } else {
             badge = String(self.results.server.data["sessions"].size)
         }
-        let image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
-        image?.isTemplate = true
-        button.image = image
+        button.image = icon.image()
         button.appearsDisabled = dim
         button.title = badge.isEmpty ? "" : " " + badge
     }

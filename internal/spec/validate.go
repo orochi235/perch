@@ -15,8 +15,8 @@ func (s *Spec) validate() error {
 	if err := checkAppID(s.App.ID); err != nil {
 		return err
 	}
-	if s.App.Icon == "" {
-		return fmt.Errorf("app.icon: required (an SF Symbol name)")
+	if s.App.Icon.IsZero() {
+		return fmt.Errorf("app.icon: required (an SF Symbol name, or {asset: <name>} for a file in menubar/Icons)")
 	}
 	if s.App.Interval <= 0 {
 		return fmt.Errorf("app.interval: required and must be positive, got %v", s.App.Interval)

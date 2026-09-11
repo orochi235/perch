@@ -44,7 +44,7 @@ All four fields are required.
 |---|---|
 | `name` | The bundle and executable name. One path component — it names a `.app` under `~/Applications`, so no `/` and no leading dot. |
 | `id` | The bundle identifier, e.g. `dev.example.menubar`. launchd takes it as a label and `install` as a plist filename: letters, digits, dots, dashes, underscores. |
-| `icon` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, shown when no `status:` rule overrides it. |
+| `icon` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, shown when no `status:` rule overrides it. Or `{asset: <name>}` for your own artwork — see [Icon assets](#icon-assets). |
 | `interval` | How often every watch re-polls, as a Go duration — `5s`, `1m30s`. Must be positive. |
 
 ## watch
@@ -121,7 +121,7 @@ last; anything after it is refused rather than left unreachable.
 | Field | Effect |
 |---|---|
 | `when` | The condition. Omit it to match always. |
-| `icon` | An SF Symbol replacing `app.icon`. |
+| `icon` | An SF Symbol, or `{asset: <name>}`, replacing `app.icon`. |
 | `dim` | Draw the item dimmed. |
 | `badge` | An expression rendered as text beside the icon. |
 
@@ -246,3 +246,37 @@ The directory boundary is the whole of the drift story: nothing outside
 Ejecting is moving a file across that line and deleting the YAML that made it.
 
 Generated Swift is committed, so the repo builds without perch installed.
+
+## Icon assets
+
+An SF Symbol is drawn as a template: macOS tints it for the menu bar's
+appearance and for whether the bar is selected. Your own artwork is not
+tinted, so it keeps the colors you drew — which is the point when the icon
+says something a symbol cannot, such as how full something is.
+
+Put `.png` files in `menubar/Icons` beside your spec and name one without its
+extension:
+
+```yaml
+app: {name: onto, id: dev.onto.menubar, icon: {asset: o-0}, interval: 5s}
+watch:
+  fleet:
+    run: [onto, top, --json]
+    json: true
+    shape: {nodes: [{up: bool}]}
+status:
+  - when: "!fleet.ok"
+    icon: {asset: o-problem}
+  - icon: {asset: o-4}
+menu:
+  - {text: Quit, quit: true}
+```
+
+Every `.png` in that directory is copied into the bundle, and `perch build`
+refuses a spec naming one that is not there — otherwise the app installs and
+runs with no image at all, which reads as the poller failing.
+
+Ship artwork at twice the size you want it drawn: it is scaled to the menu
+bar's 18pt height with its aspect kept. Where an icon has to read against both
+a light and a dark menu bar, add `<name>~dark.png` beside `<name>.png` and the
+app picks per appearance.

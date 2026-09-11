@@ -35,7 +35,7 @@ func FuzzParse(f *testing.F) {
 		}
 		// Anything Parse accepts, a backend then emits from, so the invariants the
 		// emitter relies on have to hold on every accepted document.
-		if s.App.Name == "" || s.App.ID == "" || s.App.Icon == "" || s.App.Interval <= 0 {
+		if s.App.Name == "" || s.App.ID == "" || s.App.Icon.IsZero() || s.App.Interval <= 0 {
 			t.Fatalf("%q parsed into an incomplete app: %+v", doc, s.App)
 		}
 		if strings.ContainsAny(s.App.Name, `/\`) {

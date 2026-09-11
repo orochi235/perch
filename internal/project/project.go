@@ -32,6 +32,9 @@ func Load(root string) (*Project, error) {
 		return nil, fmt.Errorf("%s: %w", p.SpecPath(), err)
 	}
 	p.Spec = s
+	if err := p.checkIcons(); err != nil {
+		return nil, fmt.Errorf("%s: %w", p.SpecPath(), err)
+	}
 	return p, nil
 }
 
@@ -40,6 +43,26 @@ func (p *Project) SpecPath() string { return filepath.Join(p.Root, SpecFile) }
 
 func (p *Project) GeneratedDir() string { return filepath.Join(p.Root, "menubar", "Generated") }
 func (p *Project) SourcesDir() string   { return filepath.Join(p.Root, "menubar", "Sources") }
+
+// IconsDir holds artwork an icon: {asset: name} refers to. Copied into the
+// bundle's Resources whole, so a file nothing references costs only its bytes.
+func (p *Project) IconsDir() string { return filepath.Join(p.Root, "menubar", "Icons") }
+
+// checkIcons refuses a spec naming artwork that is not there. The app would
+// otherwise build, install and run with no status item image at all, which
+// looks like the poller failing rather than a missing file.
+func (p *Project) checkIcons() error {
+	for path, icon := range p.Spec.Icons() {
+		if icon.Asset == "" {
+			continue
+		}
+		file := filepath.Join(p.IconsDir(), icon.Asset+".png")
+		if _, err := os.Stat(file); err != nil {
+			return fmt.Errorf("%s: no such file: %s", path, file)
+		}
+	}
+	return nil
+}
 
 // WriteGenerated replaces the generated directory outright, so a file the spec
 // no longer produces cannot linger. It touches nothing else.

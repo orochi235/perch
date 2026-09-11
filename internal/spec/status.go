@@ -10,16 +10,16 @@ import (
 // holds wins; a rule with no when: always matches.
 type StatusRule struct {
 	When  string
-	Icon  string
+	Icon  Icon
 	Dim   bool
 	Badge string
 }
 
 type rawStatusRule struct {
-	When  string `yaml:"when"`
-	Icon  string `yaml:"icon"`
-	Dim   bool   `yaml:"dim"`
-	Badge string `yaml:"badge"`
+	When  string    `yaml:"when"`
+	Icon  yaml.Node `yaml:"icon"`
+	Dim   bool      `yaml:"dim"`
+	Badge string    `yaml:"badge"`
 }
 
 func parseStatus(n *yaml.Node) ([]StatusRule, error) {
@@ -36,7 +36,11 @@ func parseStatus(n *yaml.Node) ([]StatusRule, error) {
 		if err := decodeStrict(c, &raw, path); err != nil {
 			return nil, err
 		}
-		out = append(out, StatusRule{When: raw.When, Icon: raw.Icon, Dim: raw.Dim, Badge: raw.Badge})
+		icon, err := parseIcon(&raw.Icon, path+".icon")
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, StatusRule{When: raw.When, Icon: icon, Dim: raw.Dim, Badge: raw.Badge})
 	}
 	return out, nil
 }

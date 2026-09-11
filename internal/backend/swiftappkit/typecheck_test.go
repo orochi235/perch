@@ -58,7 +58,7 @@ status:
   - when: "!plist.ok"
     icon: circle.dashed
   - when: "!server.ok"
-    icon: exclamationmark.triangle
+    icon: {asset: alarm}
     dim: true
   - badge: "string(server.data.sessions.size())"
 menu:
