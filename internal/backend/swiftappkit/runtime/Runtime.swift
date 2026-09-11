@@ -24,12 +24,27 @@ enum MenuIcon {
             return image
         case .asset(let name):
             guard let image = MenuIcon.load(name), image.size.height > 0 else { return nil }
-            // The menu bar's own height, with the artwork's aspect kept: an
-            // asset is shipped at 2x and would otherwise draw at twice the bar.
-            let height: CGFloat = 18
+            // Measured off the bar rather than fixed at the 18pt a menu bar used
+            // to be: the bar has been taller than that for several releases, and
+            // artwork sized to the old number sits in the middle of its frame
+            // looking like a mistake. The inset is what keeps it off the edges.
+            let height = max(NSStatusBar.system.thickness - 5, 12)
             image.size = NSSize(width: height * (image.size.width / image.size.height), height: height)
             return image
         }
+    }
+
+    /// How faint to draw, approximating the fade macOS gives a template when the
+    /// menu bar goes inactive and gives artwork not at all. The bar is taken as
+    /// inactive when the item's own screen is not the one holding the active
+    /// menu bar, which is right for the two common cases — another display has
+    /// focus, or a full screen app owns this one — and wrong for anything else
+    /// that dims the bar. A template is left alone: it has already faded, and
+    /// fading it twice is worse than not matching.
+    func alpha(on button: NSStatusBarButton) -> CGFloat {
+        guard case .asset = self else { return 1 }
+        guard let screen = button.window?.screen, let active = NSScreen.main else { return 1 }
+        return screen == active ? 1 : 0.55
     }
 
     /// `<name>~dark.png` where the bundle carries one. A template gets its two

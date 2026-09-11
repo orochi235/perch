@@ -37,6 +37,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+            ) { [weak self] _ in self?.refresh() }
         refresh()
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
@@ -109,6 +112,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
             badge = String(self.results.server.data["sessions"].size)
         }
         button.image = icon.image()
+        button.alphaValue = icon.alpha(on: button)
         button.appearsDisabled = dim
         button.title = badge.isEmpty ? "" : " " + badge
     }

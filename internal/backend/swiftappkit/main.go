@@ -32,6 +32,14 @@ func emitMain(s *spec.Spec, n structNames) (string, error) {
 	b.line("let menu = NSMenu()")
 	b.line("menu.delegate = self")
 	b.line("statusItem.menu = menu")
+	// Artwork's fade is worked out at draw time, so it has to be redrawn when
+	// the thing it is worked out from moves. The poll interval would get there
+	// eventually and look like a lag.
+	b.line("NSWorkspace.shared.notificationCenter.addObserver(")
+	b.in()
+	b.line("forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main")
+	b.line(") { [weak self] _ in self?.refresh() }")
+	b.out()
 	b.line("refresh()")
 	b.line("poll()")
 	b.line("timer = Timer.scheduledTimer(withTimeInterval: %s, repeats: true) { [weak self] _ in", swiftDouble(s.App.Interval.Seconds()))
@@ -229,6 +237,7 @@ func emitRefresh(b *buf, s *spec.Spec, e *celswift.Env) error {
 	}
 
 	b.line("button.image = icon.image()")
+	b.line("button.alphaValue = icon.alpha(on: button)")
 	b.line("button.appearsDisabled = dim")
 	b.line(`button.title = badge.isEmpty ? "" : " " + badge`)
 	b.out()
