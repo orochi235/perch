@@ -62,7 +62,9 @@ const introSection = "\x00intro"
 
 // depth is how many directories down a page sits, which is how far its links
 // have to climb: the site is published under /perch/, not at a root.
-func (p *Page) depth() int { return strings.Count(strings.TrimSuffix(p.URL, "/"), "/") + boolToInt(p.URL != "") }
+func (p *Page) depth() int {
+	return strings.Count(strings.TrimSuffix(p.URL, "/"), "/") + boolToInt(p.URL != "")
+}
 
 func boolToInt(b bool) int {
 	if b {
