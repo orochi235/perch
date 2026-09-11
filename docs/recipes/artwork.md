@@ -73,9 +73,9 @@ ci:
 ```
 
 Put the four PNGs in `menubar/Icons` beside the file and name one without its
-extension. They are flat colors that read against a light or a dark menu bar,
-so each needs only one file; [Icon assets](../schema.md#icon-assets) covers what
-to do when one does not, and what size to draw at.
+extension. These are flat colors that read against a light or a dark menu bar,
+so each is a single file. [Icon assets](../schema.md#icon-assets) covers what
+size to draw at, and what to add when an icon needs a separate dark version.
 
 This watch declares no `shape:`, which is why `ci.data[0]` is written with an
 index and compared to strings: `gh` returns a list, and a shape describes a
