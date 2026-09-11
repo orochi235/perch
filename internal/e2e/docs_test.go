@@ -23,6 +23,26 @@ var docs = []string{
 	"../../docs/superpowers/specs/2026-09-05-perch-design.md",
 }
 
+// docDirs are published whole, so a page added to one is covered by being
+// there rather than by being listed.
+var docDirs = []string{"../../docs/guide", "../../docs/recipes"}
+
+func docFiles(t *testing.T) []string {
+	t.Helper()
+	files := append([]string(nil), docs...)
+	for _, dir := range docDirs {
+		found, err := filepath.Glob(filepath.Join(dir, "*.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(found) == 0 {
+			t.Fatalf("%s holds no pages; the site publishes it", dir)
+		}
+		files = append(files, found...)
+	}
+	return files
+}
+
 type block struct {
 	file string
 	line int
@@ -56,7 +76,7 @@ func yamlBlocks(t *testing.T, path string) []block {
 func TestDocumentedExamplesBuild(t *testing.T) {
 	swiftc, _ := exec.LookPath("swiftc")
 	var found int
-	for _, doc := range docs {
+	for _, doc := range docFiles(t) {
 		for _, b := range yamlBlocks(t, doc) {
 			found++
 			name := filepath.Base(b.file) + ":" + strconv.Itoa(b.line)
