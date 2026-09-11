@@ -1,6 +1,8 @@
 # perch docs site
 
-**Status: being built.** This line changes when the site builds and deploys.
+**Status: built, not yet published.** `go run ./cmd/site` builds every page and
+its previews, and the tests check them. Nothing is online until GitHub Pages is
+enabled on the repo with "GitHub Actions" as its source.
 
 The design of perch's documentation site, for someone changing the site, adding
 a recipe, or touching the emitted Swift the site's menu previews run on.
@@ -17,7 +19,7 @@ anything on your Mac a menu bar widget." There is no search.
 
 | Sidebar | Pages | Source |
 |---|---|---|
-| Guide | Overview, Install, Your first app, Ejecting, Commands | `docs/guide/*.md` |
+| Guide | Overview, Install, Your first app, Commands | `docs/guide/*.md` |
 | menubar.yaml | the intro, then one page per `##` section | `docs/schema.md`, split at build |
 | Recipes | one page each | `docs/recipes/*.md` |
 
