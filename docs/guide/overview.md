@@ -85,5 +85,5 @@ prints, so `fleet.data.jbos` stops compiling instead of rendering as blank.
 
 Generated Swift lives in `menubar/Generated/` and is replaced whole on every
 build. Anything you write by hand lives in `menubar/Sources/`, which perch never
-reads or writes — so [ejecting](../menubar/files/) is moving a file across that
-line and deleting the YAML that made it.
+reads or writes — so [ejecting](../schema.md#files-in-a-consuming-repo) is
+moving a file across that line and deleting the YAML that made it.

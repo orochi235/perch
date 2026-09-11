@@ -1,7 +1,7 @@
 # Your first app
 
 A widget that watches GitHub's own status page, so you can build it without
-anything installed but perch. It takes four steps, and each one runs.
+anything installed but perch. Five steps, and it runs at the end of each one.
 
 ## 1. An app with nothing in it
 

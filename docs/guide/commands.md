@@ -39,7 +39,8 @@ Unload the agent, and remove both the plist and the app.
 ## perch shape
 
 Run a command once, or read JSON files you already have, and print the `shape:`
-declaration for what came back. Both flags repeat, and several samples union.
+declaration for what came back. Both flags repeat, and several samples merge
+into one shape.
 
 ```help shape
 ```

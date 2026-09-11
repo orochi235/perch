@@ -1,16 +1,12 @@
 # perch docs site
 
-**Status: built, not yet published.** `go run ./cmd/site` builds every page and
-its previews, and the tests check them. Nothing is online until GitHub Pages is
-enabled on the repo with "GitHub Actions" as its source.
-
 The design of perch's documentation site, for someone changing the site, adding
 a recipe, or touching the emitted Swift the site's menu previews run on.
 
 ## What it is
 
-A static site at `orochi235.github.io/perch`, built from the markdown in `docs/`
-by `go run ./cmd/site`. The layout is comp C (`.comps/c.png`): a header, a left
+A static site at [michaelbaker.tech/perch](https://michaelbaker.tech/perch/),
+built from the markdown in `docs/` by `go run ./cmd/site`. The layout is comp C (`.comps/c.png`): a header, a left
 sidebar, one column of prose. It follows the reader's light or dark setting;
 dark is comp C's palette and light is comp A's. The Overview headline is "Give
 anything on your Mac a menu bar widget." There is no search.
@@ -80,8 +76,8 @@ The build needs macOS and `swiftc`, and fails without them rather than publish
 pages with no previews.
 
 `.github/workflows/site.yml` builds on every push to `main` and deploys to
-GitHub Pages. Pages has to be enabled on the repo with "GitHub Actions" as its
-source.
+GitHub Pages, whose source is set to "GitHub Actions". The build runs on
+`macos-latest`, since it compiles the previews.
 
 ## Tests
 

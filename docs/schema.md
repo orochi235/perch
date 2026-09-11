@@ -52,10 +52,9 @@ All four fields are required.
 A mapping of names to polled sources. They run concurrently, every `interval`,
 and their results are what every expression in the document reads.
 
-A name has to be something an expression can select and the backend can
-declare: letters, digits and underscores, starting with a letter or underscore.
-`it` is taken — `each:` binds its element to that — and so are CEL's own
-keywords.
+A name is letters, digits and underscores, starting with a letter or
+underscore. `it` is taken — `each:` binds its element to that — and so are
+CEL's own keywords.
 
 Each watch is exactly one of three kinds.
 
@@ -107,10 +106,11 @@ perch shape --from 'onto top --once --json'
 perch shape --sample healthy.json --sample failing.json
 ```
 
+Both flags repeat, and several samples merge into one shape.
+
 An inferred shape is a starting point, not an answer: it describes only the
 samples it saw, and a healthy sample omits every field that appears only when
-something is wrong — disproportionately the ones a widget branches on. Both
-flags repeat, and several samples union.
+something is wrong — disproportionately the ones a widget branches on.
 
 ## status
 
@@ -125,10 +125,12 @@ last; anything after it is refused rather than left unreachable.
 | `dim` | Draw the item dimmed. |
 | `badge` | An expression rendered as text beside the icon. |
 
+One rule may set several of them — an `icon:` and `dim:` together, say.
+
 ## menu
 
-A list of items, rebuilt from the last poll every time the menu opens — which
-is why an action it offers is never one that cannot work.
+A list of items, rebuilt from the last poll every time the menu opens, so the
+menu never offers an action that cannot work.
 
 The only bare item is `separator`. Everything else is a mapping:
 
@@ -152,35 +154,28 @@ Every action re-polls the watches as soon as it finishes, which is what makes a
 Start item feel like it did something. A non-zero exit raises an alert naming
 the command.
 
-Controlling a LaunchAgent needs no special support — Start, Stop and Restart
-are three `run:` items with `when:` guards:
+Controlling a LaunchAgent needs no special support. Start, Stop and Restart are
+three `run:` items with `when:` guards, so the menu offers only the one that can
+work:
 
 ```yaml
-app: {name: brainhouse, id: dev.brainhouse.menubar, icon: brain, interval: 10s}
+app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
 
 watch:
   agent:
-    run: [launchctl, print, gui/501/dev.brainhouse]
-  plist:
-    exists: ~/Library/LaunchAgents/dev.brainhouse.plist
-
-status:
-  - when: "!plist.ok"
-    icon: exclamationmark.triangle
-  - when: "!agent.ok"
-    dim: true
+    run: [launchctl, print, gui/501/dev.example.worker]
 
 menu:
-  - text: Running
+  - text: Start
+    when: "!agent.ok"
+    run: [launchctl, bootstrap, gui/501, ~/Library/LaunchAgents/dev.example.worker.plist]
+  - text: Stop
     when: "agent.ok"
-  - text: Not loaded
-    when: "!agent.ok && plist.ok"
-  - separator
-  - {text: Start, run: [launchctl, bootstrap, gui/501, ~/Library/LaunchAgents/dev.brainhouse.plist], when: "!agent.ok"}
-  - {text: Restart, run: [launchctl, kickstart, -k, gui/501/dev.brainhouse], when: "agent.ok"}
-  - separator
+    run: [launchctl, bootout, gui/501/dev.example.worker]
   - {text: Quit, quit: true}
 ```
+
+[Start and stop a LaunchAgent](recipes/launchagent.md) is the whole widget.
 
 ### each
 
@@ -188,14 +183,13 @@ menu:
 element, with `it` bound to that element.
 
 ```yaml
-app: {name: onto, id: dev.onto.menubar, icon: rectangle.3.group, interval: 5s}
+app: {name: fleet, id: dev.example.fleet.menubar, icon: rectangle.3.group, interval: 5s}
 
 watch:
   fleet:
     run: [onto, top, --once, --json]
     json: true
-    shape:
-      jobs: [{id: string, node: string, cmd: string}]
+    shape: {jobs: [{id: string, node: string, cmd: string}]}
 
 menu:
   - each: fleet.data.jobs
@@ -203,9 +197,10 @@ menu:
     menu:
       - {text: Logs, run: [onto, logs, "{{it.id}}"]}
       - {text: Kill, run: [onto, kill, "{{it.id}}"]}
-  - separator
   - {text: Quit, quit: true}
 ```
+
+[Jobs, with a submenu each](recipes/jobs.md) is the whole widget.
 
 ## Expressions
 
@@ -223,7 +218,7 @@ The supported subset is field selection and indexing, literals, `== != < <= >
 offending expression quoted. perch does not claim to implement CEL; it claims
 to reject what it has not implemented.
 
-Four edges the typing settles, none of which widen that list:
+Four things the typing settles:
 
 - An `int` compared against a `double` is refused rather than quietly widened.
 - Both arms of a `? :` must have the same type.

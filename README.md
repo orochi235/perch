@@ -76,8 +76,13 @@ installed.
 
 ## Docs
 
-[`docs/schema.md`](docs/schema.md) is the reference for `menubar.yaml`: every
-key, what a watch binds, and the CEL subset expressions may use.
+**[michaelbaker.tech/perch](https://michaelbaker.tech/perch/)** — the guide, the
+`menubar.yaml` reference, and six worked recipes. Every recipe shows the menu it
+builds in each state it can be in, drawn by compiling and running the Swift
+perch emits for it.
+
+[`docs/schema.md`](docs/schema.md) is that reference as one file: every key,
+what a watch binds, and the CEL subset expressions may use.
 
 [`docs/superpowers/specs/2026-09-05-perch-design.md`](docs/superpowers/specs/2026-09-05-perch-design.md)
 is the design — what the schema deliberately cannot say, and why the generator

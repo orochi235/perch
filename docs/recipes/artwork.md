@@ -14,7 +14,8 @@ app:
 
 watch:
   ci:
-    run: [gh, run, list, --limit, "1", --json, status,conclusion,displayTitle,url]
+    run: [gh, run, list, --limit, "1",
+          --json, "status,conclusion,displayTitle,url"]
     json: true
 
 status:
@@ -71,15 +72,10 @@ ci:
   err: "env: gh: No such file or directory"
 ```
 
-Put the PNGs in `menubar/Icons` beside the file and name one without its
-extension. Every `.png` there is copied into the bundle, and a build refuses a
-name that is not there — an app that installs with no image reads as the poller
-failing rather than as a missing file.
-
-Ship artwork at twice the size you want it drawn: it is scaled to the menu bar's
-height with its aspect kept. Where an icon has to read against both a light and
-a dark menu bar, add `<name>~dark.png` beside `<name>.png` and the app picks per
-appearance. These four are flat colors, so they need only one each.
+Put the four PNGs in `menubar/Icons` beside the file and name one without its
+extension. They are flat colors that read against a light or a dark menu bar,
+so each needs only one file; [Icon assets](../schema.md#icon-assets) covers what
+to do when one does not, and what size to draw at.
 
 This watch declares no `shape:`, which is why `ci.data[0]` is written with an
 index and compared to strings: `gh` returns a list, and a shape describes a
