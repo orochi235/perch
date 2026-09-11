@@ -3,10 +3,6 @@
 import AppKit
 import Foundation
 
-struct Results {
-    // no watches declared
-}
-
 final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var results = Results()
@@ -33,20 +29,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func refresh() {
         guard let button = statusItem.button else { return }
-        let icon = MenuIcon.symbol("circle")
-        let dim = false
-        let badge = ""
-        button.image = icon.image()
-        button.alphaValue = icon.alpha(on: button)
-        button.appearsDisabled = dim
-        button.title = badge.isEmpty ? "" : " " + badge
+        Draw.face(renderFace(results), on: button)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-        menu.addItem(ActionItem(title: "Quit") {
-            NSApp.terminate(nil)
-        })
+        Draw.menu(renderMenu(results), into: menu) { [weak self] in self?.poll() }
     }
 }
 

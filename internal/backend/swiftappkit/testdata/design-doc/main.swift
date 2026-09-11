@@ -3,18 +3,6 @@
 import AppKit
 import Foundation
 
-struct FleetResult {
-    var ok = false
-    var code = -1
-    var out = ""
-    var err = ""
-    var data: FleetData = FleetData()
-}
-
-struct Results {
-    var fleet = FleetResult()
-}
-
 final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var results = Results()
@@ -42,13 +30,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            var r = FleetResult()
-            let o = Watcher.run(["onto", "top", "--once", "--json"])
-            r.ok = o.ok
-            r.code = o.code
-            r.out = o.out
-            r.err = o.err
-            r.data = (try? JSONDecoder().decode(FleetData.self, from: Data(o.out.utf8))) ?? FleetData()
+            let r = FleetResult(Watcher.run(["onto", "top", "--once", "--json"]))
             sync.async {
                 next.fleet = r
                 group.leave()
@@ -65,48 +47,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func refresh() {
         guard let button = statusItem.button else { return }
-        var icon = MenuIcon.symbol("rectangle.3.group")
-        var dim = false
-        var badge = ""
-        if !(self.results.fleet.ok) {
-            icon = MenuIcon.symbol("exclamationmark.triangle")
-        } else if (self.results.fleet.data.jobs.count == 0) {
-            dim = true
-        } else {
-            badge = String(self.results.fleet.data.jobs.count)
-        }
-        button.image = icon.image()
-        button.alphaValue = icon.alpha(on: button)
-        button.appearsDisabled = dim
-        button.title = badge.isEmpty ? "" : " " + badge
+        Draw.face(renderFace(results), on: button)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-        menu.addItem(NSMenuItem(title: "\(String(self.results.fleet.data.nodes.count)) nodes · \(String(self.results.fleet.data.jobs.count)) running", action: nil, keyEquivalent: ""))
-        menu.addItem(NSMenuItem.separator())
-        for it1 in self.results.fleet.data.jobs {
-            let item2 = NSMenuItem(title: "\(it1.node) — \(it1.cmd)", action: nil, keyEquivalent: "")
-            let sub3 = NSMenu()
-            sub3.addItem(ActionItem(title: "Logs") { [weak self] in
-                guard let self else { return }
-                Act.run(["onto", "logs", "\(it1.id)"]) { self.poll() }
-            })
-            sub3.addItem(ActionItem(title: "Prune") { [weak self] in
-                guard let self else { return }
-                Act.run(["onto", "prune", "\(it1.id)"]) { self.poll() }
-            })
-            sub3.addItem(ActionItem(title: "Kill") { [weak self] in
-                guard let self else { return }
-                Act.run(["onto", "kill", "\(it1.id)"]) { self.poll() }
-            })
-            item2.submenu = sub3
-            menu.addItem(item2)
-        }
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(ActionItem(title: "Quit") {
-            NSApp.terminate(nil)
-        })
+        Draw.menu(renderMenu(results), into: menu) { [weak self] in self?.poll() }
     }
 }
 

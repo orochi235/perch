@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/orochi235/perch/internal/backend"
-	"github.com/orochi235/perch/internal/celswift"
 	"github.com/orochi235/perch/internal/spec"
 )
 
@@ -25,18 +24,23 @@ func (*Backend) Name() string { return "swift-appkit" }
 
 // Emit renders the whole generated directory. Nothing outside it is written.
 func (*Backend) Emit(s *spec.Spec) ([]backend.File, error) {
-	files := []backend.File{{Name: "Runtime.swift", Body: runtimeSwift}}
+	return emitFiles(s, []backend.File{{Name: "Runtime.swift", Body: runtimeSwift}}, emitMain)
+}
 
+// emitFiles renders the fixed files, the shapes, Render.swift, and whichever
+// main goes on top of them: the app's, or the preview driver's.
+func emitFiles(s *spec.Spec, fixed []backend.File, main func(*spec.Spec, structNames) string) ([]backend.File, error) {
+	files := fixed
 	n := nameStructs(s)
 	if shapes := emitShapes(s, n); shapes != "" {
 		files = append(files, backend.File{Name: "Shapes.swift", Body: []byte(shapes)})
 	}
-	main, err := emitMain(s, n)
+	render, err := emitRender(s, n)
 	if err != nil {
 		return nil, err
 	}
-	files = append(files, backend.File{Name: "main.swift", Body: []byte(main)})
-	return files, nil
+	files = append(files, backend.File{Name: "Render.swift", Body: []byte(render)})
+	return append(files, backend.File{Name: "main.swift", Body: []byte(main(s, n))}), nil
 }
 
 // buf writes indented Swift.
@@ -94,10 +98,4 @@ func exported(name string) string {
 		sb.WriteString(strings.ToUpper(p[:1]) + p[1:])
 	}
 	return sb.String()
-}
-
-// env is the lowering environment for emitted code: watches are reached through
-// the results record, so an expression never needs a local the code might not use.
-func env(s *spec.Spec) *celswift.Env {
-	return celswift.NewEnv(s.Watches).Prefixed("self.results.")
 }

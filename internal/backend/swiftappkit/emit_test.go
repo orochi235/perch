@@ -32,7 +32,7 @@ menu: [{text: Quit, quit: true}]
 
 func TestEmitProducesRuntimeAndApp(t *testing.T) {
 	files := emit(t, minimal)
-	for _, want := range []string{"Runtime.swift", "main.swift"} {
+	for _, want := range []string{"Runtime.swift", "Render.swift", "main.swift"} {
 		if _, ok := files[want]; !ok {
 			t.Errorf("no %s emitted; got %v", want, keys(files))
 		}
@@ -53,12 +53,15 @@ func TestEmitEveryFileSaysRegeneratingOverwrites(t *testing.T) {
 	}
 }
 
+// The icon is decided in Render.swift and the cadence is the app's, so the two
+// halves of the split each carry one.
 func TestEmitCarriesAppIdentityAndInterval(t *testing.T) {
-	app := emit(t, minimal)["main.swift"]
-	for _, want := range []string{`"circle"`, "3.0"} {
-		if !strings.Contains(app, want) {
-			t.Errorf("main.swift missing %s", want)
-		}
+	files := emit(t, minimal)
+	if !strings.Contains(files["Render.swift"], `"circle"`) {
+		t.Error("Render.swift does not name the app's icon")
+	}
+	if !strings.Contains(files["main.swift"], "3.0") {
+		t.Error("main.swift does not carry the poll interval")
 	}
 }
 

@@ -3,30 +3,6 @@
 import AppKit
 import Foundation
 
-struct ServerResult {
-    var ok = false
-    var status = 0
-    var out = ""
-    var data: JSONValue = JSONValue.null
-}
-
-struct AgentResult {
-    var ok = false
-    var code = -1
-    var out = ""
-    var err = ""
-}
-
-struct PlistResult {
-    var ok = false
-}
-
-struct Results {
-    var server = ServerResult()
-    var agent = AgentResult()
-    var plist = PlistResult()
-}
-
 final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var results = Results()
@@ -54,12 +30,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            var r = ServerResult()
-            let o = Watcher.http("http://127.0.0.1:8765/api/health")
-            r.ok = o.ok
-            r.status = o.status
-            r.out = o.out
-            r.data = JSONValue.parse(o.out)
+            let r = ServerResult(Watcher.http("http://127.0.0.1:8765/api/health"))
             sync.async {
                 next.server = r
                 group.leave()
@@ -68,12 +39,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            var r = AgentResult()
-            let o = Watcher.run(["launchctl", "print", "gui/501/dev.brainhouse"])
-            r.ok = o.ok
-            r.code = o.code
-            r.out = o.out
-            r.err = o.err
+            let r = AgentResult(Watcher.run(["launchctl", "print", "gui/501/dev.brainhouse"]))
             sync.async {
                 next.agent = r
                 group.leave()
@@ -82,8 +48,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            var r = PlistResult()
-            r.ok = Watcher.exists("~/Library/LaunchAgents/dev.brainhouse.plist")
+            let r = PlistResult(exists: Watcher.exists("~/Library/LaunchAgents/dev.brainhouse.plist"))
             sync.async {
                 next.plist = r
                 group.leave()
@@ -100,49 +65,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func refresh() {
         guard let button = statusItem.button else { return }
-        var icon = MenuIcon.symbol("brain")
-        var dim = false
-        var badge = ""
-        if !(self.results.plist.ok) {
-            icon = MenuIcon.symbol("circle.dashed")
-        } else if !(self.results.server.ok) {
-            icon = MenuIcon.asset("alarm")
-            dim = true
-        } else {
-            badge = String(self.results.server.data["sessions"].size)
-        }
-        button.image = icon.image()
-        button.alphaValue = icon.alpha(on: button)
-        button.appearsDisabled = dim
-        button.title = badge.isEmpty ? "" : " " + badge
+        Draw.face(renderFace(results), on: button)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-        if self.results.server.ok {
-            menu.addItem(NSMenuItem(title: "\(String(self.results.server.data["sessions"].size)) sessions", action: nil, keyEquivalent: ""))
-        }
-        if !(self.results.server.ok) {
-            menu.addItem(NSMenuItem(title: "not running", action: nil, keyEquivalent: ""))
-        }
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(ActionItem(title: "Open") {
-            Act.open("http://127.0.0.1:8765")
-        })
-        if self.results.agent.ok {
-            menu.addItem(ActionItem(title: "Restart") { [weak self] in
-                guard let self else { return }
-                Act.run(["launchctl", "kickstart", "-k", "gui/501/dev.brainhouse"]) { self.poll() }
-            })
-        }
-        menu.addItem(ActionItem(title: "Ping") { [weak self] in
-            guard let self else { return }
-            Act.post("http://127.0.0.1:8765/api/ping", body: "{\"source\":\"menubar\"}") { self.poll() }
-        })
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(ActionItem(title: "Quit") {
-            NSApp.terminate(nil)
-        })
+        Draw.menu(renderMenu(results), into: menu) { [weak self] in self?.poll() }
     }
 }
 
