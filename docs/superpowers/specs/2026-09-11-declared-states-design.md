@@ -1,24 +1,24 @@
 # Declared states
 
-**Status: designed, not built.** Nothing in this document exists in the repo
-yet.
+**Status: built.** `state:` parses, validates, lowers and emits; the recipes
+use it. This is the design, kept for whoever changes it next.
 
-A widget is a state machine, and `menubar.yaml` has no way to say so. This
+A widget is a state machine, and `menubar.yaml` had no way to say so. This
 adds one: a `state:` block naming the states in order, each becoming a boolean
-any expression in the document can use. It is for whoever implements it.
+any expression can use.
 
 ## Why
 
 Both apps perch was written to replace carry a state enum — `ServerState` in
-one, `ServiceState` in the other — and the schema cannot express the single
-abstraction they independently arrived at. What it offers instead is a `when:`
-on every item, so the state machine survives only as fragments in the author's
-head.
+one, `ServiceState` in the other — and the schema could not express the single
+abstraction they independently arrived at. What it offered instead was a
+`when:` on every item, so the state machine survived only as fragments in the
+author's head.
 
-That has a cost the recipes show. `docs/recipes/launchagent.md` writes
+That had a cost the recipes showed. `docs/recipes/launchagent.md` wrote
 `!agent.ok && plist.ok` twice, once as an item's label guard and once as the
-guard on Start. Nothing checks that the two agree, or that the three labels it
-offers cover every case, or that no two of them can show at once.
+guard on Start. Nothing checked that the two agreed, or that the three labels
+it offered covered every case, or that no two of them could show at once.
 
 ## The block
 
@@ -56,17 +56,21 @@ status:
   - {when: stopped,     dim: true}
 
 menu:
-  - {text: Not installed, when: uninstalled}
-  - {text: Not loaded,    when: stopped}
-  - {text: Running,       when: running}
+  - {text: Not installed,   when: uninstalled}
   - {text: Needs attention, when: "uninstalled || stopped"}
 ```
 
-There is no separate `state:` field: it would be a second way to say `when:`,
-buying only a check that CEL already performs on an undeclared name.
+There is no separate `state:` field on an item: it would be a second way to
+say `when:`, buying only a check that CEL already performs on an undeclared
+name.
 
-A state's own condition may name any state declared before it. Naming a later
-one, or itself, is refused.
+A condition names watches and nothing else. Naming an earlier state is
+refused, not allowed: the ordering has already excluded every earlier state,
+so such a reference could only ever be a constant, and a guard that reads like
+a guard while contributing nothing is the failure this schema exists to
+prevent. Naming a later state is the same refusal, and needs no cycle check of
+its own — the backend declares states one at a time, so a later name is simply
+not bound yet.
 
 ## Where it runs
 
@@ -75,17 +79,18 @@ be done correctly: `uninstalled` inside a string literal, or as a shape's
 field in `x.uninstalled`, must not be rewritten, and a pass working on text
 cannot tell those apart from a reference.
 
-Instead states reach the backend intact, as a `States []State` on `Spec`, and
-`celswift.Env` declares each one as a bool. The type-checker then resolves a
-reference the same way it resolves a watch, and a misspelling comes back
-through the diagnostic that already exists for an undeclared identifier.
+Instead states reach the backend intact, as `States []State` on `Spec`, and
+`celswift.Env` declares each as a bool. The type-checker resolves a reference
+the same way it resolves a watch, and a misspelling comes back through the
+diagnostic that already exists for an undeclared identifier.
 
-`Env` today hardcodes the single binding `it`, added by `WithEach`. It gains a
-way to declare a named boolean bound to a Swift expression, which is what both
-`it` and a state need.
+`Env` had one binding it minted itself, `it` from `WithEach`. It gained
+`WithState`, and `binding` gained a `local` flag so `Prefixed` can tell a loop
+variable — which is already a name in scope — from everything it has to reach
+through the results record.
 
 State *n* resolves to every earlier state negated, and its own condition
-asserted — so `when: stopped` and "the machine is in state stopped" are the
+asserted — so `when: stopped` and "the widget is in state stopped" are the
 same claim, which they would not be if a state meant its raw condition:
 
     state 1     (c₁)
@@ -94,22 +99,28 @@ same claim, which they would not be if a state meant its raw condition:
     fallback    !state1 && !state2 && !state3
 
 Each own condition is parenthesized. Without that, a state whose condition is
-`a && b` breaks apart under the leading negations, which parses, type-checks,
-emits, and is wrong — the silent-wrong-answer failure this schema exists to
-prevent.
+`a || b` comes apart under the leading negations, and still compiles — the
+silent-wrong-answer failure this schema exists to prevent. The lowering
+brackets its own output as well, so the emitted Swift carries a redundant
+layer; relying on that instead would be an unwritten contract between two
+packages.
 
-The emitter writes these in order as `let` bindings at the top of `face(_:)`
-and `menu(_:)`, so each state is computed once per poll and every reference is
-a name:
+They are emitted as properties of `Results` rather than as locals in the two
+render functions:
 
 ```swift
-let uninstalled = !(plist.ok)
-let stopped     = !uninstalled && !(agent.ok)
-let running     = !uninstalled && !stopped
+extension Results {
+    var state_uninstalled: Bool { (!(plist.ok)) }
+    var state_stopped: Bool { !state_uninstalled && (!(agent.ok)) }
+    var state_running: Bool { !state_uninstalled && !state_stopped }
+}
 ```
 
-That is the enum both original apps wrote by hand, and here it falls out of
-the lowering rather than being an optimization on top of it.
+Locals would read better and compute once per poll, but a state that only the
+menu names would then be an unused binding in `renderFace`, and the typecheck
+test fails on a warning. A property a function never reads is simply unread.
+The cost is that a state named twice in one function is computed twice, which
+is what every `when:` already does.
 
 ## Validation
 
@@ -118,54 +129,47 @@ expressions are opaque strings until the backend:
 
 - The fallback is required, and must be last. An entry after it is refused
   rather than left unreachable, matching the existing rule for `status:`.
-- Names are unique, valid, and do not take a watch's name.
+- Names are unique, valid, not `it`, and do not take a watch's name.
 
-The forward reference needs no check of its own. The backend resolves states
-in order and declares each in the env as it goes, so a condition naming a
-later state finds nothing declared and fails as an undeclared identifier —
-with the position and the message that error already carries.
+Everything about what a condition names is the backend's, and falls out of
+declaring states in order against an environment holding only the watches.
 
 A declared state nothing references is allowed. The typo it might indicate is
 already caught at the reference, by CEL.
 
-## What has to change
+## What changed
 
 | File | Change |
 |---|---|
-| `internal/spec/state.go` | new: the raw struct, the parse, the checks above |
-| `internal/spec/spec.go` | `States` on `Spec`; parse the block |
-| `internal/celswift/env.go` | declare a named bool bound to a Swift expression |
-| `internal/backend/swiftappkit/render.go` | resolve each state, emit the `let` block, extend the env |
+| `internal/spec/state.go` | new: `State`, `parseStates`, `validateStates` |
+| `internal/spec/spec.go` | `States` on `Spec`, `state` on `rawSpec`, the parse call |
+| `internal/spec/validate.go` | call `validateStates` |
+| `internal/celswift/env.go` | `WithState`, and `local` so `Prefixed` skips `it` |
+| `internal/backend/swiftappkit/render.go` | `emitStates`, `stateProp`, states in `renderEnv` |
 | `internal/schema/schema.go` | the `state` block |
-| `internal/schema/drift_test.go` | a `sections` entry for the new struct |
-| `docs/schema.md` | a `## state` section |
-| `internal/site/nav.go` | that section's page — the site build fails without it |
+| `docs/schema.md`, `internal/site/nav.go` | a `## state` section and its page |
+| `docs/recipes/launchagent.md` | rewritten on states |
 
-The block decodes through its own tagged raw struct rather than being read off
-`yaml.Node` by hand: that is what keeps `drift_test` able to see its keys, and
-what gets it unknown-key rejection.
-
-Nothing here needs a new command. The resolved conditions are visible in the
-emitted Swift, which is committed.
+`drift_test` needed no new `sections` entry. Its map is per raw struct, and a
+state entry's key is a name the author chose, so the block has no fixed key
+set — the same hole `shape` sits in. Adding `state` to `rawSpec` did mean
+adding it to the schema's top-level properties, which is the drift that map
+does catch.
 
 ## Testing
 
-- Golden pairs in `swiftappkit`: a spec with states in, the `let` block and
-  the expressions referencing it out. This is where the parenthesization and
-  the ordering are legible, and the only place a wrong resolution shows.
-- `swiftc -typecheck` over that golden, as every golden already gets.
-- Table tests in `spec` for each refusal: missing fallback, fallback not last,
-  duplicate name, collision with a watch.
-- A `celswift` case for a condition naming a later state, asserting the
-  undeclared-identifier diagnostic rather than silence.
-- One `celswift` case per reference form — a bare state, a state under `!`, a
-  state in `||`, and a state name appearing inside a string literal, which
-  must survive untouched.
+- `internal/spec/state_test.go`: the parse, and a table of every refusal.
+- `internal/backend/swiftappkit/state_test.go`: a condition naming another
+  state in either direction, the shape of the emitted extension, and the
+  parenthesization.
+- A `states` golden, carried through `swiftc -typecheck` like every other. It
+  reads a state from both render functions, from inside a larger expression,
+  and from inside a string literal, where the name is text and stays text.
 - `FuzzParse` covers the new block without changes.
 
 ## Then
 
-`launchagent:` and `control:`, designed in conversation on 2026-09-11 and not
-written down, guard their generated items with a state rather than inventing a
-condition. That is why they wait: the sugar reads differently once states
-exist, and designing it twice is the waste.
+`launchagent:` and `control:` — sugar expanding to the watch and the three
+guarded items — were designed in conversation on 2026-09-11 and are not built.
+They guard on a state rather than inventing a condition, which is why they
+waited.
