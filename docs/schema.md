@@ -327,6 +327,38 @@ Ejecting is moving a file across that line and deleting the YAML that made it.
 
 Generated Swift is committed, so the repo builds without perch installed.
 
+### Hooking the app from Sources/
+
+Everything in both directories compiles into one binary, so a hand-written file
+can reach the emitted app. What it reaches is `Controller`, which declares
+`NSApplicationDelegate` and implements none of its lifecycle methods — so an
+extension supplies the witness and AppKit calls it:
+
+```swift
+// menubar/Sources/Alerts.swift
+import AppKit
+
+extension Controller {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // your own timers, observers, notification center
+    }
+}
+```
+
+`applicationWillFinishLaunching`, `applicationDidFinishLaunching` and
+`applicationWillTerminate` are reserved for you. perch will not start
+implementing one: doing so would shadow yours with no error and no warning —
+your file would still compile and simply stop running — so a test refuses it.
+
+This is how a repo keeps behavior the schema deliberately refuses. Notification
+delivery is the case it exists for: banners fire on a transition rather than on
+a condition holding, and the cursor that makes them fire once is state no
+`when:` can name.
+
+The status item, the menu and the polling stay perch's. An extension that
+redraws either is fighting a menu rebuilt from the last poll every time it
+opens.
+
 ## Icon assets
 
 An SF Symbol is drawn as a template: macOS tints it for the menu bar's
