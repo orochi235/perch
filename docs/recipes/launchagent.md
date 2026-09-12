@@ -36,9 +36,15 @@ menu:
   - text: Not installed
     when: uninstalled
   - separator
-  - {text: Start, when: stopped, agent: worker.start}
-  - {text: Stop, when: "running || idle", agent: worker.stop}
-  - {text: Restart, when: "!uninstalled", agent: worker.restart}
+  - text: Start
+    when: stopped
+    agent: worker.start
+  - text: Stop
+    when: "running || idle"
+    agent: worker.stop
+  - text: Restart
+    when: "!uninstalled"
+    agent: worker.restart
   - separator
   - {text: Quit, quit: true}
 ```
