@@ -21,17 +21,67 @@ func emitRender(s *spec.Spec, n structNames) (string, error) {
 
 	emitResultTypes(b, s, n)
 	emitResultInits(b, s, n)
+	if err := emitStates(b, s); err != nil {
+		return "", err
+	}
 	if err := emitFace(b, s, e); err != nil {
 		return "", err
 	}
 	return emitMenu(b, s, e)
 }
 
-// renderEnv is the lowering environment for Render.swift: watches are reached
-// through the results the two functions take.
+// renderEnv is the lowering environment for Render.swift: watches and states
+// are reached through the results the two functions take.
 func renderEnv(s *spec.Spec) *celswift.Env {
-	return celswift.NewEnv(s.Watches).Prefixed("results.")
+	e := celswift.NewEnv(s.Watches)
+	for _, st := range s.States {
+		e = e.WithState(st.Name, stateProp(st.Name))
+	}
+	return e.Prefixed("results.")
 }
+
+// emitStates writes each state as a property of Results. A condition is
+// lowered against the watches alone: the ordering already excludes every
+// earlier state, so naming one could only ever be a constant, and a guard that
+// contributes nothing is worse than one refused. They are properties rather
+// than locals because a state a given function never reads is then simply
+// unread, instead of an unused binding the compiler warns about.
+func emitStates(b *buf, s *spec.Spec) error {
+	if len(s.States) == 0 {
+		return nil
+	}
+	e := celswift.NewEnv(s.Watches)
+	b.line("extension Results {")
+	b.in()
+	for i, st := range s.States {
+		parts := make([]string, 0, i+1)
+		for _, earlier := range s.States[:i] {
+			parts = append(parts, "!"+stateProp(earlier.Name))
+		}
+		if st.Cond == "" {
+			if len(parts) == 0 {
+				parts = append(parts, "true")
+			}
+		} else {
+			cond, err := e.LowerCondition(st.Cond)
+			if err != nil {
+				return fmt.Errorf("state[%d].%s: %w", i, st.Name, err)
+			}
+			// Parenthesized: a condition of a && b would otherwise come apart
+			// under the leading negations, and still compile.
+			parts = append(parts, "("+cond+")")
+		}
+		b.line("var %s: Bool { %s }", stateProp(st.Name), strings.Join(parts, " && "))
+	}
+	b.out()
+	b.line("}")
+	b.line("")
+	return nil
+}
+
+// stateProp keeps a state's property out of the way of a watch's, and of the
+// names the emitter mints for itself.
+func stateProp(name string) string { return "state_" + name }
 
 func emitResultTypes(b *buf, s *spec.Spec, n structNames) {
 	for _, w := range s.Watches {

@@ -18,28 +18,33 @@ watch:
   plist:
     exists: ~/Library/LaunchAgents/dev.example.worker.plist
 
+state:
+  - uninstalled: "!plist.ok"
+  - stopped: "!agent.ok"
+  - running:
+
 status:
-  - when: "!plist.ok"
+  - when: uninstalled
     icon: exclamationmark.triangle
-  - when: "!agent.ok"
+  - when: stopped
     dim: true
 
 menu:
   - text: Running
-    when: "agent.ok"
+    when: running
   - text: Not loaded
-    when: "!agent.ok && plist.ok"
+    when: stopped
   - text: Not installed
-    when: "!plist.ok"
+    when: uninstalled
   - separator
   - text: Start
-    when: "!agent.ok && plist.ok"
+    when: stopped
     run: [launchctl, bootstrap, gui/501, ~/Library/LaunchAgents/dev.example.worker.plist]
   - text: Stop
-    when: "agent.ok"
+    when: running
     run: [launchctl, bootout, gui/501/dev.example.worker]
   - text: Restart
-    when: "agent.ok"
+    when: running
     run: [launchctl, kickstart, -k, gui/501/dev.example.worker]
   - separator
   - {text: Quit, quit: true}
@@ -68,9 +73,14 @@ plist: false
 and `id -u` prints yours.
 
 Both watches say only whether they worked. `agent` runs `launchctl print`, which
-fails when the service is not loaded, so `agent.ok` is "loaded"; `plist` tests
-for the file, so `plist.ok` is "installed". Neither needs `json:` — nothing here
-reads what they printed.
+fails when the service is not loaded; `plist` tests for the file. Neither needs
+`json:` — nothing here reads what they printed.
+
+The [`state:`](../schema.md#state) block is what turns those two flags into the
+three cases the menu actually offers. `stopped` is written `!agent.ok`, but it
+means `!uninstalled && !agent.ok`, because a state excludes the ones before it
+— so Start is never offered for an agent that was never installed, and the
+guard says that without anyone having to remember it.
 
 Every action re-polls as soon as it finishes, which is what makes Start feel
 like it did something: the menu that reopens says Running.

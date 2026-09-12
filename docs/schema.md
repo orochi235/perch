@@ -112,6 +112,56 @@ An inferred shape is a starting point, not an answer: it describes only the
 samples it saw, and a healthy sample omits every field that appears only when
 something is wrong — disproportionately the ones a widget branches on.
 
+## state
+
+An ordered list naming the conditions the widget can be in. The first whose
+condition holds wins, and the last takes no condition at all — so exactly one
+state holds at every poll.
+
+Each name is then a boolean any expression can use — every `when:`, every
+`badge:`, every `{{ }}` hole.
+
+```yaml
+app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
+
+watch:
+  agent:
+    run: [launchctl, print, gui/501/dev.example.worker]
+  plist:
+    exists: ~/Library/LaunchAgents/dev.example.worker.plist
+
+state:
+  - uninstalled: "!plist.ok"
+  - stopped: "!agent.ok"
+  - running:
+
+status:
+  - {when: uninstalled, icon: exclamationmark.triangle}
+  - {when: stopped,     dim: true}
+
+menu:
+  - {text: Not installed, when: uninstalled}
+  - {text: Not loaded,    when: stopped}
+  - {text: Running,       when: running}
+  - {text: Quit, quit: true}
+```
+
+A state means "the widget is in this state", not "this condition holds" — the
+two differ, because a state also excludes every state declared before it.
+`stopped` above is `!uninstalled && !agent.ok`, so the ordering is what says an
+agent that is not installed is not also stopped.
+
+The block is optional, and a name follows the rule a watch name follows:
+letters, digits and underscores, starting with a letter or underscore, and not
+`it`. States and watches are named the same way in an expression, so a state
+may not take a watch's name.
+
+A condition names watches and nothing else. Naming another state is refused
+rather than resolved: a state declared earlier is already excluded by the
+ordering, so naming one could only ever be a constant, and a guard that looks
+like a guard while contributing nothing is the failure this schema exists to
+prevent.
+
 ## status
 
 A list of rules deciding how the status item looks. **The first rule whose

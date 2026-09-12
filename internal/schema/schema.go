@@ -46,6 +46,17 @@ const body = `{
         }
       }
     },
+    "state": {
+      "type": "array",
+      "description": "Named states, first match wins. The last takes no condition and is the fallback, so exactly one state always holds.",
+      "items": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": {"type": ["string", "null"], "description": "CEL condition reaching this state; omit on the last one."},
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it"]}}
+      }
+    },
     "status": {
       "type": "array",
       "description": "First matching rule wins.",

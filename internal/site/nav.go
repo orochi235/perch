@@ -40,6 +40,7 @@ func nav() []*Section {
 			{Title: "The file", URL: "menubar/", Source: "docs/schema.md", Schema: introSection},
 			{Title: "app", URL: "menubar/app/", Source: "docs/schema.md", Schema: "app"},
 			{Title: "watch", URL: "menubar/watch/", Source: "docs/schema.md", Schema: "watch"},
+			{Title: "state", URL: "menubar/state/", Source: "docs/schema.md", Schema: "state"},
 			{Title: "status", URL: "menubar/status/", Source: "docs/schema.md", Schema: "status"},
 			{Title: "menu", URL: "menubar/menu/", Source: "docs/schema.md", Schema: "menu"},
 			{Title: "Expressions", URL: "menubar/expressions/", Source: "docs/schema.md", Schema: "expressions"},

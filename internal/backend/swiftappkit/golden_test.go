@@ -19,6 +19,7 @@ func TestGolden(t *testing.T) {
 		"minimal":       minimal,
 		"design-doc":    designDocExample,
 		"every-feature": everyFeature,
+		"states":        states,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

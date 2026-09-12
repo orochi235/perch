@@ -15,6 +15,7 @@ type binding struct {
 	name  string
 	typ   *spec.Type
 	swift string // how the binding is spelled in generated Swift
+	local bool   // a name the emitted function declares, not a field of the results
 }
 
 // NewEnv binds each watch to the fields its kind produces.
@@ -30,7 +31,21 @@ func NewEnv(watches []spec.Watch) *Env {
 // each: item.
 func (e *Env) WithEach(elem *spec.Type, swiftName string) *Env {
 	out := &Env{vars: append([]binding(nil), e.vars...)}
-	out.vars = append(out.vars, binding{name: "it", typ: elem, swift: swiftName})
+	out.vars = append(out.vars, binding{name: "it", typ: elem, swift: swiftName, local: true})
+	return out
+}
+
+// WithState returns a copy of e with name bound to a boolean the emitted code
+// spells swiftName. Declaring states one at a time, in order, is what makes a
+// condition naming a later state fail as an undeclared name rather than
+// needing a cycle check of its own.
+func (e *Env) WithState(name, swiftName string) *Env {
+	out := &Env{vars: append([]binding(nil), e.vars...)}
+	out.vars = append(out.vars, binding{
+		name:  name,
+		typ:   &spec.Type{Kind: spec.TypeBool},
+		swift: swiftName,
+	})
 	return out
 }
 
@@ -96,11 +111,12 @@ func dataField(w spec.Watch) []spec.Field {
 
 // Prefixed returns a copy of e whose watch bindings are spelled with prefix in
 // generated Swift, so expressions reach them through the results record rather
-// than through locals the emitted code might never use.
+// than through locals the emitted code might never use. `it` is a loop
+// variable in scope already, so it is left alone.
 func (e *Env) Prefixed(prefix string) *Env {
 	out := &Env{vars: append([]binding(nil), e.vars...)}
 	for i := range out.vars {
-		if out.vars[i].name != "it" {
+		if !out.vars[i].local {
 			out.vars[i].swift = prefix + out.vars[i].swift
 		}
 	}

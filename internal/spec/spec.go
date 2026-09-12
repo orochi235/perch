@@ -13,6 +13,7 @@ import (
 type Spec struct {
 	App     App
 	Watches []Watch
+	States  []State
 	Status  []StatusRule
 	Menu    []Item
 }
@@ -28,6 +29,7 @@ type App struct {
 type rawSpec struct {
 	App    rawApp    `yaml:"app"`
 	Watch  yaml.Node `yaml:"watch"`
+	State  yaml.Node `yaml:"state"`
 	Status yaml.Node `yaml:"status"`
 	Menu   yaml.Node `yaml:"menu"`
 }
@@ -78,6 +80,11 @@ func Parse(src []byte) (*Spec, error) {
 		return nil, err
 	}
 	s.Watches = ws
+	states, err := parseStates(&raw.State)
+	if err != nil {
+		return nil, err
+	}
+	s.States = states
 	st, err := parseStatus(&raw.Status)
 	if err != nil {
 		return nil, err

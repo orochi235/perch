@@ -74,6 +74,33 @@ menu:
   - {text: Quit, quit: true}
 `
 
+// states reaches a state from both rendered functions, from inside a larger
+// expression, and from inside a string literal — where the name is text and
+// has to stay text. `running` is read only by the menu, which is what would
+// warn if states were emitted as locals rather than properties.
+const states = `
+app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
+watch:
+  agent:
+    run: [launchctl, print, gui/501/dev.example.worker]
+  plist:
+    exists: ~/Library/LaunchAgents/dev.example.worker.plist
+state:
+  - uninstalled: "!plist.ok"
+  - stopped: "!agent.ok"
+  - running:
+status:
+  - when: uninstalled
+    icon: exclamationmark.triangle
+  - when: stopped
+    dim: true
+menu:
+  - {text: "the agent is running", when: running}
+  - {text: "needs attention", when: "uninstalled || stopped"}
+  - {text: "uninstalled is a word here, not a state", when: "agent.out == \"uninstalled\""}
+  - {text: Quit, quit: true}
+`
+
 // watchInAction reaches a watch from inside an action, which the two examples
 // above never do: they only ever interpolate the each: element.
 const watchInAction = `
@@ -104,6 +131,7 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		"collidingNames": collidingNames,
 		"watchInAction":  watchInAction,
 		"swiftKeywords":  swiftKeywordShape,
+		"states":         states,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))
