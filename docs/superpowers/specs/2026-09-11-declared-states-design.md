@@ -4,8 +4,8 @@
 yet.
 
 A widget is a state machine, and `menubar.yaml` has no way to say so. This
-adds one: a `state:` block naming the states, and a `state:` field usable
-anywhere `when:` is. It is for whoever implements it.
+adds one: a `state:` block naming the states in order, each becoming a boolean
+any expression in the document can use. It is for whoever implements it.
 
 ## Why
 
@@ -41,101 +41,127 @@ model them as independent booleans.
 
 A state name follows the rule watch names follow — letters, digits and
 underscores, starting with a letter or underscore, not `it` and not a CEL
-keyword. States and watches share one namespace, so a state may not take a
-watch's name.
+keyword. States and watches are declared in the same CEL scope, so a state
+taking a watch's name would shadow it: the collision is refused rather than
+resolved.
 
 ## Using a state
 
-Anywhere `when:` is accepted, `state:` is accepted instead:
+A state is an ordinary boolean in every expression the document can write —
+every `when:`, every `badge:`, every `{{ }}` hole:
 
 ```yaml
 status:
-  - {state: uninstalled, icon: exclamationmark.triangle}
-  - {state: stopped,     dim: true}
+  - {when: uninstalled, icon: exclamationmark.triangle}
+  - {when: stopped,     dim: true}
 
 menu:
-  - {text: Not installed, state: uninstalled}
-  - {text: Not loaded,    state: stopped}
-  - {text: Running,       state: running}
+  - {text: Not installed, when: uninstalled}
+  - {text: Not loaded,    when: stopped}
+  - {text: Running,       when: running}
+  - {text: Needs attention, when: "uninstalled || stopped"}
 ```
 
-An item takes at most one of `when:` and `state:`.
+There is no separate `state:` field: it would be a second way to say `when:`,
+buying only a check that CEL already performs on an undeclared name.
 
-`state:` naming something undeclared is a build error listing the states that
-exist. That is the part a raw expression cannot offer: a misspelled `when:`
-is an error only if it happens to break typing, while a misspelled state is
-always one.
+A state's own condition may name any state declared before it. Naming a later
+one, or itself, is refused.
 
 ## Where it runs
 
-A desugaring pass in `internal/spec`, after `resolveAliases` and before
-`decodeStrict`, rewriting the YAML node tree. `state:` fields are replaced by
-the `when:` they stand for and the `state:` block is removed, so nothing
-downstream — `Spec`, the CEL environment, `internal/backend/swiftappkit` —
-learns the concept exists. The expansion is then checked by exactly the rules
-that check hand-written YAML.
+Not a desugaring pass. Substituting a state's text into an expression cannot
+be done correctly: `uninstalled` inside a string literal, or as a shape's
+field in `x.uninstalled`, must not be rewritten, and a pass working on text
+cannot tell those apart from a reference.
 
-State *n* lowers to every earlier condition negated, and its own asserted:
+Instead states reach the backend intact, as a `States []State` on `Spec`, and
+`celswift.Env` declares each one as a bool. The type-checker then resolves a
+reference the same way it resolves a watch, and a misspelling comes back
+through the diagnostic that already exists for an undeclared identifier.
+
+`Env` today hardcodes the single binding `it`, added by `WithEach`. It gains a
+way to declare a named boolean bound to a Swift expression, which is what both
+`it` and a state need.
+
+State *n* resolves to every earlier state negated, and its own condition
+asserted — so `when: stopped` and "the machine is in state stopped" are the
+same claim, which they would not be if a state meant its raw condition:
 
     state 1     (c₁)
-    state 2     !(c₁) && (c₂)
-    state 3     !(c₁) && !(c₂) && (c₃)
-    fallback    !(c₁) && !(c₂) && !(c₃)
+    state 2     !state1 && (c₂)
+    state 3     !state1 && !state2 && (c₃)
+    fallback    !state1 && !state2 && !state3
 
-Every condition is parenthesized on substitution. Dropping the parentheses
-turns `!stopped` into `!!agent.ok && plist.ok`, which parses, type-checks,
+Each own condition is parenthesized. Without that, a state whose condition is
+`a && b` breaks apart under the leading negations, which parses, type-checks,
 emits, and is wrong — the silent-wrong-answer failure this schema exists to
 prevent.
 
-The repeated conditions this produces are the emitter's problem to collapse
-later: computing the state once into a Swift enum and switching on it is an
-optimization behind an unchanged schema, and is what the two original apps
-wrote by hand. It is not a prerequisite.
+The emitter writes these in order as `let` bindings at the top of `face(_:)`
+and `menu(_:)`, so each state is computed once per poll and every reference is
+a name:
+
+```swift
+let uninstalled = !(plist.ok)
+let stopped     = !uninstalled && !(agent.ok)
+let running     = !uninstalled && !stopped
+```
+
+That is the enum both original apps wrote by hand, and here it falls out of
+the lowering rather than being an optimization on top of it.
 
 ## Validation
 
-Beyond what the expanded YAML already gets:
+`spec` checks only what it can see without parsing an expression, since
+expressions are opaque strings until the backend:
 
 - The fallback is required, and must be last. An entry after it is refused
   rather than left unreachable, matching the existing rule for `status:`.
-- Names are unique, valid, and do not collide with a watch name.
-- Every `state:` names a declared state.
-- A declared state nothing references is allowed. The typo it might indicate
-  is already caught at the reference.
+- Names are unique, valid, and do not take a watch's name.
 
-## Seeing the expansion
+The forward reference needs no check of its own. The backend resolves states
+in order and declares each in the env as it goes, so a condition naming a
+later state finds nothing declared and fails as an undeclared identifier —
+with the position and the message that error already carries.
 
-`perch flat` reads the spec, expands every state, and prints the result
-without emitting. Reading the expansion is also how an author learns what to
-write by hand when the block does not fit. (`expand` says it more plainly;
-`flat` is shorter to type. Either name, not both.)
+A declared state nothing references is allowed. The typo it might indicate is
+already caught at the reference, by CEL.
 
 ## What has to change
 
 | File | Change |
 |---|---|
-| `internal/spec/state.go` | new: the raw struct, the pass, its checks |
-| `internal/spec/spec.go` | call the pass after `resolveAliases` |
-| `internal/spec/menu.go`, `status.go` | accept `state:`, refuse it beside `when:` |
-| `internal/schema/schema.go` | the `state` block and the `state` field |
+| `internal/spec/state.go` | new: the raw struct, the parse, the checks above |
+| `internal/spec/spec.go` | `States` on `Spec`; parse the block |
+| `internal/celswift/env.go` | declare a named bool bound to a Swift expression |
+| `internal/backend/swiftappkit/render.go` | resolve each state, emit the `let` block, extend the env |
+| `internal/schema/schema.go` | the `state` block |
 | `internal/schema/drift_test.go` | a `sections` entry for the new struct |
-| `cmd/perch/main.go` | `perch flat` |
 | `docs/schema.md` | a `## state` section |
 | `internal/site/nav.go` | that section's page — the site build fails without it |
 
-The sugar keys decode through their own tagged raw structs rather than being
-read off `yaml.Node` by hand. That is what keeps `drift_test` able to see them
-and what gets them unknown-key rejection.
+The block decodes through its own tagged raw struct rather than being read off
+`yaml.Node` by hand: that is what keeps `drift_test` able to see its keys, and
+what gets it unknown-key rejection.
+
+Nothing here needs a new command. The resolved conditions are visible in the
+emitted Swift, which is committed.
 
 ## Testing
 
-- Golden pairs, sugared YAML in and flat YAML out. This is the cheapest place
-  to catch a bad expansion, and the only place the parenthesization is legible.
-- One golden carried through to Swift, so an expansion that parses but emits
-  nothing sensible fails too.
-- Table tests for each refusal: missing fallback, fallback not last, duplicate
-  name, collision with a watch, `state:` beside `when:`, undeclared reference.
-- `FuzzParse` covers the new pass without changes.
+- Golden pairs in `swiftappkit`: a spec with states in, the `let` block and
+  the expressions referencing it out. This is where the parenthesization and
+  the ordering are legible, and the only place a wrong resolution shows.
+- `swiftc -typecheck` over that golden, as every golden already gets.
+- Table tests in `spec` for each refusal: missing fallback, fallback not last,
+  duplicate name, collision with a watch.
+- A `celswift` case for a condition naming a later state, asserting the
+  undeclared-identifier diagnostic rather than silence.
+- One `celswift` case per reference form — a bare state, a state under `!`, a
+  state in `||`, and a state name appearing inside a string literal, which
+  must survive untouched.
+- `FuzzParse` covers the new block without changes.
 
 ## Then
 
