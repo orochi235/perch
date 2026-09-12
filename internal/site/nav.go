@@ -53,7 +53,7 @@ func nav() []*Section {
 			{Title: "Is my server up?", URL: "recipes/server/", Source: "docs/recipes/server.md"},
 			{Title: "Homebrew updates", URL: "recipes/brew/", Source: "docs/recipes/brew.md"},
 			{Title: "Uncommitted changes", URL: "recipes/git/", Source: "docs/recipes/git.md"},
-			{Title: "Your own artwork", URL: "recipes/artwork/", Source: "docs/recipes/artwork.md"},
+			{Title: "Custom icons", URL: "recipes/artwork/", Source: "docs/recipes/artwork.md"},
 		}},
 	}
 }

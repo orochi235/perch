@@ -1,4 +1,4 @@
-# Your own artwork
+# Custom icons
 
 An SF Symbol is drawn as a template: macOS tints it, so it can say only what a
 shape can say. When the thing your widget reports is a color — pass, fail,
