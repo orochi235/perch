@@ -3,8 +3,9 @@
 The reference for the file perch reads. It is for someone writing one; for why
 the schema stops where it does, see [the design](superpowers/specs/2026-09-05-perch-design.md).
 
-A document has four top-level keys. Only `app` is required, though an app with
-no `menu` offers nothing but its icon.
+A document has five top-level keys — `app`, `watch`, `state`, `status` and
+`menu`. Only `app` is required, though an app with no `menu` offers nothing but
+its icon.
 
 ```yaml
 # yaml-language-server: $schema=./menubar.schema.json
@@ -38,43 +39,65 @@ menu item that silently never appears.
 
 ## app
 
-All four fields are required.
+All four keys are required.
 
-| Field | Takes |
+| Key | Takes |
 |---|---|
-| `name` | The bundle and executable name. One path component — it names a `.app` under `~/Applications`, so no `/` and no leading dot. |
-| `id` | The bundle identifier, e.g. `dev.example.menubar`. launchd takes it as a label and `install` as a plist filename: letters, digits, dots, dashes, underscores. |
-| `icon` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, shown when no `status:` rule overrides it. Or `{asset: <name>}` for your own artwork — see [Icon assets](#icon-assets). |
-| `interval` | How often every watch re-polls, as a Go duration — `5s`, `1m30s`. Must be positive. |
+| `name` | A string, one path component: no `/`, no leading dot, not `.` or `..`. It names the `.app` under `~/Applications` and the executable inside it. |
+| `id` | A string of letters, digits, dots, dashes and underscores, starting with a letter or digit — `dev.example.menubar`. launchd takes it as a label and `install` as a plist filename. |
+| `icon` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, or `{asset: <name>}` where `<name>` is letters, digits, dashes and underscores. Shown when no `status:` rule overrides it. See [Icon assets](#icon-assets). |
+| `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 
 ## watch
 
-A mapping of names to polled sources. They run concurrently, every `interval`,
-and their results are what every expression in the document reads.
+A mapping of names to polled sources. They run concurrently, and they all
+re-poll on the [`interval`](#app) the `app:` block sets. Their results are what
+every expression in the document reads.
 
 A name is letters, digits and underscores, starting with a letter or
 underscore. `it` is taken — `each:` binds its element to that — and so are
 CEL's own keywords.
 
-Each watch is exactly one of three kinds.
+Each watch is exactly one of four kinds. The kind is the key it carries:
 
-```
-run: [argv, …]     run a command; never a shell, so no pipes and no globbing
-http: <url>        GET a URL
-exists: <path>     test for a file
-```
+| Key | Takes |
+|---|---|
+| `run` | A list of at least one string: argv. Never a shell, so no pipes, no globbing, no `~`. |
+| `http` | A string: the URL to GET. |
+| `exists` | A string: a path to test for. A leading `~` is expanded. |
+| `launchagent` | A string: a launchd label, written like a bundle identifier — `dev.example.worker`. |
+
+Three more keys qualify a kind rather than choosing one:
+
+| Key | Takes | On |
+|---|---|---|
+| `json` | `true` or `false`. Decodes the output and binds `.data`. | `run`, `http` |
+| `shape` | What that output looks like — see [shape](#shape). Needs `json: true`. | `run`, `http` |
+| `plist` | A string: where the LaunchAgent file is. Defaults to `~/Library/LaunchAgents/<label>.plist`. | `launchagent` |
+
+`run:` is a list rather than one string because a `{{ }}` hole would otherwise
+decide how many arguments it becomes: splitting `onto kill {{it.id}}` on spaces
+turns an id of `j1 extra` into two arguments. As a list, `"{{it.id}}"` is one
+element whatever it holds.
 
 What a watch binds depends on its kind:
 
 | Kind | Binds |
 |---|---|
-| `run` | `.ok` (exit status 0), `.code`, `.out`, `.err` |
-| `http` | `.ok` (a 2xx), `.status`, `.out` |
+| `run` | `.ok` (exit status 0), `.code` (int), `.out`, `.err` |
+| `http` | `.ok` (a 2xx), `.status` (int), `.out` |
 | `exists` | `.ok` |
+| `launchagent` | `.installed`, `.loaded`, `.running` (bools), `.pid` (int), `.label`, `.plist`, `.domain`, `.target` |
 
-Adding `json: true` to a `run` or `http` watch decodes its output and binds
-`.data` as well. An `exists` watch binds only `.ok`, so `json:` on one is an
-error rather than a no-op.
+An `exists` watch binds only `.ok`, so `json:` on one is an error rather than a
+no-op.
+
+A `launchagent` watch binds no `.ok`, because there are two answers and they
+differ: `.loaded` is launchd holding the label, `.running` is the job having a
+process. A job that has run and exited is loaded and not running. `.pid` is `0`
+unless it is running. The last four are strings for `launchctl` calls perch does
+not write for you: `.plist` with `~` expanded, `.domain` as `gui/<your uid>`,
+and `.target` as `<domain>/<label>`.
 
 A watch that fails sets `.ok` false and leaves `.data` null. It never takes the
 app down, and the menu still opens.
@@ -118,6 +141,10 @@ An ordered list naming the conditions the widget can be in. The first whose
 condition holds wins, and the last takes no condition at all — so exactly one
 state holds at every poll.
 
+Each entry is a mapping of exactly one key: the state's name, and the condition
+that reaches it as a string. The last entry's value is nothing at all, which is
+what makes it the fallback.
+
 Each name is then a boolean any expression can use — every `when:`, every
 `badge:`, every `{{ }}` hole.
 
@@ -125,14 +152,12 @@ Each name is then a boolean any expression can use — every `when:`, every
 app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
 
 watch:
-  agent:
-    run: [launchctl, print, gui/501/dev.example.worker]
-  plist:
-    exists: ~/Library/LaunchAgents/dev.example.worker.plist
+  worker:
+    launchagent: dev.example.worker
 
 state:
-  - uninstalled: "!plist.ok"
-  - stopped: "!agent.ok"
+  - uninstalled: "!worker.installed"
+  - stopped: "!worker.loaded"
   - running:
 
 status:
@@ -148,8 +173,8 @@ menu:
 
 A state means "the widget is in this state", not "this condition holds" — the
 two differ, because a state also excludes every state declared before it.
-`stopped` above is `!uninstalled && !agent.ok`, so the ordering is what says an
-agent that is not installed is not also stopped.
+`stopped` above is `!uninstalled && !worker.loaded`, so the ordering is what
+says an agent that is not installed is not also stopped.
 
 The block is optional, and a name follows the rule a watch name follows:
 letters, digits and underscores, starting with a letter or underscore, and not
@@ -168,12 +193,12 @@ A list of rules deciding how the status item looks. **The first rule whose
 `when:` holds wins.** A rule with no `when:` always matches, so it has to be
 last; anything after it is refused rather than left unreachable.
 
-| Field | Effect |
+| Key | Takes |
 |---|---|
-| `when` | The condition. Omit it to match always. |
-| `icon` | An SF Symbol, or `{asset: <name>}`, replacing `app.icon`. |
-| `dim` | Draw the item dimmed. |
-| `badge` | An expression rendered as text beside the icon. |
+| `when` | A string: the condition. Omit it to match always. |
+| `icon` | An SF Symbol name, or `{asset: <name>}`. Replaces `app.icon`. |
+| `dim` | `true` or `false`. Draws the status item dimmed. |
+| `badge` | A string: an expression, rendered as text beside the icon. |
 
 One rule may set several of them — an `icon:` and `dim:` together, say.
 
@@ -184,44 +209,48 @@ menu never offers an action that cannot work.
 
 The only bare item is `separator`. Everything else is a mapping:
 
-| Field | Effect |
+| Key | Takes |
 |---|---|
-| `text` | The label. `{{ }}` holes interpolate expressions. |
-| `when` | Show the item only when this holds. |
-| `each` | Repeat the item over a list, binding each element to `it`. |
-| `menu` | A submenu, written the same way. |
-| `run` / `open` / `post` / `quit` | What activating the item does. |
+| `text` | A string: the label. `{{ }}` holes interpolate expressions. |
+| `when` | A string: a condition. The item appears only when it holds. |
+| `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
+| `menu` | A list of items, written the same way. |
 
-An item takes at most one action, and an item with a submenu takes none:
-opening the submenu supersedes the action, so it could never run.
+Then at most one action, which is what activating the item does:
+
+| Key | Takes |
+|---|---|
+| `run` | A list of at least one string: argv, never a shell. |
+| `open` | A string: a URL, or a path with `~` expanded. |
+| `post` | A mapping of `url` (a string) and `body` (any YAML, sent as JSON). |
+| `agent` | A string, `<watch>.<verb>`, where `<watch>` is a `launchagent` watch and `<verb>` is `start`, `stop` or `restart`. |
+| `quit` | `true`. Ends the app. |
+
+An item with a submenu takes no action: opening the submenu supersedes it, so it
+could never run.
 
 ### Actions
 
-`run:` takes argv and never a shell. `open:` takes a URL or a path. `post:`
-takes a `url` and a `body`, sent as JSON. `quit:` ends the app.
-
 Every action re-polls the watches as soon as it finishes, which is what makes a
-Start item feel like it did something. A non-zero exit raises an alert naming
-the command.
+Start item feel like it did something. A failure raises an alert naming what was
+attempted.
 
-Controlling a LaunchAgent needs no special support. Start, Stop and Restart are
-three `run:` items with `when:` guards, so the menu offers only the one that can
-work:
+`agent:` is the one action perch writes the command for. `worker.start` boots
+the LaunchAgent that `worker` watches into your GUI domain, `worker.stop` boots
+it out, and `worker.restart` does both with a wait between — which is not two
+`run:` items, because `bootout` returns before launchd has released the label.
 
 ```yaml
 app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
 
 watch:
-  agent:
-    run: [launchctl, print, gui/501/dev.example.worker]
+  worker:
+    launchagent: dev.example.worker
 
 menu:
-  - text: Start
-    when: "!agent.ok"
-    run: [launchctl, bootstrap, gui/501, ~/Library/LaunchAgents/dev.example.worker.plist]
-  - text: Stop
-    when: "agent.ok"
-    run: [launchctl, bootout, gui/501/dev.example.worker]
+  - {text: Start, when: "!worker.loaded", agent: worker.start}
+  - {text: Stop, when: "worker.loaded", agent: worker.stop}
+  - {text: Restart, when: "worker.installed", agent: worker.restart}
   - {text: Quit, quit: true}
 ```
 
@@ -262,11 +291,11 @@ time and lowers it to a plain Swift expression.
 expression perch cannot lower is a build error rather than a widget that shows
 nothing.
 
-The supported subset is field selection and indexing, literals, `== != < <= >
->=`, `&& || !`, `in`, the ternary `? :`, and the functions `size()`, `has()`,
-`string()`, `startsWith()` and `contains()`. Anything else is refused with the
-offending expression quoted. perch does not claim to implement CEL; it claims
-to reject what it has not implemented.
+The supported subset is field selection and indexing, literals,
+`== != < <= > >=`, `&& || !`, `in`, the ternary `? :`, and the functions
+`size()`, `has()`, `string()`, `startsWith()` and `contains()`. Anything else
+is refused with the offending expression quoted. perch does not claim to
+implement CEL; it claims to reject what it has not implemented.
 
 Four things the typing settles:
 
@@ -300,7 +329,7 @@ tinted, so it keeps the colors you drew — which is the point when the icon
 says something a symbol cannot, such as how full something is.
 
 Put `.png` files in `menubar/Icons` beside your spec and name one without its
-extension:
+extension. An asset name is letters, digits, dashes and underscores:
 
 ```yaml
 app: {name: onto, id: dev.onto.menubar, icon: {asset: o-0}, interval: 5s}
