@@ -32,7 +32,7 @@ commit.
 **The TCC claim is reasoned, not measured end to end.** What is measured: a
 source edit moves the cdhash while the designated requirement holds. What is not:
 that a specific Local Network grant actually survived, because `TCC.db` needs
-Full Disk Access and the menu-bar screenshot came back with an unreadable colour
+Full Disk Access and the menu-bar screenshot came back with an unreadable color
 cast. If it matters, grant Full Disk Access and read `access` in
 `~/Library/Application Support/com.apple.TCC/TCC.db`.
 
