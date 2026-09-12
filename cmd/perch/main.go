@@ -188,7 +188,7 @@ func runRun(args []string, e *env) error {
 	}
 	defer os.RemoveAll(tmp)
 
-	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name}
+	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name, Identity: p.Spec.App.Sign}
 	dest := filepath.Join(tmp, p.Spec.App.Name+".app")
 	fmt.Fprintln(e.out, "compiling…")
 	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: dest, Compile: e.compile, Icons: p.IconsDir()}); err != nil {
@@ -221,7 +221,7 @@ func runInstall(args []string, e *env) error {
 		return err
 	}
 
-	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name}
+	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name, Identity: p.Spec.App.Sign}
 	fmt.Fprintln(e.out, "compiling…")
 	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: bundle, Compile: e.compile, Icons: p.IconsDir()}); err != nil {
 		return err

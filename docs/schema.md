@@ -39,7 +39,7 @@ menu item that silently never appears.
 
 ## app
 
-All four keys are required.
+The first four keys are required.
 
 | Key | Takes |
 |---|---|
@@ -47,6 +47,7 @@ All four keys are required.
 | `id` | A string of letters, digits, dots, dashes and underscores, starting with a letter or digit — `dev.example.menubar`. launchd takes it as a label and `install` as a plist filename. |
 | `icon` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, or `{asset: <name>}` where `<name>` is letters, digits, dashes and underscores. Shown when no `status:` rule overrides it. See [Icon assets](#icon-assets). |
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
+| `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
 
 ## watch
 

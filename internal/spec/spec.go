@@ -24,6 +24,9 @@ type App struct {
 	ID       string
 	Icon     Icon
 	Interval time.Duration
+	// Sign is a keychain code signing identity. Empty signs the bundle ad-hoc,
+	// which seals it but gives it a new identity on every build.
+	Sign string
 }
 
 type rawSpec struct {
@@ -39,6 +42,7 @@ type rawApp struct {
 	ID       string    `yaml:"id"`
 	Icon     yaml.Node `yaml:"icon"`
 	Interval string    `yaml:"interval"`
+	Sign     string    `yaml:"sign"`
 }
 
 // Parse reads a menubar.yaml document into a Spec.
@@ -67,6 +71,7 @@ func Parse(src []byte) (*Spec, error) {
 		Name: raw.App.Name,
 		ID:   raw.App.ID,
 		Icon: appIcon,
+		Sign: raw.App.Sign,
 	}}
 	if raw.App.Interval != "" {
 		d, err := time.ParseDuration(raw.App.Interval)

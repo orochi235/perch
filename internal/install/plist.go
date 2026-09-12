@@ -14,6 +14,8 @@ type App struct {
 	Name       string
 	ID         string
 	Executable string
+	// Identity is the keychain code signing identity, or empty for ad-hoc.
+	Identity string
 }
 
 const plistHeader = `<?xml version="1.0" encoding="UTF-8"?>
