@@ -117,6 +117,35 @@ menu:
   - {text: Quit, quit: true}
 `
 
+// launchAgent covers the fourth watch kind and the agent: action: the fields
+// it binds instead of .ok, a state block reading three of them, the escape
+// hatch of reaching .target from inside argv, and all three verbs.
+const launchAgent = `
+app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
+watch:
+  worker:
+    launchagent: dev.example.worker
+state:
+  - uninstalled: "!worker.installed"
+  - stopped: "!worker.loaded"
+  - idle: "!worker.running"
+  - running:
+status:
+  - {when: uninstalled, icon: exclamationmark.triangle}
+  - {when: "stopped || idle", dim: true}
+menu:
+  - {text: "Running · pid {{worker.pid}}", when: running}
+  - {text: "Loaded, not running", when: idle}
+  - {text: "Not loaded", when: stopped}
+  - {text: "Not installed", when: uninstalled}
+  - separator
+  - {text: Start, when: stopped, agent: worker.start}
+  - {text: Stop, when: "running || idle", agent: worker.stop}
+  - {text: Restart, when: "!uninstalled", agent: worker.restart}
+  - {text: Blame, when: "worker.loaded", run: [launchctl, blame, "{{worker.target}}"]}
+  - {text: Quit, quit: true}
+`
+
 // TestEmittedSwiftTypechecks is the check a golden test alone cannot make: a
 // golden stays green while emitting Swift that does not compile.
 func TestEmittedSwiftTypechecks(t *testing.T) {
@@ -132,6 +161,7 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		"watchInAction":  watchInAction,
 		"swiftKeywords":  swiftKeywordShape,
 		"states":         states,
+		"launchAgent":    launchAgent,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

@@ -60,6 +60,9 @@ func sampleCall(w spec.Watch, n structNames) string {
 		return fmt.Sprintf("%s(HTTPOutcome(sample: o))", n.resultTypeName(w))
 	case spec.WatchExists:
 		return fmt.Sprintf("%s(exists: o.exists ?? false)", n.resultTypeName(w))
+	case spec.WatchLaunchAgent:
+		return fmt.Sprintf("%s(LaunchAgentOutcome(sample: o, label: %s, plist: %s))",
+			n.resultTypeName(w), celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist))
 	default:
 		return fmt.Sprintf("%s(RunOutcome(sample: o))", n.resultTypeName(w))
 	}

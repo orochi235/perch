@@ -237,6 +237,27 @@ struct HTTPOutcome {
     var out = ""
 }
 
+struct LaunchAgentOutcome {
+    var installed = false
+    var loaded = false
+    var running = false
+    var pid = 0
+    var label = ""
+    var plist = "" // expanded
+}
+
+/// Where a user's own LaunchAgents live, and how launchctl is told about them.
+enum Launchd {
+    /// Read at runtime because it is the one part of addressing an agent that
+    /// differs between Macs: 501 is only the first account a Mac creates.
+    static var domain: String { "gui/\(getuid())" }
+
+    static func target(_ label: String) -> String { domain + "/" + label }
+
+    /// launchctl is handed argv directly, with no shell to expand a tilde.
+    static func expand(_ path: String) -> String { (path as NSString).expandingTildeInPath }
+}
+
 enum Watcher {
     /// Runs argv directly — never a shell. /usr/bin/env performs the PATH
     /// lookup, which a LaunchAgent's minimal environment would otherwise miss.
@@ -299,6 +320,26 @@ enum Watcher {
     static func exists(_ path: String) -> Bool {
         FileManager.default.fileExists(atPath: (path as NSString).expandingTildeInPath)
     }
+
+    /// `launchctl print` exiting 0 says launchd knows the label, which is not
+    /// the same as the job having a process: one that has run and exited is
+    /// still loaded. The top-level `state =` line is what separates the two,
+    /// and it is exactly one tab in — deeper ones describe the job's endpoints
+    /// and are active whether or not the job itself is.
+    static func launchAgent(label: String, plist: String) -> LaunchAgentOutcome {
+        var o = LaunchAgentOutcome(label: label, plist: Launchd.expand(plist))
+        o.installed = FileManager.default.fileExists(atPath: o.plist)
+        let printed = run(["launchctl", "print", Launchd.target(label)])
+        o.loaded = printed.ok
+        guard printed.ok else { return o }
+        for line in printed.out.split(separator: "\n", omittingEmptySubsequences: false) {
+            guard line.hasPrefix("\t"), !line.hasPrefix("\t\t") else { continue }
+            let field = line.dropFirst()
+            if field.hasPrefix("state = ") { o.running = field.dropFirst(8) == "running" }
+            if field.hasPrefix("pid = ") { o.pid = Int(field.dropFirst(6)) ?? 0 }
+        }
+        return o
+    }
 }
 
 // MARK: - Actions
@@ -344,11 +385,50 @@ enum Act {
         }.resume()
     }
 
+    /// The three things perch will do to a LaunchAgent. The verbs are the
+    /// modern ones: `load`/`unload` also write launchd's disabled database,
+    /// which is a second effect nobody asking for Start is asking for.
+    static func agent(label: String, plist: String, verb: LaunchAgentVerb, then repoll: @escaping () -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let outcome: RunOutcome
+            switch verb {
+            case .start:
+                outcome = Watcher.run(["launchctl", "bootstrap", Launchd.domain, Launchd.expand(plist)])
+            case .stop:
+                outcome = Watcher.run(["launchctl", "bootout", Launchd.target(label)])
+            case .restart:
+                outcome = restart(label: label, plist: plist)
+            }
+            DispatchQueue.main.async {
+                if !outcome.ok { alert(verb.gerund + " " + label, outcome.err) }
+                repoll()
+            }
+        }
+    }
+
+    /// bootout returns before launchd has let go of the label, and
+    /// bootstrapping into that gap fails with Input/output error — so this
+    /// polls until the label is genuinely gone rather than bootstrapping blind.
+    private static func restart(label: String, plist: String) -> RunOutcome {
+        _ = Watcher.run(["launchctl", "bootout", Launchd.target(label)])
+        for _ in 0..<40 {
+            if !Watcher.run(["launchctl", "print", Launchd.target(label)]).ok {
+                return Watcher.run(["launchctl", "bootstrap", Launchd.domain, Launchd.expand(plist)])
+            }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        return RunOutcome(
+            ok: false, code: -1, out: "",
+            err: "launchd still holds \(label) after two seconds, so it was not bootstrapped again."
+        )
+    }
+
     static func perform(_ action: MenuAction, then repoll: @escaping () -> Void) {
         switch action {
         case .run(let argv): run(argv, then: repoll)
         case .open(let target): open(target)
         case .post(let url, let body): post(url, body: body, then: repoll)
+        case .agent(let label, let plist, let verb): agent(label: label, plist: plist, verb: verb, then: repoll)
         case .quit: NSApp.terminate(nil)
         }
     }
@@ -391,12 +471,27 @@ struct Face {
     var badge = ""
 }
 
+/// What agent: does to a LaunchAgent. Closed, because each one is a launchctl
+/// invocation perch writes rather than the author.
+enum LaunchAgentVerb: String {
+    case start, stop, restart
+
+    var gerund: String {
+        switch self {
+        case .start: return "Starting"
+        case .stop: return "Stopping"
+        case .restart: return "Restarting"
+        }
+    }
+}
+
 /// What activating a menu item does. It is lowered when the menu is built, so
 /// an item runs what it showed.
 enum MenuAction {
     case run([String])
     case open(String)
     case post(url: String, body: String)
+    case agent(label: String, plist: String, verb: LaunchAgentVerb)
     case quit
 }
 

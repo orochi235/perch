@@ -43,10 +43,17 @@ type Post struct {
 // Action is what activating an item does, with every expression already
 // resolved against the state the frame was rendered for.
 type Action struct {
-	Run  []string `json:"run,omitempty"`
-	Open string   `json:"open,omitempty"`
-	Post *Post    `json:"post,omitempty"`
-	Quit bool     `json:"quit,omitempty"`
+	Run   []string `json:"run,omitempty"`
+	Open  string   `json:"open,omitempty"`
+	Post  *Post    `json:"post,omitempty"`
+	Agent *Agent   `json:"agent,omitempty"`
+	Quit  bool     `json:"quit,omitempty"`
+}
+
+// Agent is an agent: action: what it does, and to which LaunchAgent.
+type Agent struct {
+	Label string `json:"label"`
+	Verb  string `json:"verb"`
 }
 
 // Node is one menu entry. An item with no action is a label, which macOS draws
@@ -67,11 +74,15 @@ type Frame struct {
 
 // Sample is what one poll of one watch returned.
 type Sample struct {
-	Code   *int    `json:"code,omitempty"`
-	Out    *string `json:"out,omitempty"`
-	Err    *string `json:"err,omitempty"`
-	Status *int    `json:"status,omitempty"`
-	Exists *bool   `json:"exists,omitempty"`
+	Code      *int    `json:"code,omitempty"`
+	Out       *string `json:"out,omitempty"`
+	Err       *string `json:"err,omitempty"`
+	Status    *int    `json:"status,omitempty"`
+	Exists    *bool   `json:"exists,omitempty"`
+	Installed *bool   `json:"installed,omitempty"`
+	Loaded    *bool   `json:"loaded,omitempty"`
+	Running   *bool   `json:"running,omitempty"`
+	Pid       *int    `json:"pid,omitempty"`
 }
 
 // State is one named set of outcomes, as a docs page states them. A watch it
@@ -163,6 +174,30 @@ func parseSample(w spec.Watch, v value) (Sample, error) {
 				return s, fmt.Errorf("status: %w", err)
 			}
 			s.Status = &n
+		case f.key == "installed" && w.Kind == spec.WatchLaunchAgent:
+			b, err := f.value.bool()
+			if err != nil {
+				return s, fmt.Errorf("installed: %w", err)
+			}
+			s.Installed = &b
+		case f.key == "loaded" && w.Kind == spec.WatchLaunchAgent:
+			b, err := f.value.bool()
+			if err != nil {
+				return s, fmt.Errorf("loaded: %w", err)
+			}
+			s.Loaded = &b
+		case f.key == "running" && w.Kind == spec.WatchLaunchAgent:
+			b, err := f.value.bool()
+			if err != nil {
+				return s, fmt.Errorf("running: %w", err)
+			}
+			s.Running = &b
+		case f.key == "pid" && w.Kind == spec.WatchLaunchAgent:
+			n, err := f.value.number()
+			if err != nil {
+				return s, fmt.Errorf("pid: %w", err)
+			}
+			s.Pid = &n
 		default:
 			return s, fmt.Errorf("a %s watch does not bind %q; it binds %s",
 				w.Kind, f.key, strings.Join(sampleKeys(w), ", "))
@@ -179,6 +214,8 @@ func sampleKeys(w spec.Watch) []string {
 		return []string{"status", "out"}
 	case spec.WatchExists:
 		return []string{"true or false"}
+	case spec.WatchLaunchAgent:
+		return []string{"installed", "loaded", "running", "pid"}
 	default:
 		return []string{"code", "out", "err"}
 	}

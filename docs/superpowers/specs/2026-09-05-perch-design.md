@@ -148,8 +148,12 @@ Every action re-polls immediately on completion — `brainhouse` does this by
 hand and it is what makes Start feel like it did something. A non-zero exit
 raises an alert naming the command, as `runLaunchctlOrAlert` does today.
 
-`launchctl` control needs no dedicated support. Start, Stop and Restart are
-three `run:` items with `when:` guards.
+`launchctl` control was expected to need no dedicated support — three `run:`
+items with `when:` guards. That turned out to be wrong twice over, and
+[the launchagent watch](2026-09-12-launchagent-watch-design.md) is what replaced
+it: `run:` argv has no shell to expand `~` and nothing bound the user's id, so
+no correct invocation could be written, and `launchctl print` reports loaded
+rather than running.
 
 ### Menus
 

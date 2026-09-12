@@ -93,3 +93,21 @@ menu: [{text: Quit, quit: true}]
 		t.Errorf("Render.swift is missing %q", want)
 	}
 }
+
+// A launchagent watch is the only one with no .ok, because the two answers it
+// could mean differ — which is the whole reason the kind exists. Listing the
+// fields it does have would leave an author to guess which of loaded and
+// running they meant.
+func TestALaunchAgentWatchHasNoOkAndSaysWhy(t *testing.T) {
+	got := emitErr(t, `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+watch:
+  worker: {launchagent: dev.example.worker}
+menu: [{text: Up, when: "worker.ok"}]
+`)
+	for _, want := range []string{`has no field "ok"`, "loaded", "running"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("error = %q, want it to mention %q", got, want)
+		}
+	}
+}

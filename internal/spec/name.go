@@ -60,3 +60,13 @@ func checkAppID(id string) error {
 	}
 	return nil
 }
+
+// checkLabel is what launchd will take as a service label. It is the same
+// grammar app.id follows, checked separately because the two name different
+// things: one is the widget, the other is what the widget watches.
+func checkLabel(path, label string) error {
+	if !bundleID.MatchString(label) {
+		return fmt.Errorf("%s.launchagent: %q is not a launchd label; a label is letters, digits, dots, dashes and underscores, e.g. dev.example.worker", path, label)
+	}
+	return nil
+}

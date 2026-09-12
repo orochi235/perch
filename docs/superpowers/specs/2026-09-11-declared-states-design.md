@@ -169,7 +169,8 @@ does catch.
 
 ## Then
 
-`launchagent:` and `control:` — sugar expanding to the watch and the three
-guarded items — were designed in conversation on 2026-09-11 and are not built.
-They guard on a state rather than inventing a condition, which is why they
-waited.
+`launchagent:` shipped on 2026-09-12 as a watch kind, binding the predicates a
+`state:` block reads — see
+[the launchagent watch](2026-09-12-launchagent-watch-design.md). `control:`,
+the menu-item sugar designed alongside it, was retired there: states made the
+duplication it existed to remove go away.

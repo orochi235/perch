@@ -35,12 +35,15 @@ const body = `{
         "oneOf": [
           {"required": ["run"]},
           {"required": ["http"]},
-          {"required": ["exists"]}
+          {"required": ["exists"]},
+          {"required": ["launchagent"]}
         ],
         "properties": {
           "run": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "argv, never a shell."},
           "http": {"type": "string", "description": "URL; .ok is a 2xx."},
           "exists": {"type": "string", "description": "Path; binds .ok only."},
+          "launchagent": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "A launchd label, e.g. dev.example.worker. Binds .installed, .loaded, .running, .pid, .label, .plist, .domain, .target."},
+          "plist": {"type": "string", "description": "Where the LaunchAgent file is; defaults to ~/Library/LaunchAgents/<label>.plist. Needs launchagent."},
           "json": {"type": "boolean", "description": "Decode the output into .data."},
           "shape": {"$ref": "#/definitions/shape"}
         }
@@ -103,7 +106,8 @@ const body = `{
                 "additionalProperties": false,
                 "properties": {"url": {"type": "string"}, "body": {}}
               },
-              "quit": {"type": "boolean"}
+              "quit": {"type": "boolean"},
+              "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$", "description": "<launchagent watch>.start, .stop or .restart."}
             }
           }
         ]

@@ -20,6 +20,7 @@ const (
 	ActionOpen
 	ActionPost
 	ActionQuit
+	ActionAgent
 )
 
 func (k ActionKind) String() string {
@@ -34,9 +35,24 @@ func (k ActionKind) String() string {
 		return "post"
 	case ActionQuit:
 		return "quit"
+	case ActionAgent:
+		return "agent"
 	}
 	return "unknown"
 }
+
+// AgentVerb is what an agent: action does to a LaunchAgent. The set is closed
+// because each one is a launchctl invocation perch writes, not the author.
+type AgentVerb string
+
+const (
+	AgentStart   AgentVerb = "start"
+	AgentStop    AgentVerb = "stop"
+	AgentRestart AgentVerb = "restart"
+)
+
+// AgentVerbs is every verb agent: accepts, in the order the docs list them.
+var AgentVerbs = []AgentVerb{AgentStart, AgentStop, AgentRestart}
 
 // Action is the single verb an item carries. Run is argv and never a shell.
 type Action struct {
@@ -45,6 +61,8 @@ type Action struct {
 	Open     string
 	PostURL  string
 	PostBody string // compact JSON, template holes preserved
+	Agent    string // ActionAgent: the launchagent watch acted on
+	Verb     AgentVerb
 }
 
 // Item is one menu entry: a separator, a label, or a label with an action,
@@ -59,14 +77,15 @@ type Item struct {
 }
 
 type itemFields struct {
-	Text string    `yaml:"text"`
-	When string    `yaml:"when"`
-	Each string    `yaml:"each"`
-	Menu yaml.Node `yaml:"menu"`
-	Run  []string  `yaml:"run"`
-	Open string    `yaml:"open"`
-	Post *rawPost  `yaml:"post"`
-	Quit bool      `yaml:"quit"`
+	Text  string    `yaml:"text"`
+	When  string    `yaml:"when"`
+	Each  string    `yaml:"each"`
+	Menu  yaml.Node `yaml:"menu"`
+	Run   []string  `yaml:"run"`
+	Open  string    `yaml:"open"`
+	Post  *rawPost  `yaml:"post"`
+	Quit  bool      `yaml:"quit"`
+	Agent string    `yaml:"agent"`
 }
 
 type rawPost struct {
@@ -142,10 +161,41 @@ func actionFrom(f itemFields, path string) (Action, error) {
 		verbs = append(verbs, "quit")
 		a.Kind = ActionQuit
 	}
+	if f.Agent != "" {
+		verbs = append(verbs, "agent")
+		name, verb, err := parseAgentAction(f.Agent, path)
+		if err != nil {
+			return a, err
+		}
+		a.Kind, a.Agent, a.Verb = ActionAgent, name, verb
+	}
 	if len(verbs) > 1 {
-		return a, fmt.Errorf("%s: has %v; an item takes at most one of run, open, post or quit", path, verbs)
+		return a, fmt.Errorf("%s: has %v; an item takes at most one of run, open, post, quit or agent", path, verbs)
 	}
 	return a, nil
+}
+
+// parseAgentAction reads `<watch>.<verb>`. A watch name holds no dot, so the
+// one separator is unambiguous.
+func parseAgentAction(src, path string) (string, AgentVerb, error) {
+	name, rest, found := strings.Cut(src, ".")
+	if !found {
+		return "", "", fmt.Errorf("%s.agent: %q names no verb; write <watch>.%s", path, src, strings.Join(verbList(), ", <watch>."))
+	}
+	for _, v := range AgentVerbs {
+		if rest == string(v) {
+			return name, v, nil
+		}
+	}
+	return "", "", fmt.Errorf("%s.agent: %q is not something perch can do to a LaunchAgent; it does %s", path, rest, strings.Join(verbList(), ", "))
+}
+
+func verbList() []string {
+	out := make([]string, 0, len(AgentVerbs))
+	for _, v := range AgentVerbs {
+		out = append(out, string(v))
+	}
+	return out
 }
 
 func jsonFromNode(n *yaml.Node) (string, error) {

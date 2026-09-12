@@ -160,7 +160,7 @@ func (e *Env) lowerSelect(s celast.SelectExpr, src string) (value, error) {
 				return value{swift: recv.swift + "." + name, typ: f.Type, display: recv.shown() + "." + name}, nil
 			}
 		}
-		return value{}, fmt.Errorf("%q: %s has no field %q; it has %s", src, recv.shown(), name, fieldNames(recv.typ))
+		return value{}, fmt.Errorf("%q: %s has no field %q; it has %s%s", src, recv.shown(), name, fieldNames(recv.typ), hint(recv.typ, name))
 	case spec.TypeAny:
 		acc := fmt.Sprintf("%s[%q]", recv.swift, name)
 		shown := recv.shown() + "." + name
@@ -488,3 +488,13 @@ func displayName(fn string) string {
 
 // SwiftString renders s as a Swift string literal.
 func SwiftString(s string) string { return `"` + escapeInterpolated(s) + `"` }
+
+// hint says why a particular missing field is missing, where naming the fields
+// that do exist does not answer it. A launchagent watch has no .ok because
+// there are two answers and the author has to pick one.
+func hint(t *spec.Type, name string) string {
+	if h := t.Hints[name]; h != "" {
+		return ". " + h
+	}
+	return ""
+}

@@ -80,6 +80,21 @@ func watchType(w spec.Watch) *spec.Type {
 	switch w.Kind {
 	case spec.WatchExists:
 		return obj(field("ok", spec.TypeBool))
+	case spec.WatchLaunchAgent:
+		t := obj(
+			field("installed", spec.TypeBool),
+			field("loaded", spec.TypeBool),
+			field("running", spec.TypeBool),
+			field("pid", spec.TypeInt),
+			field("label", spec.TypeString),
+			field("plist", spec.TypeString),
+			field("domain", spec.TypeString),
+			field("target", spec.TypeString),
+		)
+		t.Hints = map[string]string{
+			"ok": "A LaunchAgent has two answers and they differ: .loaded is launchd knowing the label, .running is it having a process",
+		}
+		return t
 	case spec.WatchHTTP:
 		fs := []spec.Field{
 			field("ok", spec.TypeBool),

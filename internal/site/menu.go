@@ -118,6 +118,8 @@ func actionText(a preview.Action) string {
 		return "opens " + a.Open
 	case a.Post != nil:
 		return "posts " + a.Post.Body + " to " + a.Post.URL
+	case a.Agent != nil:
+		return a.Agent.Verb + "s " + a.Agent.Label
 	default:
 		return "runs " + strings.Join(a.Run, " ")
 	}

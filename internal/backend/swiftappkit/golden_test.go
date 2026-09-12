@@ -20,6 +20,7 @@ func TestGolden(t *testing.T) {
 		"design-doc":    designDocExample,
 		"every-feature": everyFeature,
 		"states":        states,
+		"launchagent":   launchAgent,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

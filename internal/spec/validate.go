@@ -1,6 +1,9 @@
 package spec
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func (s *Spec) validate() error {
 	if s.App.Name == "" {
@@ -39,26 +42,26 @@ func (s *Spec) validate() error {
 			return fmt.Errorf("status[%d]: a rule with no when: always matches, so it must be last; %d rule(s) after it can never apply", i, len(s.Status)-1-i)
 		}
 	}
-	return validateItems(s.Menu, "menu")
+	return validateItems(s.Menu, "menu", s.Watches)
 }
 
-func validateItems(items []Item, path string) error {
+func validateItems(items []Item, path string, watches []Watch) error {
 	for i, it := range items {
 		p := fmt.Sprintf("%s[%d]", path, i)
 		if len(it.Menu) > 0 && it.Action.Kind != ActionNone {
 			return fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", p, it.Action.Kind)
 		}
-		if err := it.Action.validate(p); err != nil {
+		if err := it.Action.validate(p, watches); err != nil {
 			return err
 		}
-		if err := validateItems(it.Menu, p+".menu"); err != nil {
+		if err := validateItems(it.Menu, p+".menu", watches); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a Action) validate(path string) error {
+func (a Action) validate(path string, watches []Watch) error {
 	switch a.Kind {
 	case ActionRun:
 		if len(a.Run) == 0 {
@@ -68,8 +71,33 @@ func (a Action) validate(path string) error {
 		if a.PostURL == "" {
 			return fmt.Errorf("%s.post: needs a url", path)
 		}
+	case ActionAgent:
+		return checkAgentTarget(path, a.Agent, watches)
 	}
 	return nil
+}
+
+// checkAgentTarget refuses an agent: naming anything but a launchagent watch.
+// The label and the plist path both come from that watch, so there is nothing
+// to act on without one.
+func checkAgentTarget(path, name string, watches []Watch) error {
+	var agents []string
+	for _, w := range watches {
+		if w.Kind == WatchLaunchAgent {
+			agents = append(agents, w.Name)
+		}
+		if w.Name != name {
+			continue
+		}
+		if w.Kind != WatchLaunchAgent {
+			return fmt.Errorf("%s.agent: %q is a %s watch; agent: acts on a launchagent watch, which is where the label and the plist come from", path, name, w.Kind)
+		}
+		return nil
+	}
+	if len(agents) == 0 {
+		return fmt.Errorf("%s.agent: no watch named %q, and this file declares no launchagent watch", path, name)
+	}
+	return fmt.Errorf("%s.agent: no watch named %q; the launchagent watches are %s", path, name, strings.Join(agents, ", "))
 }
 
 func (w Watch) validate() error {
@@ -85,6 +113,14 @@ func (w Watch) validate() error {
 	}
 	if w.Kind == WatchExists && w.JSON {
 		return fmt.Errorf("%s: json has no meaning on an exists watch, which only binds .ok", path)
+	}
+	if w.Kind == WatchLaunchAgent {
+		if w.JSON {
+			return fmt.Errorf("%s: json has no meaning on a launchagent watch; it binds the fields launchd reports, not decoded output", path)
+		}
+		if err := checkLabel(path, w.Label); err != nil {
+			return err
+		}
 	}
 	if w.Shape != nil && !w.JSON {
 		return fmt.Errorf("%s: shape describes decoded JSON, so it needs json: true", path)

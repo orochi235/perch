@@ -114,6 +114,9 @@ func watchCall(w spec.Watch, n structNames) string {
 		return fmt.Sprintf("%s(Watcher.http(%s))", n.resultTypeName(w), celswift.SwiftString(w.HTTP))
 	case spec.WatchExists:
 		return fmt.Sprintf("%s(exists: Watcher.exists(%s))", n.resultTypeName(w), celswift.SwiftString(w.Exists))
+	case spec.WatchLaunchAgent:
+		return fmt.Sprintf("%s(Watcher.launchAgent(label: %s, plist: %s))",
+			n.resultTypeName(w), celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist))
 	default:
 		return fmt.Sprintf("%s(Watcher.run(%s))", n.resultTypeName(w), swiftArray(w.Run))
 	}

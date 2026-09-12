@@ -13,6 +13,10 @@ struct Sample: Decodable {
     var err: String?
     var status: Int?
     var exists: Bool?
+    var installed: Bool?
+    var loaded: Bool?
+    var running: Bool?
+    var pid: Int?
 }
 
 struct SampleState: Decodable {
@@ -24,6 +28,23 @@ extension RunOutcome {
     init(sample: Sample) {
         let code = sample.code ?? 0
         self.init(ok: code == 0, code: code, out: sample.out ?? "", err: sample.err ?? "")
+    }
+}
+
+extension LaunchAgentOutcome {
+    /// A page states the three flags it wants to draw. Anything it leaves out
+    /// follows: a running agent is loaded, and nothing runs uninstalled unless
+    /// the page says so outright.
+    init(sample: Sample, label: String, plist: String) {
+        let running = sample.running ?? false
+        self.init(
+            installed: sample.installed ?? true,
+            loaded: sample.loaded ?? running,
+            running: running,
+            pid: sample.pid ?? (running ? 1 : 0),
+            label: label,
+            plist: Launchd.expand(plist)
+        )
     }
 }
 
@@ -64,6 +85,7 @@ private func encoded(_ action: MenuAction) -> [String: Any] {
     case .run(let argv): return ["run": argv]
     case .open(let target): return ["open": target]
     case .post(let url, let body): return ["post": ["url": url, "body": body]]
+    case .agent(let label, _, let verb): return ["agent": ["label": label, "verb": verb.rawValue]]
     case .quit: return ["quit": true]
     }
 }

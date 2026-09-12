@@ -87,15 +87,28 @@ func emitResultTypes(b *buf, s *spec.Spec, n structNames) {
 	for _, w := range s.Watches {
 		b.line("struct %s {", n.resultTypeName(w))
 		b.in()
-		b.line("var ok = false")
 		switch w.Kind {
 		case spec.WatchRun:
+			b.line("var ok = false")
 			b.line("var code = -1")
 			b.line(`var out = ""`)
 			b.line(`var err = ""`)
 		case spec.WatchHTTP:
+			b.line("var ok = false")
 			b.line("var status = 0")
 			b.line(`var out = ""`)
+		case spec.WatchLaunchAgent:
+			// No ok: loaded and running are both answers to it and they differ.
+			b.line("var installed = false")
+			b.line("var loaded = false")
+			b.line("var running = false")
+			b.line("var pid = 0")
+			b.line(`var label = ""`)
+			b.line(`var plist = ""`)
+			b.line(`var domain = ""`)
+			b.line(`var target = ""`)
+		default:
+			b.line("var ok = false")
 		}
 		if t, zero, ok := n.dataTypeAndZero(w); ok {
 			b.line("var data: %s = %s", t, zero)
@@ -140,6 +153,18 @@ func emitResultInits(b *buf, s *spec.Spec, n structNames) {
 			b.in()
 			b.line("self.init()")
 			b.line("ok = exists")
+		case spec.WatchLaunchAgent:
+			b.line("init(_ o: LaunchAgentOutcome) {")
+			b.in()
+			b.line("self.init()")
+			b.line("installed = o.installed")
+			b.line("loaded = o.loaded")
+			b.line("running = o.running")
+			b.line("pid = o.pid")
+			b.line("label = o.label")
+			b.line("plist = o.plist")
+			b.line("domain = Launchd.domain")
+			b.line("target = Launchd.target(o.label)")
 		default:
 			b.line("init(_ o: RunOutcome) {")
 			b.in()
@@ -236,8 +261,9 @@ func swiftIcon(i spec.Icon) string {
 // menuGen hands out unique local names so nested submenus and each: loops do
 // not shadow one another.
 type menuGen struct {
-	b *buf
-	n int
+	b       *buf
+	n       int
+	watches []spec.Watch // for agent:, which acts on the watch it names
 }
 
 func (g *menuGen) name(prefix string) string {
@@ -255,7 +281,7 @@ func emitMenu(b *buf, s *spec.Spec, e *celswift.Env) (string, error) {
 		return b.String(), nil
 	}
 	b.line("var menu: [MenuNode] = []")
-	g := &menuGen{b: b}
+	g := &menuGen{b: b, watches: s.Watches}
 	if err := g.items(s.Menu, "menu", e, "menu"); err != nil {
 		return "", err
 	}
@@ -365,6 +391,16 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path string) (string, e
 			return "", fmt.Errorf("%s.open: %w", path, err)
 		}
 		return ".open(" + target + ")", nil
+
+	case spec.ActionAgent:
+		// spec.validate has already refused an agent: naming anything else.
+		for _, w := range g.watches {
+			if w.Name == a.Agent && w.Kind == spec.WatchLaunchAgent {
+				return fmt.Sprintf(".agent(label: %s, plist: %s, verb: .%s)",
+					celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), a.Verb), nil
+			}
+		}
+		return "", fmt.Errorf("%s.agent: no launchagent watch named %q", path, a.Agent)
 
 	case spec.ActionPost:
 		url, err := e.LowerTemplate(a.PostURL)

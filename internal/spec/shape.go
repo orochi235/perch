@@ -42,8 +42,9 @@ func (k TypeKind) String() string {
 // Type is a declared watch shape: what a command prints, and nothing else.
 type Type struct {
 	Kind   TypeKind
-	Fields []Field // TypeObject, in document order
-	Elem   *Type   // TypeList
+	Fields []Field           // TypeObject, in document order
+	Elem   *Type             // TypeList
+	Hints  map[string]string // field name -> why this object does not have it
 }
 
 // Field is one named member of an object type.
