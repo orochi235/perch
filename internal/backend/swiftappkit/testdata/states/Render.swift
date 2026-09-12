@@ -63,5 +63,5 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("uninstalled is a word here, not a state", nil))
     }
     menu.append(.item("Quit", .quit))
-    return menu
+    return tidy(menu)
 }

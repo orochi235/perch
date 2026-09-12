@@ -285,7 +285,9 @@ func emitMenu(b *buf, s *spec.Spec, e *celswift.Env) (string, error) {
 	if err := g.items(s.Menu, "menu", e, "menu"); err != nil {
 		return "", err
 	}
-	b.line("return menu")
+	// tidy, not the author: which items a poll leaves out decides which
+	// separators are left with nothing beside them.
+	b.line("return tidy(menu)")
 	b.out()
 	b.line("}")
 	return b.String(), nil

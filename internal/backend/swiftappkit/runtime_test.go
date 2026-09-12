@@ -114,3 +114,54 @@ func TestRuntimeBehavior(t *testing.T) {
 		}
 	}
 }
+
+// tidyProbe drives the separator pass. A menu is rebuilt from the last poll
+// every time it opens, so which items are missing — and therefore which
+// dividers have nothing beside them — is not knowable where they are written.
+const tidyProbe = `
+import Foundation
+
+func show(_ nodes: [MenuNode]) -> String {
+    nodes.map { node in
+        switch node {
+        case .separator: return "-"
+        case .item(let t, _): return t
+        case .submenu(let t, let items): return t + "(" + show(items) + ")"
+        }
+    }.joined(separator: ",")
+}
+
+print("empty=\(show(tidy([])))")
+print("allseps=\(show(tidy([.separator, .separator])))")
+print("leading=\(show(tidy([.separator, .item("a", nil)])))")
+print("trailing=\(show(tidy([.item("a", nil), .separator])))")
+print("run=\(show(tidy([.item("a", nil), .separator, .separator, .separator, .item("b", nil)])))")
+print("kept=\(show(tidy([.item("a", nil), .separator, .item("b", nil)])))")
+print("nested=\(show(tidy([.submenu("s", [.separator, .item("x", nil), .separator]), .separator])))")
+`
+
+func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
+	bin := buildProbe(t, tidyProbe)
+	out, err := exec.Command(bin).CombinedOutput()
+	if err != nil {
+		t.Fatalf("the probe died: %v\n%s", err, out)
+	}
+	want := []string{
+		"empty=",
+		"allseps=",
+		"leading=a",
+		"trailing=a",
+		"run=a,-,b",
+		"kept=a,-,b",
+		"nested=s(x)",
+	}
+	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
+	if len(got) != len(want) {
+		t.Fatalf("got %d lines, want %d:\n%s", len(got), len(want), out)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("line %d:\n got %q\nwant %q", i+1, got[i], want[i])
+		}
+	}
+}

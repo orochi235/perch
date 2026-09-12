@@ -82,5 +82,5 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     menu.append(.item("Ping", .post(url: "http://127.0.0.1:8765/api/ping", body: "{\"source\":\"menubar\"}")))
     menu.append(.separator)
     menu.append(.item("Quit", .quit))
-    return menu
+    return tidy(menu)
 }

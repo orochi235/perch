@@ -50,5 +50,5 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     }
     menu.append(.separator)
     menu.append(.item("Quit", .quit))
-    return menu
+    return tidy(menu)
 }

@@ -76,5 +76,5 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("Blame", .run(["launchctl", "blame", "\(results.worker.target)"])))
     }
     menu.append(.item("Quit", .quit))
-    return menu
+    return tidy(menu)
 }

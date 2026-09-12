@@ -503,6 +503,30 @@ enum MenuNode {
     case submenu(String, [MenuNode])
 }
 
+/// Drops separators with nothing beside them: leading, trailing, and every one
+/// after the first in a run. A divider earns its line by dividing two things,
+/// and which items a poll leaves out is not knowable where they are written —
+/// so guarding each separator by hand would mean repeating the conditions of
+/// every item around it.
+func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
+    var out: [MenuNode] = []
+    for node in nodes {
+        if case .separator = node {
+            if out.isEmpty { continue }
+            if case .separator = out[out.count - 1] { continue }
+            out.append(node)
+            continue
+        }
+        if case .submenu(let title, let items) = node {
+            out.append(.submenu(title, tidy(items)))
+            continue
+        }
+        out.append(node)
+    }
+    if let last = out.last, case .separator = last { out.removeLast() }
+    return out
+}
+
 enum Draw {
     static func face(_ face: Face, on button: NSStatusBarButton) {
         button.image = face.icon.image()

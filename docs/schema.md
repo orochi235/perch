@@ -229,6 +229,11 @@ Then at most one action, which is what activating the item does:
 An item with a submenu takes no action: opening the submenu supersedes it, so it
 could never run.
 
+A separator with nothing beside it is dropped — leading, trailing, and every one
+after the first in a run. Which items a poll leaves out is not knowable where
+they are written, so guarding each separator by hand would mean repeating the
+conditions of every item around it.
+
 ### Actions
 
 Every action re-polls the watches as soon as it finishes, which is what makes a

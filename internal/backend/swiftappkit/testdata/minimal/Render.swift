@@ -14,5 +14,5 @@ func renderFace(_ results: Results) -> Face {
 func renderMenu(_ results: Results) -> [MenuNode] {
     var menu: [MenuNode] = []
     menu.append(.item("Quit", .quit))
-    return menu
+    return tidy(menu)
 }
