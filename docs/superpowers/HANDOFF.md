@@ -11,11 +11,16 @@ Branch `main` in `~/src/perch`, clean and pushed through `9317741`.
 
 ## Not done, in rough order of value
 
-**brainhouse is still hand-written Swift.** `~/src/brainhouse/menubar/main.swift`
-is the app perch was written to replace, and it is the last one not on perch. It
-controls `com.brainhouse` (a LaunchAgent) and carries the `ServiceState` enum
-that motivated `state:`, so it is now expressible. Porting it is the real test of
-whether the schema is finished.
+**brainhouse is ported** — branch `perch-menubar` in `~/src/brainhouse`,
+installed and running. The `ServiceState` enum that motivated `state:` is now
+four declared states, and the one thing the schema refuses stayed Swift:
+`menubar/Sources/Alerts.swift` hooks `applicationDidFinishLaunching` on the
+emitted `Controller`. That seam is now tested and documented here.
+
+**reviewplex is the last one not on perch.** `~/src/pw/reviewplex` (a Point Wild
+repo) still has seven hand-written files under `menubar/Sources/`. It is the
+repo that carries the two install-script fixes brainhouse never got, so porting
+it is what actually retires the duplication perch was written for.
 
 **A guarded separator is still impossible.** The collapse pass handles a divider
 next to nothing, which was the whole observed problem, but `- separator` is a
