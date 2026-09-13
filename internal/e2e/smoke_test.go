@@ -31,8 +31,10 @@ func TestInstalledAppStaysRunning(t *testing.T) {
 		t.Skipf("not a GUI login session (%s); a status item has nowhere to appear", out)
 	}
 
+	bootoutStale(t, smokePrefix)
+
 	suffix := strconv.Itoa(os.Getpid())
-	name, label := "perchSmoke"+suffix, "dev.perch.smoke."+suffix
+	name, label := "perchSmoke"+suffix, smokePrefix+suffix
 	home := t.TempDir()
 	dir := project(t, `
 app: {name: `+name+`, id: `+label+`, icon: circle.dashed, interval: 2s}
@@ -107,7 +109,25 @@ menu:
 	}
 }
 
+const smokePrefix = "dev.perch.smoke."
+
 func domain() string { return "gui/" + strconv.Itoa(os.Getuid()) }
+
+// bootoutStale unloads agents left behind by a run that was killed before its
+// cleanup. KeepAlive holds their status items in the menu bar indefinitely.
+func bootoutStale(t *testing.T, prefix string) {
+	t.Helper()
+	out, err := exec.Command("launchctl", "list").Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		f := strings.Fields(line)
+		if len(f) == 3 && strings.HasPrefix(f[2], prefix) {
+			_ = exec.Command("launchctl", "bootout", domain()+"/"+f[2]).Run()
+		}
+	}
+}
 
 var pidLine = regexp.MustCompile(`(?m)^\s*pid = (\d+)$`)
 
