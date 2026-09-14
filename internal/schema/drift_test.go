@@ -23,6 +23,8 @@ var sections = map[string]string{
 	"rawApp":        "properties.app.properties",
 	"rawWatch":      "properties.watch.additionalProperties.properties",
 	"rawStatusRule": "properties.status.items.properties",
+	"rawWindow":     "properties.window.properties",
+	"rawZoom":       "properties.window.properties.zoom.properties",
 	"itemFields":    "definitions.menu.items.oneOf.1.properties",
 	"rawPost":       "definitions.menu.items.oneOf.1.properties.post.properties",
 }

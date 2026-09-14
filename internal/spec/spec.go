@@ -16,6 +16,7 @@ type Spec struct {
 	States  []State
 	Status  []StatusRule
 	Menu    []Item
+	Window  *Window
 }
 
 // App is the identity and cadence of the generated status-bar app.
@@ -35,6 +36,7 @@ type rawSpec struct {
 	State  yaml.Node `yaml:"state"`
 	Status yaml.Node `yaml:"status"`
 	Menu   yaml.Node `yaml:"menu"`
+	Window yaml.Node `yaml:"window"`
 }
 
 type rawApp struct {
@@ -80,6 +82,11 @@ func Parse(src []byte) (*Spec, error) {
 		}
 		s.App.Interval = d
 	}
+	win, err := parseWindow(&raw.Window, s.App.Name)
+	if err != nil {
+		return nil, err
+	}
+	s.Window = win
 	ws, err := parseWatches(&raw.Watch)
 	if err != nil {
 		return nil, err

@@ -22,6 +22,7 @@ const (
 	ActionQuit
 	ActionAgent
 	ActionSwift
+	ActionWindow
 )
 
 func (k ActionKind) String() string {
@@ -40,6 +41,8 @@ func (k ActionKind) String() string {
 		return "agent"
 	case ActionSwift:
 		return "swift"
+	case ActionWindow:
+		return "window"
 	}
 	return "unknown"
 }
@@ -57,6 +60,18 @@ const (
 // AgentVerbs is every verb agent: accepts, in the order the docs list them.
 var AgentVerbs = []AgentVerb{AgentStart, AgentStop, AgentRestart}
 
+// WindowVerb is what a window: action does to the declared window.
+type WindowVerb string
+
+const (
+	WindowOpen   WindowVerb = "open"
+	WindowClose  WindowVerb = "close"
+	WindowReload WindowVerb = "reload"
+)
+
+// WindowVerbs is every verb window: accepts, in the order the docs list them.
+var WindowVerbs = []WindowVerb{WindowOpen, WindowClose, WindowReload}
+
 // Action is the single verb an item carries. Run is argv and never a shell.
 type Action struct {
 	Kind     ActionKind
@@ -67,6 +82,7 @@ type Action struct {
 	Agent    string // ActionAgent: the launchagent watch acted on
 	Verb     AgentVerb
 	Swift    string // ActionSwift: a dotted path, Type.method
+	Window   WindowVerb
 }
 
 // Item is one menu entry: a separator, a label, or a label with an action,
@@ -81,16 +97,17 @@ type Item struct {
 }
 
 type itemFields struct {
-	Text  string    `yaml:"text"`
-	When  string    `yaml:"when"`
-	Each  string    `yaml:"each"`
-	Menu  yaml.Node `yaml:"menu"`
-	Run   []string  `yaml:"run"`
-	Open  string    `yaml:"open"`
-	Post  *rawPost  `yaml:"post"`
-	Quit  bool      `yaml:"quit"`
-	Agent string    `yaml:"agent"`
-	Swift string    `yaml:"swift"`
+	Text   string    `yaml:"text"`
+	When   string    `yaml:"when"`
+	Each   string    `yaml:"each"`
+	Menu   yaml.Node `yaml:"menu"`
+	Run    []string  `yaml:"run"`
+	Open   string    `yaml:"open"`
+	Post   *rawPost  `yaml:"post"`
+	Quit   bool      `yaml:"quit"`
+	Agent  string    `yaml:"agent"`
+	Swift  string    `yaml:"swift"`
+	Window string    `yaml:"window"`
 }
 
 type rawPost struct {
@@ -182,8 +199,16 @@ func actionFrom(f itemFields, path string) (Action, error) {
 		}
 		a.Kind, a.Swift = ActionSwift, target
 	}
+	if f.Window != "" {
+		verbs = append(verbs, "window")
+		verb, err := parseWindowAction(f.Window, path)
+		if err != nil {
+			return a, err
+		}
+		a.Kind, a.Window = ActionWindow, verb
+	}
 	if len(verbs) > 1 {
-		return a, fmt.Errorf("%s: has %v; an item takes at most one of run, open, post, quit, agent or swift", path, verbs)
+		return a, fmt.Errorf("%s: has %v; an item takes at most one of run, open, post, quit, agent, swift or window", path, verbs)
 	}
 	return a, nil
 }
@@ -213,6 +238,19 @@ func parseSwiftAction(src, path string) (string, error) {
 		return "", fmt.Errorf("%s.swift: %q is not <Type>.<method>; swift: names a static method in menubar/Sources/, e.g. Dash.showPreferences", path, src)
 	}
 	return src, nil
+}
+
+// parseWindowAction reads a bare verb. There is one window per app, so unlike
+// agent: there is nothing to name.
+func parseWindowAction(src, path string) (WindowVerb, error) {
+	names := make([]string, 0, len(WindowVerbs))
+	for _, v := range WindowVerbs {
+		if src == string(v) {
+			return v, nil
+		}
+		names = append(names, string(v))
+	}
+	return "", fmt.Errorf("%s.window: %q is not something perch can do to a window; it does %s", path, src, strings.Join(names, ", "))
 }
 
 func verbList() []string {

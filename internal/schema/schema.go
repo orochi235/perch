@@ -75,6 +75,28 @@ const body = `{
         }
       }
     },
+    "window": {
+      "type": "object",
+      "description": "One WebKit window, opened from a menu item.",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string", "description": "The page the window loads."},
+        "title": {"type": "string", "description": "Window title; defaults to app.name."},
+        "size": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer", "minimum": 1}, "description": "[width, height] in points; defaults to [1024, 768]."},
+        "zoom": {
+          "type": "object",
+          "description": "Page zoom bounds. Omit for no zoom controls.",
+          "required": ["min", "max", "step"],
+          "additionalProperties": false,
+          "properties": {
+            "min": {"type": "number", "exclusiveMinimum": 0},
+            "max": {"type": "number", "exclusiveMinimum": 0},
+            "step": {"type": "number", "exclusiveMinimum": 0}
+          }
+        }
+      }
+    },
     "menu": {"$ref": "#/definitions/menu"}
   },
   "definitions": {
@@ -109,7 +131,8 @@ const body = `{
               },
               "quit": {"type": "boolean"},
               "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$", "description": "<launchagent watch>.start, .stop or .restart."},
-              "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$", "description": "A static method in menubar/Sources/, written Type.method."}
+              "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$", "description": "A static method in menubar/Sources/, written Type.method."},
+              "window": {"enum": ["open", "close", "reload"], "description": "Act on the declared window."}
             }
           }
         ]

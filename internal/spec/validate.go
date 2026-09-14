@@ -24,6 +24,11 @@ func (s *Spec) validate() error {
 	if s.App.Interval <= 0 {
 		return fmt.Errorf("app.interval: required and must be positive, got %v", s.App.Interval)
 	}
+	if s.Window != nil {
+		if err := s.Window.validate(); err != nil {
+			return err
+		}
+	}
 	seen := map[string]bool{}
 	for _, w := range s.Watches {
 		if seen[w.Name] {
@@ -42,26 +47,26 @@ func (s *Spec) validate() error {
 			return fmt.Errorf("status[%d]: a rule with no when: always matches, so it must be last; %d rule(s) after it can never apply", i, len(s.Status)-1-i)
 		}
 	}
-	return validateItems(s.Menu, "menu", s.Watches)
+	return validateItems(s.Menu, "menu", s.Watches, s.Window)
 }
 
-func validateItems(items []Item, path string, watches []Watch) error {
+func validateItems(items []Item, path string, watches []Watch, window *Window) error {
 	for i, it := range items {
 		p := fmt.Sprintf("%s[%d]", path, i)
 		if len(it.Menu) > 0 && it.Action.Kind != ActionNone {
 			return fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", p, it.Action.Kind)
 		}
-		if err := it.Action.validate(p, watches); err != nil {
+		if err := it.Action.validate(p, watches, window); err != nil {
 			return err
 		}
-		if err := validateItems(it.Menu, p+".menu", watches); err != nil {
+		if err := validateItems(it.Menu, p+".menu", watches, window); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a Action) validate(path string, watches []Watch) error {
+func (a Action) validate(path string, watches []Watch, window *Window) error {
 	switch a.Kind {
 	case ActionRun:
 		if len(a.Run) == 0 {
@@ -73,6 +78,10 @@ func (a Action) validate(path string, watches []Watch) error {
 		}
 	case ActionAgent:
 		return checkAgentTarget(path, a.Agent, watches)
+	case ActionWindow:
+		if window == nil {
+			return fmt.Errorf("%s.window: this file declares no window: block, so there is nothing to %s", path, a.Window)
+		}
 	}
 	return nil
 }
