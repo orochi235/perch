@@ -77,7 +77,10 @@ var agentTmpl = template.Must(template.New("agent").Parse(plistHeader + `<plist 
 	<key>RunAtLoad</key>
 	<true/>
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
 	<key>ProcessType</key>
 	<string>Interactive</string>
 </dict>
@@ -87,6 +90,9 @@ var agentTmpl = template.Must(template.New("agent").Parse(plistHeader + `<plist 
 // AgentPlist renders the LaunchAgent that keeps the app running. It carries a
 // PATH because launchd's default cannot resolve a bare command in run:, and a
 // watch that cannot resolve its command just leaves the widget looking broken.
+//
+// KeepAlive is conditional on a non-zero exit: a widget quit from its own Quit
+// item exits 0 and must stay quit, while a crash still brings it back.
 func AgentPlist(label, program, path string) string {
 	var sb strings.Builder
 	_ = agentTmpl.Execute(&sb, struct{ Label, Program, Path string }{

@@ -91,3 +91,13 @@ func TestInstallPATHFallsBackWhenUnset(t *testing.T) {
 		t.Errorf("fallback PATH = %q, want the system directories", got)
 	}
 }
+
+func TestAgentPlistKeepsAliveOnlyOnCrash(t *testing.T) {
+	got := AgentPlist("dev.example.w", "/tmp/w", "/usr/bin")
+	if !strings.Contains(got, "<key>SuccessfulExit</key>") {
+		t.Error("KeepAlive is unconditional, so Quit exits 0 and launchd restarts the app immediately")
+	}
+	if strings.Contains(got, "<key>KeepAlive</key>\n\t<true/>") {
+		t.Error("KeepAlive is still a bare <true/>")
+	}
+}
