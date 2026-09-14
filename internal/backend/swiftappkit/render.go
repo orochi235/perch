@@ -290,7 +290,69 @@ func emitMenu(b *buf, s *spec.Spec, e *celswift.Env) (string, error) {
 	b.line("return tidy(menu)")
 	b.out()
 	b.line("}")
+	if err := emitQuit(b, s, e, g); err != nil {
+		return "", err
+	}
 	return b.String(), nil
+}
+
+// emitQuit writes renderQuit: the first rule whose condition holds, lowered in
+// order so the fallback cannot outrank a guarded rule.
+func emitQuit(b *buf, s *spec.Spec, e *celswift.Env, g *menuGen) error {
+	if len(s.App.Quit) == 0 {
+		return nil
+	}
+	b.line("")
+	b.line("func renderQuit(_ results: Results) -> QuitPrompt? {")
+	b.in()
+	for i, r := range s.App.Quit {
+		path := fmt.Sprintf("app.quit[%d]", i)
+		guarded := r.When != ""
+		if guarded {
+			cond, err := e.LowerCondition(r.When)
+			if err != nil {
+				return fmt.Errorf("%s.when: %w", path, err)
+			}
+			b.line("if %s {", cond)
+			b.in()
+		}
+		b.line("return QuitPrompt(")
+		b.in()
+		b.line("message: %s,", celswift.SwiftString(r.Confirm))
+		b.line("detail: %s,", celswift.SwiftString(r.Detail))
+		if len(r.Buttons) == 0 {
+			b.line("buttons: [])")
+		} else {
+			b.line("buttons: [")
+			b.in()
+			for j, btn := range r.Buttons {
+				action := "nil"
+				if btn.Action.Kind != spec.ActionNone {
+					lowered, err := g.action(btn.Action, e, fmt.Sprintf("%s.buttons[%d]", path, j))
+					if err != nil {
+						return err
+					}
+					action = lowered
+				}
+				b.line("QuitChoice(text: %s, action: %s),", celswift.SwiftString(btn.Text), action)
+			}
+			b.out()
+			b.line("])")
+		}
+		b.out()
+		if guarded {
+			b.out()
+			b.line("}")
+		}
+	}
+	// A bare last rule always returns, so this is reachable only when every
+	// rule is guarded and none of them held.
+	if s.App.Quit[len(s.App.Quit)-1].When != "" {
+		b.line("return nil")
+	}
+	b.out()
+	b.line("}")
+	return nil
 }
 
 func (g *menuGen) items(items []spec.Item, into string, e *celswift.Env, path string) error {

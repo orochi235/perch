@@ -49,6 +49,56 @@ The first four keys are required.
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 | `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
 
+### quit
+
+What quitting asks first. An ordered list, first match wins, the last rule bare
+— the idiom `status:` uses.
+
+```yaml
+app:
+  name: reviewplex
+  id: com.reviewplex.menubar
+  icon: tray
+  interval: 5s
+  quit:
+    - when: svc.loaded
+      confirm: "Quit reviewplex?"
+      detail: "Stops the menu bar item and its polling. The server is running as a launchd service."
+      buttons:
+        - {text: Quit Both, agent: svc.stop}
+        - {text: Quit Helper Only}
+    - confirm: "Quit reviewplex?"
+      detail: "The menu bar item goes away. The server itself keeps running."
+
+watch:
+  svc:
+    launchagent: com.reviewplex
+
+menu:
+  - {text: Quit, quit: true}
+```
+
+| Key | Takes |
+|---|---|
+| `when` | A string: the condition. Omit it to match always, which means it must be last. |
+| `confirm` | A string: the question. Required. |
+| `detail` | A string: the smaller text under it. |
+| `buttons` | A list of `{text: …}` mappings, each with at most one action — the same ones a menu item takes, less `quit:` and `window:`. |
+
+Buttons are offered in order, the first is the default, and Cancel is implicit
+and always last. A button's action runs before the app terminates; if it fails,
+the alert names the command and the quit is canceled. With no `buttons:` the
+prompt offers one button named Quit.
+
+This is app policy rather than something on the Quit item, because the Dock
+tile's own Quit calls `terminate` directly and would skip anything wired to a
+menu. Every route in goes through it: the menu item, ⌥⌘Q, the Dock tile.
+
+Logging out, restarting and shutting down skip the prompt and quit. A helper
+that cancels someone's logout is worse than one that exits without asking.
+
+Leave the block out and the app quits without asking.
+
 ## watch
 
 A mapping of names to polled sources. They run concurrently, and they all

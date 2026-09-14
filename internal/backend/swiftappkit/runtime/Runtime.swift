@@ -452,6 +452,74 @@ enum Act {
     }
 }
 
+// MARK: - Quitting
+
+/// One answer in the quit prompt. A nil action just quits.
+struct QuitChoice {
+    let text: String
+    let action: MenuAction?
+}
+
+/// What quitting asks. Cancel is implicit and always last; the first button is
+/// the default.
+struct QuitPrompt {
+    let message: String
+    let detail: String
+    let buttons: [QuitChoice]
+}
+
+enum Quit {
+    /// Quit reasons that mean the machine is going down or the user is walking
+    /// away — nobody is asking this app a question, and nobody is waiting to
+    /// answer one.
+    private static let unattended: Set<OSType> = [
+        OSType(kAELogOut), OSType(kAEReallyLogOut),
+        OSType(kAEShutDown), OSType(kAERestart), OSType(kAEQuitAll),
+    ]
+
+    /// Whether this termination is aimed at this app specifically. An absent
+    /// event or an absent reason means it is: NSApp.terminate from our own
+    /// menus and from the Dock tile carries no quit reason at all.
+    static func isUserInitiated(_ event: NSAppleEventDescriptor?) -> Bool {
+        guard let reason = event?.attributeDescriptor(forKeyword: AEKeyword(kAEQuitReason)) else {
+            return true
+        }
+        return !unattended.contains(reason.enumCodeValue)
+    }
+
+    /// Asks, and reports what to do. A helper that cancels someone's logout is
+    /// worse than one that exits without asking, and a modal raised during
+    /// shutdown is a dialog nobody is there to dismiss — so an unattended quit
+    /// never reaches the alert.
+    static func should(_ prompt: QuitPrompt?,
+                       event: NSAppleEventDescriptor?,
+                       then finish: @escaping (Bool) -> Void) -> NSApplication.TerminateReply {
+        guard let prompt, isUserInitiated(event) else { return .terminateNow }
+
+        let alert = NSAlert()
+        alert.messageText = prompt.message
+        alert.informativeText = prompt.detail
+        let choices = prompt.buttons.isEmpty ? [QuitChoice(text: "Quit", action: nil)] : prompt.buttons
+        for choice in choices {
+            alert.addButton(withTitle: choice.text)
+        }
+        alert.addButton(withTitle: "Cancel").keyEquivalent = "\u{1b}"
+
+        // The status item does not activate the app, so an unactivated modal can
+        // sit behind another app with nothing to click while runModal blocks.
+        NSApp.activate(ignoringOtherApps: true)
+
+        let picked = alert.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
+        guard picked >= 0, picked < choices.count else { return .terminateCancel }
+        guard let action = choices[picked].action else { return .terminateNow }
+
+        // Captured strongly on purpose: every path out of this has to reply
+        // exactly once, and a dropped reply hangs termination forever.
+        Act.perform(action) { finish(true) }
+        return .terminateLater
+    }
+}
+
 /// The app's one window, if it declared one. Set at launch by the generated
 /// Controller. A closure rather than a typed reference so Runtime.swift does not
 /// depend on Window.swift, which is emitted only when there is a window.

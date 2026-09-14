@@ -120,3 +120,23 @@ func emitWindowActions(b *buf, s *spec.Spec) {
 	b.line("}")
 	b.line("")
 }
+
+// emitQuitDelegate writes applicationShouldTerminate. Nothing is written when
+// the spec declares no rules, so an app that never asks does not carry the
+// machinery for asking.
+func emitQuitDelegate(b *buf, s *spec.Spec) {
+	if len(s.App.Quit) == 0 {
+		return
+	}
+	b.line("func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {")
+	b.in()
+	b.line("Quit.should(")
+	b.in()
+	b.line("renderQuit(results),")
+	b.line("event: NSAppleEventManager.shared().currentAppleEvent,")
+	b.line("then: { ok in NSApp.reply(toApplicationShouldTerminate: ok) })")
+	b.out()
+	b.out()
+	b.line("}")
+	b.line("")
+}

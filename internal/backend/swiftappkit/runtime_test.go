@@ -165,3 +165,63 @@ func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
 		}
 	}
 }
+
+// applicationShouldTerminate under a real logout cannot be tested without
+// logging out, so this drives the discriminator it hangs on. Getting it wrong
+// means either a helper that blocks someone's logout with a modal nobody is
+// there to dismiss, or one that stops asking at all.
+const quitReasonProbe = `
+import AppKit
+
+func withReason(_ code: OSType) -> NSAppleEventDescriptor {
+    let event = NSAppleEventDescriptor.appleEvent(
+        withEventClass: OSType(kCoreEventClass),
+        eventID: OSType(kAEQuitApplication),
+        targetDescriptor: nil,
+        returnID: 0,
+        transactionID: 0)
+    event.setAttribute(NSAppleEventDescriptor(enumCode: code), forKeyword: AEKeyword(kAEQuitReason))
+    return event
+}
+
+print("logout=\(Quit.isUserInitiated(withReason(OSType(kAELogOut))))")
+print("shutdown=\(Quit.isUserInitiated(withReason(OSType(kAEShutDown))))")
+print("restart=\(Quit.isUserInitiated(withReason(OSType(kAERestart))))")
+print("quitall=\(Quit.isUserInitiated(withReason(OSType(kAEQuitAll))))")
+print("noevent=\(Quit.isUserInitiated(nil))")
+
+let bare = NSAppleEventDescriptor.appleEvent(
+    withEventClass: OSType(kCoreEventClass),
+    eventID: OSType(kAEQuitApplication),
+    targetDescriptor: nil,
+    returnID: 0,
+    transactionID: 0)
+print("noreason=\(Quit.isUserInitiated(bare))")
+`
+
+func TestQuitReasonSeparatesLogoutFromAQuit(t *testing.T) {
+	bin := buildProbe(t, quitReasonProbe)
+	out, err := exec.Command(bin).CombinedOutput()
+	if err != nil {
+		t.Fatalf("the probe died: %v\n%s", err, out)
+	}
+	want := []string{
+		"logout=false",
+		"shutdown=false",
+		"restart=false",
+		"quitall=false",
+		// NSApp.terminate from our own menus and from the Dock tile carries no
+		// reason at all, so an absent one has to read as a deliberate quit.
+		"noevent=true",
+		"noreason=true",
+	}
+	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
+	if len(got) != len(want) {
+		t.Fatalf("got %d lines, want %d:\n%s", len(got), len(want), out)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("line %d:\n got %q\nwant %q", i+1, got[i], want[i])
+		}
+	}
+}

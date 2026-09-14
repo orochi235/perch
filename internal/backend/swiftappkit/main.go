@@ -62,6 +62,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 	emitPoll(b, s, n)
 	emitDraw(b)
 	emitWindowActions(b, s)
+	emitQuitDelegate(b, s)
 	emitWindowSetup(b, s)
 
 	b.out()

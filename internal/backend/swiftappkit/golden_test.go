@@ -22,6 +22,7 @@ func TestGolden(t *testing.T) {
 		"states":        states,
 		"launchagent":   launchAgent,
 		"window":        windowDoc,
+		"quit":          quitDoc,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

@@ -93,5 +93,6 @@ func specs() map[string]string {
 		"states":       states,
 		"launchAgent":  launchAgent,
 		"window":       windowDoc,
+		"quit":         quitDoc,
 	}
 }
