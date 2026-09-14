@@ -24,6 +24,7 @@ var sections = map[string]string{
 	"rawWatch":      "properties.watch.additionalProperties.properties",
 	"rawStatusRule": "properties.status.items.properties",
 	"rawWindow":     "properties.window.properties",
+	"rawQuitRule":   "properties.app.properties.quit.items.properties",
 	"rawZoom":       "properties.window.properties.zoom.properties",
 	"itemFields":    "definitions.menu.items.oneOf.1.properties",
 	"rawPost":       "definitions.menu.items.oneOf.1.properties.post.properties",

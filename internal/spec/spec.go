@@ -28,6 +28,8 @@ type App struct {
 	// Sign is a keychain code signing identity. Empty signs the bundle ad-hoc,
 	// which seals it but gives it a new identity on every build.
 	Sign string
+	// Quit is what quitting asks first. Empty quits without asking.
+	Quit []QuitRule
 }
 
 type rawSpec struct {
@@ -45,6 +47,7 @@ type rawApp struct {
 	Icon     yaml.Node `yaml:"icon"`
 	Interval string    `yaml:"interval"`
 	Sign     string    `yaml:"sign"`
+	Quit     yaml.Node `yaml:"quit"`
 }
 
 // Parse reads a menubar.yaml document into a Spec.
@@ -82,6 +85,11 @@ func Parse(src []byte) (*Spec, error) {
 		}
 		s.App.Interval = d
 	}
+	quit, err := parseQuit(&raw.App.Quit)
+	if err != nil {
+		return nil, err
+	}
+	s.App.Quit = quit
 	win, err := parseWindow(&raw.Window, s.App.Name)
 	if err != nil {
 		return nil, err

@@ -23,7 +23,38 @@ const body = `{
         "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "Bundle identifier, e.g. dev.example.menubar."},
         "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
         "interval": {"type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$", "description": "Poll interval, e.g. 5s or 1m30s."},
-        "sign": {"type": "string", "description": "Keychain code signing identity for the .app. Omit to sign ad-hoc."}
+        "sign": {"type": "string", "description": "Keychain code signing identity for the .app. Omit to sign ad-hoc."},
+        "quit": {
+          "type": "array",
+          "description": "What quitting asks first. First matching rule wins; the last takes no when:.",
+          "items": {
+            "type": "object",
+            "required": ["confirm"],
+            "additionalProperties": false,
+            "properties": {
+              "when": {"type": "string", "description": "CEL condition; omit on the last rule."},
+              "confirm": {"type": "string", "description": "The question."},
+              "detail": {"type": "string", "description": "The smaller text under it."},
+              "buttons": {
+                "type": "array",
+                "description": "Offered in order; the first is the default, Cancel is implicit and last.",
+                "items": {
+                  "type": "object",
+                  "required": ["text"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {"type": "string"},
+                    "run": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                    "open": {"type": "string"},
+                    "post": {"type": "object", "required": ["url"], "additionalProperties": false, "properties": {"url": {"type": "string"}, "body": {}}},
+                    "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$"},
+                    "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"}
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "watch": {

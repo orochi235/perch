@@ -47,6 +47,9 @@ func (s *Spec) validate() error {
 			return fmt.Errorf("status[%d]: a rule with no when: always matches, so it must be last; %d rule(s) after it can never apply", i, len(s.Status)-1-i)
 		}
 	}
+	if err := s.validateQuit(); err != nil {
+		return err
+	}
 	return validateItems(s.Menu, "menu", s.Watches, s.Window)
 }
 
