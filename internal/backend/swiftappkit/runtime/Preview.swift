@@ -86,6 +86,9 @@ private func encoded(_ action: MenuAction) -> [String: Any] {
     case .open(let target): return ["open": target]
     case .post(let url, let body): return ["post": ["url": url, "body": body]]
     case .agent(let label, _, let verb): return ["agent": ["label": label, "verb": verb.rawValue]]
+    // A closure has nothing to render but the fact that it is one: what the
+    // hand-written method does is not knowable from here.
+    case .swift: return ["swift": true]
     case .quit: return ["quit": true]
     }
 }

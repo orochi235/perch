@@ -107,3 +107,40 @@ menu:
 		t.Fatal("want error for an unknown menu item key, got nil")
 	}
 }
+
+func TestSwiftActionTakesADottedPath(t *testing.T) {
+	s, err := Parse([]byte(`
+app: {name: w, id: dev.example.w, icon: gear, interval: 5s}
+menu:
+  - {text: Prefs, swift: Dash.showPreferences}
+`))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	got := s.Menu[0].Action
+	if got.Kind != ActionSwift {
+		t.Fatalf("Kind = %v, want ActionSwift", got.Kind)
+	}
+	if got.Swift != "Dash.showPreferences" {
+		t.Errorf("Swift = %q, want Dash.showPreferences", got.Swift)
+	}
+}
+
+func TestSwiftActionRefusals(t *testing.T) {
+	cases := map[string]string{
+		"bare name":    `{text: P, swift: showPreferences}`,
+		"leading dot":  `{text: P, swift: ".showPreferences"}`,
+		"trailing dot": `{text: P, swift: "Dash."}`,
+		"not an ident": `{text: P, swift: "Dash.show preferences"}`,
+		"two actions":  `{text: P, swift: Dash.show, quit: true}`,
+	}
+	for name, item := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse([]byte(
+				"app: {name: w, id: dev.example.w, icon: gear, interval: 5s}\nmenu:\n  - " + item + "\n"))
+			if err == nil {
+				t.Fatal("accepted; want a refusal")
+			}
+		})
+	}
+}

@@ -365,6 +365,14 @@ enum Act {
         }
     }
 
+    /// Hand-written Swift from menubar/Sources/. It re-polls like every other
+    /// action, and raises no alert: there is no exit status to inspect, so
+    /// reporting a failure belongs to the hook.
+    static func swift(_ body: () -> Void, then repoll: @escaping () -> Void) {
+        body()
+        repoll()
+    }
+
     static func post(_ urlString: String, body: String, then repoll: @escaping () -> Void) {
         guard let url = URL(string: urlString) else {
             alert("POST \(urlString)", "Not a URL.")
@@ -429,6 +437,7 @@ enum Act {
         case .open(let target): open(target)
         case .post(let url, let body): post(url, body: body, then: repoll)
         case .agent(let label, let plist, let verb): agent(label: label, plist: plist, verb: verb, then: repoll)
+        case .swift(let body): swift(body, then: repoll)
         case .quit: NSApp.terminate(nil)
         }
     }
@@ -492,6 +501,7 @@ enum MenuAction {
     case open(String)
     case post(url: String, body: String)
     case agent(label: String, plist: String, verb: LaunchAgentVerb)
+    case swift(() -> Void)
     case quit
 }
 

@@ -108,7 +108,8 @@ const body = `{
                 "properties": {"url": {"type": "string"}, "body": {}}
               },
               "quit": {"type": "boolean"},
-              "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$", "description": "<launchagent watch>.start, .stop or .restart."}
+              "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$", "description": "<launchagent watch>.start, .stop or .restart."},
+              "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$", "description": "A static method in menubar/Sources/, written Type.method."}
             }
           }
         ]

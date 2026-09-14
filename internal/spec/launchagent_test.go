@@ -121,7 +121,7 @@ menu: [{text: Go, agent: worker.start}]
 watch:
   worker: {launchagent: dev.example.worker}
 menu: [{text: Go, agent: worker.start, quit: true}]
-`, "at most one of run, open, post, quit or agent"},
+`, "at most one of run, open, post, quit, agent or swift"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := Parse([]byte(tc.doc))

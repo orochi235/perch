@@ -226,6 +226,7 @@ Then at most one action, which is what activating the item does:
 | `post` | A mapping of `url` (a string) and `body` (any YAML, sent as JSON). |
 | `agent` | A string, `<watch>.<verb>`, where `<watch>` is a `launchagent` watch and `<verb>` is `start`, `stop` or `restart`. |
 | `quit` | `true`. Ends the app. |
+| `swift` | A string, `<Type>.<method>`: a static method in `menubar/Sources/`. |
 
 An item with a submenu takes no action: opening the submenu supersedes it, so it
 could never run.
@@ -261,6 +262,16 @@ menu:
 ```
 
 [Start and stop a LaunchAgent](recipes/launchagent.md) is the whole widget.
+
+`swift:` calls hand-written Swift. It names a static method — dotted, so your
+names cannot collide with the emitted ones — and perch emits the call without
+checking it exists; `swiftc` does that when the app is built, in the same module
+as `menubar/Sources/*.swift`. So `perch build` alone will not catch a misspelled
+method, but `run` and `install` will. It re-polls afterward like every other
+action, and raises no alert on failure: there is no exit status to inspect.
+
+This is the menu-side half of [hooking the app from
+Sources/](#hooking-the-app-from-sources), which is otherwise launch-only.
 
 ### each
 
@@ -358,6 +369,8 @@ a condition holding, and the cursor that makes them fire once is state no
 The status item, the menu and the polling stay perch's. An extension that
 redraws either is fighting a menu rebuilt from the last poll every time it
 opens.
+
+A menu item reaches hand-written code through [`swift:`](#actions).
 
 ## Icon assets
 

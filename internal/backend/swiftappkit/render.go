@@ -404,6 +404,11 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path string) (string, e
 		}
 		return "", fmt.Errorf("%s.agent: no launchagent watch named %q", path, a.Agent)
 
+	case spec.ActionSwift:
+		// Emitted verbatim as a method reference, which is a () -> Void. perch
+		// cannot check the target exists; swiftc does, in the same module.
+		return ".swift(" + a.Swift + ")", nil
+
 	case spec.ActionPost:
 		url, err := e.LowerTemplate(a.PostURL)
 		if err != nil {

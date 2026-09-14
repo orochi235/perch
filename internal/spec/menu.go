@@ -21,6 +21,7 @@ const (
 	ActionPost
 	ActionQuit
 	ActionAgent
+	ActionSwift
 )
 
 func (k ActionKind) String() string {
@@ -37,6 +38,8 @@ func (k ActionKind) String() string {
 		return "quit"
 	case ActionAgent:
 		return "agent"
+	case ActionSwift:
+		return "swift"
 	}
 	return "unknown"
 }
@@ -63,6 +66,7 @@ type Action struct {
 	PostBody string // compact JSON, template holes preserved
 	Agent    string // ActionAgent: the launchagent watch acted on
 	Verb     AgentVerb
+	Swift    string // ActionSwift: a dotted path, Type.method
 }
 
 // Item is one menu entry: a separator, a label, or a label with an action,
@@ -86,6 +90,7 @@ type itemFields struct {
 	Post  *rawPost  `yaml:"post"`
 	Quit  bool      `yaml:"quit"`
 	Agent string    `yaml:"agent"`
+	Swift string    `yaml:"swift"`
 }
 
 type rawPost struct {
@@ -169,8 +174,16 @@ func actionFrom(f itemFields, path string) (Action, error) {
 		}
 		a.Kind, a.Agent, a.Verb = ActionAgent, name, verb
 	}
+	if f.Swift != "" {
+		verbs = append(verbs, "swift")
+		target, err := parseSwiftAction(f.Swift, path)
+		if err != nil {
+			return a, err
+		}
+		a.Kind, a.Swift = ActionSwift, target
+	}
 	if len(verbs) > 1 {
-		return a, fmt.Errorf("%s: has %v; an item takes at most one of run, open, post, quit or agent", path, verbs)
+		return a, fmt.Errorf("%s: has %v; an item takes at most one of run, open, post, quit, agent or swift", path, verbs)
 	}
 	return a, nil
 }
@@ -188,6 +201,18 @@ func parseAgentAction(src, path string) (string, AgentVerb, error) {
 		}
 	}
 	return "", "", fmt.Errorf("%s.agent: %q is not something perch can do to a LaunchAgent; it does %s", path, rest, strings.Join(verbList(), ", "))
+}
+
+// swiftPath is Type.method: two Swift identifiers and one dot. Dotted rather
+// than bare so a hand-written name cannot collide with an emitted one —
+// Controller, Results, Draw, Watcher, renderFace, renderMenu.
+var swiftPath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*$`)
+
+func parseSwiftAction(src, path string) (string, error) {
+	if !swiftPath.MatchString(src) {
+		return "", fmt.Errorf("%s.swift: %q is not <Type>.<method>; swift: names a static method in menubar/Sources/, e.g. Dash.showPreferences", path, src)
+	}
+	return src, nil
 }
 
 func verbList() []string {
