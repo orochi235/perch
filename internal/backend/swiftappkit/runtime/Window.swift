@@ -175,7 +175,7 @@ enum MainMenu {
         main.addItem(fileMenuItem(target))
         main.addItem(editMenuItem())
         main.addItem(viewMenuItem(canZoom: canZoom, target))
-        main.addItem(mirroredMenuItem(appName, mirror))
+        main.addItem(mirroredMenuItem(mirror))
         let windowItem = windowMenuItem()
         main.addItem(windowItem)
         NSApp.mainMenu = main
@@ -237,11 +237,14 @@ enum MainMenu {
 
     /// The status item's own menu, in the menu bar. One declaration drives
     /// both, so the two cannot disagree about what is currently possible.
-    private static func mirroredMenuItem(_ name: String, _ mirror: MenuMirror) -> NSMenuItem {
-        let menu = NSMenu(title: name)
+    ///
+    /// Titled Status rather than the app's name, which the App menu already
+    /// carries: two menus with one name is a menu bar you cannot read.
+    private static func mirroredMenuItem(_ mirror: MenuMirror) -> NSMenuItem {
+        let menu = NSMenu(title: "Status")
         menu.delegate = mirror
         let item = NSMenuItem()
-        item.title = name
+        item.title = "Status"
         item.submenu = menu
         return item
     }

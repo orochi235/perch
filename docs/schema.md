@@ -275,7 +275,7 @@ menu:
 Only `url` is required.
 
 Declaring a window also emits a main menu — App, File, Edit, View, Window, and
-the status item's own menu mirrored under the app's name. Not optional: an
+the status item's own menu mirrored under **Status**. Not optional: an
 `.accessory` app owns no menu bar until it is `.regular`, and without the Edit
 menu ⌘C does not work inside the window at all. ⌘Q closes the window; quitting
 moves to ⌥⌘Q, because for a menu-bar-first app ⌘Q otherwise costs the status

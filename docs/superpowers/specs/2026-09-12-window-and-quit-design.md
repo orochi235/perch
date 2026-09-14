@@ -1,7 +1,13 @@
 # A window, a Swift action, and quit policy
 
-**Status: designed, not built.** Nothing below is in the schema yet. This is
-the design to build from; the reader is whoever builds or changes it.
+**Status: built.** `window:`, `swift:` and `app.quit:` all parse, emit and
+compile; reviewplex is generated from a `menubar.yaml`. This is the design,
+kept for whoever changes it next.
+
+Two things moved during the build. The mirrored menu is titled **Status**, not
+the app's name — the App menu already carries that, and two menus with one name
+is a menu bar you cannot read. The Dock tile's artwork is `menubar/AppIcon.png`,
+a fixed path rather than a schema key.
 
 Three additions, driven by the last repo not on perch. `window:` puts a WebKit
 window behind a menu item. `swift:` lets a menu item call hand-written Swift.
