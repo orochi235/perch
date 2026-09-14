@@ -48,6 +48,12 @@ func (p *Project) SourcesDir() string   { return filepath.Join(p.Root, "menubar"
 // bundle's Resources whole, so a file nothing references costs only its bytes.
 func (p *Project) IconsDir() string { return filepath.Join(p.Root, "menubar", "Icons") }
 
+// AppIconPath is artwork for the Dock tile, rendered into the bundle as .icns.
+// Only an app that takes a tile needs one, so its absence is ordinary.
+func (p *Project) AppIconPath() string {
+	return filepath.Join(p.Root, "menubar", "AppIcon.png")
+}
+
 // checkIcons refuses a spec naming artwork that is not there. The app would
 // otherwise build, install and run with no status item image at all, which
 // looks like the poller failing rather than a missing file.

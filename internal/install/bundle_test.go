@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -132,4 +133,54 @@ func iconsDir(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return dir
+}
+
+func TestBundleWritesAnAppIconWhenOneIsThere(t *testing.T) {
+	requireIconTools(t)
+	dir := t.TempDir()
+	icon := filepath.Join(dir, "AppIcon.png")
+	writeTestPNG(t, icon, 512)
+
+	dest := filepath.Join(dir, "W.app")
+	err := BuildBundle(BundleOpts{
+		App:     App{Name: "W", ID: "dev.example.w", Executable: "W", IconFile: "AppIcon"},
+		Dest:    dest,
+		AppIcon: icon,
+		Compile: func(sources []string, out string) error { return os.WriteFile(out, []byte("x"), 0o755) },
+		Sign:    func(bundle, identity string) error { return nil },
+	})
+	if err != nil {
+		t.Fatalf("BuildBundle: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "Contents", "Resources", "AppIcon.icns")); err != nil {
+		t.Errorf("no AppIcon.icns in the bundle: %v", err)
+	}
+	info, err := os.ReadFile(filepath.Join(dest, "Contents", "Info.plist"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(info), "<key>CFBundleIconFile</key>") {
+		t.Error("Info.plist names no icon, so the Dock tile stays generic")
+	}
+}
+
+func TestBundleWithoutAnAppIconNamesNone(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "W.app")
+	err := BuildBundle(BundleOpts{
+		App:     App{Name: "W", ID: "dev.example.w", Executable: "W"},
+		Dest:    dest,
+		Compile: func(sources []string, out string) error { return os.WriteFile(out, []byte("x"), 0o755) },
+		Sign:    func(bundle, identity string) error { return nil },
+	})
+	if err != nil {
+		t.Fatalf("BuildBundle: %v", err)
+	}
+	info, err := os.ReadFile(filepath.Join(dest, "Contents", "Info.plist"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(info), "CFBundleIconFile") {
+		t.Error("named an icon that is not there")
+	}
 }

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/orochi235/perch/internal/backend/swiftappkit"
 	"github.com/orochi235/perch/internal/install"
@@ -189,9 +190,14 @@ func runRun(args []string, e *env) error {
 	defer os.RemoveAll(tmp)
 
 	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name, Identity: p.Spec.App.Sign}
+	appIcon := ""
+	if _, err := os.Stat(p.AppIconPath()); err == nil {
+		appIcon = p.AppIconPath()
+		app.IconFile = "AppIcon"
+	}
 	dest := filepath.Join(tmp, p.Spec.App.Name+".app")
 	fmt.Fprintln(e.out, "compiling…")
-	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: dest, Compile: e.compile, Icons: p.IconsDir()}); err != nil {
+	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: dest, Compile: e.compile, Icons: p.IconsDir(), AppIcon: appIcon}); err != nil {
 		return err
 	}
 	bin := filepath.Join(dest, "Contents", "MacOS", app.Executable)
@@ -222,10 +228,19 @@ func runInstall(args []string, e *env) error {
 	}
 
 	app := install.App{Name: p.Spec.App.Name, ID: p.Spec.App.ID, Executable: p.Spec.App.Name, Identity: p.Spec.App.Sign}
+	appIcon := ""
+	if _, err := os.Stat(p.AppIconPath()); err == nil {
+		appIcon = p.AppIconPath()
+		app.IconFile = "AppIcon"
+	}
 	fmt.Fprintln(e.out, "compiling…")
-	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: bundle, Compile: e.compile, Icons: p.IconsDir()}); err != nil {
+	if err := install.BuildBundle(install.BundleOpts{App: app, Sources: sources, Dest: bundle, Compile: e.compile, Icons: p.IconsDir(), AppIcon: appIcon}); err != nil {
 		return err
 	}
+	// LaunchServices caches icons per bundle, so a changed icon does not appear
+	// until the bundle's mtime moves.
+	now := time.Now()
+	_ = os.Chtimes(bundle, now, now)
 	fmt.Fprintf(e.out, "  %s\n", bundle)
 
 	if err := os.MkdirAll(filepath.Dir(plistPath), 0o755); err != nil {

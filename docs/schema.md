@@ -405,3 +405,13 @@ Ship artwork at twice the size you want it drawn: it is scaled to the menu
 bar's 18pt height with its aspect kept. Where an icon has to read against both
 a light and a dark menu bar, add `<name>~dark.png` beside `<name>.png` and the
 app picks per appearance.
+
+### The Dock tile
+
+`menubar/Icons` is the status item's artwork. A [`window:`](#window) app also
+takes a Dock tile while its window is open, and that wants a different file:
+`menubar/AppIcon.png`, one square PNG at 1024×1024. `perch install` renders it
+into the ten sizes macOS asks for and names it in the bundle. There is no key
+for it — the file being there is what turns it on.
+
+Without one the tile is the generic blank application icon.

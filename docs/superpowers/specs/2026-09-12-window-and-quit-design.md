@@ -167,10 +167,13 @@ here and worth landing first.
 into `Resources` for the status item and writes no `.icns` and no
 `CFBundleIconFile`. Invisible while `LSUIElement` keeps the app out of the Dock;
 a `window:` app promotes to `.regular` and gets a tile with a blank generic
-icon. Install grows the pipeline reviewplex has in bash: ten renditions from one
-source PNG via `sips`, `iconutil -c icns`, and a `touch` of the bundle
-afterward, because LaunchServices caches icons per bundle and a changed icon
-otherwise does not appear.
+icon. Install grows the pipeline reviewplex has in bash: ten renditions from
+`menubar/AppIcon.png` via `sips`, `iconutil -c icns`, and a `touch` of the
+bundle afterward, because LaunchServices caches icons per bundle and a changed
+icon otherwise does not appear.
+
+The source is a fixed path rather than a schema key. The file being there is
+already the whole of the decision, and a key would be a second way to say it.
 
 `LSUIElement: true` stays hardcoded and correct. The app launches as
 `.accessory` and promotes at runtime; the plist key decides where it starts, not

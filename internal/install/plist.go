@@ -16,6 +16,10 @@ type App struct {
 	Executable string
 	// Identity is the keychain code signing identity, or empty for ad-hoc.
 	Identity string
+	// IconFile is the basename of the .icns in Resources, without its
+	// extension. Empty leaves CFBundleIconFile out, which is right for a
+	// status-bar app that never shows a Dock tile.
+	IconFile string
 }
 
 const plistHeader = `<?xml version="1.0" encoding="UTF-8"?>
@@ -32,6 +36,10 @@ var infoTmpl = template.Must(template.New("info").Parse(plistHeader + `<plist ve
 	<string>{{.ID}}</string>
 	<key>CFBundleExecutable</key>
 	<string>{{.Executable}}</string>
+{{- if .IconFile}}
+	<key>CFBundleIconFile</key>
+	<string>{{.IconFile}}</string>
+{{- end}}
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -57,6 +65,7 @@ func InfoPlist(a App) string {
 		Name:       escape(a.Name),
 		ID:         escape(a.ID),
 		Executable: escape(a.Executable),
+		IconFile:   escape(a.IconFile),
 	})
 	return sb.String()
 }

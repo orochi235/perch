@@ -53,6 +53,9 @@ type BundleOpts struct {
 	// Icons is a directory whose .png files are copied into Resources. Absent
 	// or empty is ordinary: a spec using only SF Symbols needs no artwork.
 	Icons string
+	// AppIcon is a source .png rendered into Resources/<App.IconFile>.icns.
+	// Empty is ordinary: only an app that takes a Dock tile needs one.
+	AppIcon string
 }
 
 // BuildBundle stages a complete .app in a temporary directory and only then
@@ -86,6 +89,12 @@ func BuildBundle(o BundleOpts) error {
 	}
 	if err := copyIcons(o.Icons, filepath.Join(staged, "Contents", "Resources")); err != nil {
 		return err
+	}
+	if o.AppIcon != "" {
+		icns := filepath.Join(staged, "Contents", "Resources", o.App.IconFile+".icns")
+		if err := BuildICNS(o.AppIcon, icns); err != nil {
+			return err
+		}
 	}
 	info := filepath.Join(staged, "Contents", "Info.plist")
 	if err := os.WriteFile(info, []byte(InfoPlist(o.App)), 0o644); err != nil {
