@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -31,10 +32,10 @@ func TestInstalledAppStaysRunning(t *testing.T) {
 		t.Skipf("not a GUI login session (%s); a status item has nowhere to appear", out)
 	}
 
-	bootoutStale(t, smokePrefix)
+	lockSmoke(t)
+	bootoutStale(t, smokeLabel)
 
-	suffix := strconv.Itoa(os.Getpid())
-	name, label := "perchSmoke"+suffix, smokePrefix+suffix
+	name, label := "perchSmoke", smokeLabel
 	home := t.TempDir()
 	dir := project(t, `
 app: {name: `+name+`, id: `+label+`, icon: circle.dashed, interval: 2s}
@@ -109,12 +110,30 @@ menu:
 	}
 }
 
-const smokePrefix = "dev.perch.smoke."
+// smokeLabel is one identifier for every run. It is the bundle id, so it is
+// also the signing identifier, and macOS files a Local Network rule per
+// identifier that nothing ever removes.
+const smokeLabel = "dev.perch.smoke"
+
+// lockSmoke holds the label for this run, so a second run started alongside it
+// waits instead of booting out an agent the first is still watching.
+func lockSmoke(t *testing.T) {
+	t.Helper()
+	f, err := os.OpenFile(filepath.Join(os.TempDir(), smokeLabel+".lock"), os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = f.Close() })
+}
 
 func domain() string { return "gui/" + strconv.Itoa(os.Getuid()) }
 
 // bootoutStale unloads agents left behind by a run that was killed before its
-// cleanup. KeepAlive holds their status items in the menu bar indefinitely.
+// cleanup — including the pid-suffixed labels older runs used, which the prefix
+// also matches. KeepAlive holds their status items in the menu bar indefinitely.
 func bootoutStale(t *testing.T, prefix string) {
 	t.Helper()
 	out, err := exec.Command("launchctl", "list").Output()
