@@ -187,6 +187,7 @@ type navLink struct {
 	Title   string
 	Href    string
 	Current bool
+	Sub     []navLink
 }
 
 func (s *Site) write(root, out string) error {
@@ -249,11 +250,15 @@ func (s *Site) navFor(current *Page) []navSection {
 	for _, section := range s.Sections {
 		links := make([]navLink, 0, len(section.Pages))
 		for _, p := range section.Pages {
-			links = append(links, navLink{
+			link := navLink{
 				Title:   p.Title,
 				Href:    current.linkTo(p),
 				Current: p == current,
-			})
+			}
+			for _, sub := range p.Sub {
+				link.Sub = append(link.Sub, navLink{Title: sub.Title, Href: link.Href + "#" + sub.Anchor})
+			}
+			links = append(links, link)
 		}
 		out = append(out, navSection{Title: section.Title, Links: links})
 	}

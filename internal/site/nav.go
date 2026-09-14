@@ -19,11 +19,18 @@ type Page struct {
 	Source  string
 	Schema  string
 	Section string
+	Sub     []Sub
 
 	markdown string
 	blocks   []*block
 	anchors  []string
 	html     string
+}
+
+// Sub is a sidebar entry nested under a page, jumping to one of its headings.
+type Sub struct {
+	Title  string
+	Anchor string
 }
 
 // nav is the site's order and its sidebar labels. A docs/schema.md section
@@ -41,7 +48,7 @@ func nav() []*Section {
 			{Title: "`app`", URL: "menubar/app/", Source: "docs/schema.md", Schema: "app"},
 			{Title: "`watch`", URL: "menubar/watch/", Source: "docs/schema.md", Schema: "watch"},
 			{Title: "`state`", URL: "menubar/state/", Source: "docs/schema.md", Schema: "state"},
-			{Title: "LaunchAgents, and what else perch handles", URL: "menubar/launchagents/", Source: "docs/schema.md", Schema: "launchagents-and-what-else-perch-handles"},
+			{Title: "Builtins", URL: "menubar/builtins/", Source: "docs/schema.md", Schema: "builtins", Sub: []Sub{{Title: "LaunchAgents", Anchor: "launchagents"}}},
 			{Title: "`status`", URL: "menubar/status/", Source: "docs/schema.md", Schema: "status"},
 			{Title: "`window`", URL: "menubar/window/", Source: "docs/schema.md", Schema: "window"},
 			{Title: "`menu`", URL: "menubar/menu/", Source: "docs/schema.md", Schema: "menu"},

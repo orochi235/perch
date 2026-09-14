@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -41,6 +42,9 @@ func Load(root string) (*Site, error) {
 			}
 			p.markdown, p.blocks = extractFences(body)
 			p.anchors = headings(p.markdown)
+			if err := checkSubs(p); err != nil {
+				return nil, err
+			}
 			for _, a := range p.anchors {
 				s.anchors[p.Source+"#"+a] = p
 			}
@@ -48,6 +52,17 @@ func Load(root string) (*Site, error) {
 		}
 	}
 	return s, s.checkSchemaIsPublished(sources["docs/schema.md"])
+}
+
+// checkSubs fails the build when a sidebar entry names a heading its page does
+// not have, since a link to a missing fragment still loads the page.
+func checkSubs(p *Page) error {
+	for _, sub := range p.Sub {
+		if !slices.Contains(p.anchors, sub.Anchor) {
+			return fmt.Errorf("nav.go lists %q under %s, but that page has no heading #%s", sub.Title, p.URL, sub.Anchor)
+		}
+	}
+	return nil
 }
 
 func (s *Site) bodyFor(p *Page, src string) (string, error) {

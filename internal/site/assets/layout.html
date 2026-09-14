@@ -24,7 +24,7 @@
     <div class="group">
       <p class="label">{{title .Title}}</p>
       <ul>
-        {{range .Links}}<li><a href="{{.Href}}"{{if .Current}} class="current" aria-current="page"{{end}}>{{title .Title}}</a></li>{{end}}
+        {{range .Links}}<li><a href="{{.Href}}"{{if .Current}} class="current" aria-current="page"{{end}}>{{title .Title}}</a>{{if .Sub}}<ul class="sub">{{range .Sub}}<li><a href="{{.Href}}">{{title .Title}}</a></li>{{end}}</ul>{{end}}</li>{{end}}
       </ul>
     </div>
     {{end}}

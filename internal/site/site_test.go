@@ -65,6 +65,17 @@ func TestTitleSetsABackquotedSpanAsCode(t *testing.T) {
 }
 
 // A heading set as code still has to be the section its slug names.
+func TestCheckSubsRefusesAHeadingThePageLacks(t *testing.T) {
+	p := &Page{URL: "menubar/builtins/", anchors: []string{"builtins", "launchagents"}, Sub: []Sub{{Title: "LaunchAgents", Anchor: "launchagents"}}}
+	if err := checkSubs(p); err != nil {
+		t.Errorf("a heading the page has: %v", err)
+	}
+	p.Sub[0].Anchor = "launch-agents"
+	if err := checkSubs(p); err == nil {
+		t.Error("a heading the page lacks was accepted")
+	}
+}
+
 func TestSchemaSectionMatchesACodeHeading(t *testing.T) {
 	if _, ok := schemaSection("# x\n\n## `watch`\n\nbody\n", "watch"); !ok {
 		t.Error("no watch section")

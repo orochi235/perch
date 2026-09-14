@@ -144,7 +144,7 @@ An `exists` watch binds only `.ok`, so `json:` on one is an error rather than a
 no-op.
 
 What each `launchagent` field means, and why there is no `.ok`, is in
-[LaunchAgents](#launchagents-and-what-else-perch-handles).
+[LaunchAgents](#launchagents).
 
 A watch that fails sets `.ok` false and leaves `.data` null. It never takes the
 app down, and the menu still opens.
@@ -234,11 +234,15 @@ ordering, so naming one could only ever be a constant, and a guard that looks
 like a guard while contributing nothing is the failure this schema exists to
 prevent.
 
-## LaunchAgents, and what else perch handles
+## Builtins
 
-A LaunchAgent is the one thing perch has built in. A `launchagent` watch reads a
-job launchd holds, and the `agent:` action starts, stops or restarts it, so
-neither needs a hand-written `launchctl`. The label is written once.
+What perch does for a widget so its file does not have to spell it out.
+
+### LaunchAgents
+
+A `launchagent` watch reads a job launchd holds, and the `agent:` action starts,
+stops or restarts it, so neither needs a hand-written `launchctl`. The label is
+written once.
 
 ```yaml
 app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
@@ -283,7 +287,7 @@ An `agent:` also works as a button on a [quit prompt](#quit), which is how an
 app offers to stop its server on the way out. [Start and stop a
 LaunchAgent](recipes/launchagent.md) is the whole widget.
 
-### What else perch handles
+### Handled without asking
 
 | What | Where |
 |---|---|
@@ -395,7 +399,7 @@ Start item feel like it did something. A failure raises an alert naming what was
 attempted.
 
 `agent:` is the one action perch writes the command for: see
-[LaunchAgents](#launchagents-and-what-else-perch-handles).
+[LaunchAgents](#launchagents).
 
 `swift:` calls hand-written Swift. It names a static method — dotted, so your
 names cannot collide with the emitted ones — and perch emits the call without
