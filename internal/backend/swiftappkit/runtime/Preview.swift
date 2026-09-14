@@ -89,6 +89,7 @@ private func encoded(_ action: MenuAction) -> [String: Any] {
     // A closure has nothing to render but the fact that it is one: what the
     // hand-written method does is not knowable from here.
     case .swift: return ["swift": true]
+    case .window(let verb): return ["window": String(describing: verb)]
     case .quit: return ["quit": true]
     }
 }

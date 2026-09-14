@@ -19,12 +19,18 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("import Foundation")
 	b.line("")
 
-	b.line("final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {")
+	conformance := "NSObject, NSApplicationDelegate, NSMenuDelegate"
+	if s.Window != nil {
+		conformance += ", WindowActions, NSMenuItemValidation"
+	}
+	b.line("final class Controller: %s {", conformance)
 	b.in()
 	b.line("private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)")
-	b.line("private var results = Results()")
+	// fileprivate: the mirrored menu's closure reads both.
+	b.line("fileprivate var results = Results()")
 	b.line("private var timer: Timer?")
 	b.line("")
+	emitWindowMembers(b, s)
 	b.line("override init() {")
 	b.in()
 	b.line("super.init()")
@@ -46,12 +52,17 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("self?.poll()")
 	b.out()
 	b.line("}")
+	if s.Window != nil {
+		b.line("setUpWindow()")
+	}
 	b.out()
 	b.line("}")
 	b.line("")
 
 	emitPoll(b, s, n)
 	emitDraw(b)
+	emitWindowActions(b, s)
+	emitWindowSetup(b, s)
 
 	b.out()
 	b.line("}")
@@ -65,7 +76,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 }
 
 func emitPoll(b *buf, s *spec.Spec, n structNames) {
-	b.line("func poll() {")
+	b.line("fileprivate func poll() {")
 	b.in()
 	if len(s.Watches) == 0 {
 		b.line("refresh()")

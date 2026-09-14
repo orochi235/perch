@@ -92,5 +92,6 @@ func specs() map[string]string {
 		"everyFeature": everyFeature,
 		"states":       states,
 		"launchAgent":  launchAgent,
+		"window":       windowDoc,
 	}
 }

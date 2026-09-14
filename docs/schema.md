@@ -203,6 +203,51 @@ last; anything after it is refused rather than left unreachable.
 
 One rule may set several of them — an `icon:` and `dim:` together, say.
 
+## window
+
+One WebKit window, opened from a menu item. One per app, matching one status
+item per app — which is why nothing names it.
+
+```yaml
+app: {name: dash, id: dev.example.dash, icon: tray, interval: 5s}
+
+window:
+  url: http://localhost:4747/
+  title: dash                # defaults to app.name
+  size: [1280, 860]          # width, height; defaults to [1024, 768]
+  zoom: {min: 0.5, max: 2.0, step: 0.1}   # omit for no zoom controls
+
+menu:
+  - {text: Open Dashboard, window: open}
+  - {text: Quit, quit: true}
+```
+
+Only `url` is required.
+
+Declaring a window also emits a main menu — App, File, Edit, View, Window, and
+the status item's own menu mirrored under the app's name. Not optional: an
+`.accessory` app owns no menu bar until it is `.regular`, and without the Edit
+menu ⌘C does not work inside the window at all. ⌘Q closes the window; quitting
+moves to ⌥⌘Q, because for a menu-bar-first app ⌘Q otherwise costs the status
+item and its polling.
+
+The mirrored menu is rebuilt from the last poll every time it opens, the same
+way the status menu is, so the two cannot disagree about what is possible.
+
+What the window does is fixed, because each one is a trap:
+
+| Behavior | Why |
+|---|---|
+| Close hides, never destroys | Reopening keeps scroll position and whatever was expanded |
+| A reopen reloads only if the last load failed | Held open across a server restart the page is dead HTML; reloading every time throws away the state the row above buys |
+| A load is always fresh, never `reload()` | `reload()` does nothing when the first navigation failed and left no history entry |
+| Presenting deminiaturizes first | `orderOut` does not clear the miniaturized flag, so a window hidden while minimized has no tile to come back from |
+| The Dock icon follows the window | Raised before activating, or the activation lands on an app with no tile |
+
+The frame is remembered across launches. Zoom is not — it resets to 1.0.
+
+A Dock tile wants artwork: see [The Dock tile](#the-dock-tile).
+
 ## menu
 
 A list of items, rebuilt from the last poll every time the menu opens, so the
@@ -227,6 +272,7 @@ Then at most one action, which is what activating the item does:
 | `agent` | A string, `<watch>.<verb>`, where `<watch>` is a `launchagent` watch and `<verb>` is `start`, `stop` or `restart`. |
 | `quit` | `true`. Ends the app. |
 | `swift` | A string, `<Type>.<method>`: a static method in `menubar/Sources/`. |
+| `window` | `open`, `close` or `reload`. Needs a [`window:`](#window) block. |
 
 An item with a submenu takes no action: opening the submenu supersedes it, so it
 could never run.

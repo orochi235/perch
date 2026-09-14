@@ -21,6 +21,7 @@ func TestGolden(t *testing.T) {
 		"every-feature": everyFeature,
 		"states":        states,
 		"launchagent":   launchAgent,
+		"window":        windowDoc,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))
@@ -32,7 +33,7 @@ func TestGolden(t *testing.T) {
 				t.Fatalf("Emit: %v", err)
 			}
 			for _, f := range files {
-				if f.Name == "Runtime.swift" {
+				if f.Name == "Runtime.swift" || f.Name == "Window.swift" {
 					continue // fixed, not generated from the spec
 				}
 				path := filepath.Join("testdata", name, f.Name)

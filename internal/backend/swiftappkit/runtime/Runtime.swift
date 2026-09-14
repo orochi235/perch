@@ -438,6 +438,7 @@ enum Act {
         case .post(let url, let body): post(url, body: body, then: repoll)
         case .agent(let label, let plist, let verb): agent(label: label, plist: plist, verb: verb, then: repoll)
         case .swift(let body): swift(body, then: repoll)
+        case .window(let verb): Windows.perform(verb, then: repoll)
         case .quit: NSApp.terminate(nil)
         }
     }
@@ -448,6 +449,18 @@ enum Act {
         a.informativeText = detail.isEmpty ? "No output." : detail
         a.alertStyle = .warning
         a.runModal()
+    }
+}
+
+/// The app's one window, if it declared one. Set at launch by the generated
+/// Controller. A closure rather than a typed reference so Runtime.swift does not
+/// depend on Window.swift, which is emitted only when there is a window.
+enum Windows {
+    static var handler: ((WindowVerb) -> Void)?
+
+    static func perform(_ verb: WindowVerb, then repoll: @escaping () -> Void) {
+        handler?(verb)
+        repoll()
     }
 }
 
@@ -496,12 +509,19 @@ enum LaunchAgentVerb: String {
 
 /// What activating a menu item does. It is lowered when the menu is built, so
 /// an item runs what it showed.
+enum WindowVerb {
+    case open
+    case close
+    case reload
+}
+
 enum MenuAction {
     case run([String])
     case open(String)
     case post(url: String, body: String)
     case agent(label: String, plist: String, verb: LaunchAgentVerb)
     case swift(() -> Void)
+    case window(WindowVerb)
     case quit
 }
 

@@ -72,10 +72,9 @@ way.
 
 The alternative was one installed app reading YAML at launch. Codegen wins on
 one property: **ejection is free.** Both existing apps grew things a schema
-would choke on — an embedded WebKit window with a `Cmd-W`/`Cmd-R` event
-monitor, a notification cursor seeded from the first poll so a restart does not
-replay banners. A runtime would have to either express all of that or invent an
-escape hatch. Codegen's escape hatch is "stop running the generator."
+would choke on — a notification cursor seeded from the first poll so a restart
+does not replay banners. A runtime would have to either express that or invent
+an escape hatch. Codegen's escape hatch is "stop running the generator."
 
 Generated Swift is committed, so a repo builds without perch installed.
 
@@ -275,10 +274,13 @@ error`. It is written once here instead of once per repo.
 
 ## Out of scope
 
-Notification delivery and embedded web views are hand-written Swift, not
-schema. `onto` needs neither, and both existing uses of them are entangled with
-state the schema has no way to name — a cursor seeded from the first poll, a
-window whose reload behavior depends on whether its last navigation failed.
+Notification delivery is hand-written Swift, not schema. `onto` needs none, and
+the one existing use is entangled with state the schema has no way to name: a
+cursor seeded from the first poll, so a restart does not replay banners.
+
+Embedded web views were here too, on the same reasoning. They are now the
+[`window:`](2026-09-12-window-and-quit-design.md) block — the state that looked
+entangling never left the window.
 
 One status item per app. No preferences UI. No auto-update.
 

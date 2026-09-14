@@ -409,6 +409,9 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path string) (string, e
 		// cannot check the target exists; swiftc does, in the same module.
 		return ".swift(" + a.Swift + ")", nil
 
+	case spec.ActionWindow:
+		return ".window(." + string(a.Window) + ")", nil
+
 	case spec.ActionPost:
 		url, err := e.LowerTemplate(a.PostURL)
 		if err != nil {
