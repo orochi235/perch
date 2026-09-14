@@ -190,7 +190,7 @@ type navLink struct {
 }
 
 func (s *Site) write(root, out string) error {
-	tmpl, err := template.ParseFS(assets, "assets/layout.html")
+	tmpl, err := template.New("layout.html").Funcs(template.FuncMap{"title": titleHTML, "plain": plainTitle}).ParseFS(assets, "assets/layout.html")
 	if err != nil {
 		return err
 	}
@@ -226,6 +226,23 @@ func (s *Site) write(root, out string) error {
 	}
 	return s.writeAssets(root, out)
 }
+
+// titleHTML renders a nav title, where a backquoted span names API surface and
+// is set as code.
+func titleHTML(title string) template.HTML {
+	var b strings.Builder
+	for i, part := range strings.Split(title, "`") {
+		if i%2 == 1 {
+			b.WriteString("<code>" + html.EscapeString(part) + "</code>")
+			continue
+		}
+		b.WriteString(html.EscapeString(part))
+	}
+	return template.HTML(b.String())
+}
+
+// plainTitle is a title where markup cannot go: the <title> and the crumb.
+func plainTitle(title string) string { return strings.ReplaceAll(title, "`", "") }
 
 func (s *Site) navFor(current *Page) []navSection {
 	out := make([]navSection, 0, len(s.Sections))

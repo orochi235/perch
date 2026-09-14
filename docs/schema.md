@@ -1,10 +1,10 @@
-# menubar.yaml
+# `menubar.yaml`
 
 The reference for the file perch reads. It is for someone writing one; for why
 the schema stops where it does, see [the design](superpowers/specs/2026-09-05-perch-design.md).
 
-A document has five top-level keys — `app`, `watch`, `state`, `status` and
-`menu`. Only `app` is required, though an app with no `menu` offers nothing but
+A document has six top-level keys — `app`, `watch`, `state`, `status`,
+`window` and `menu`. Only `app` is required, though an app with no `menu` offers nothing but
 its icon.
 
 ```yaml
@@ -37,7 +37,7 @@ at, which gets you completion and inline errors in an editor.
 Unknown keys are rejected everywhere, so a typo is a build error rather than a
 menu item that silently never appears.
 
-## app
+## `app`
 
 The first four keys are required.
 
@@ -49,7 +49,7 @@ The first four keys are required.
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 | `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
 
-### quit
+### `quit`
 
 What quitting asks first. An ordered list, first match wins, the last rule bare
 — the idiom `status:` uses.
@@ -99,7 +99,7 @@ that cancels someone's logout is worse than one that exits without asking.
 
 Leave the block out and the app quits without asking.
 
-## watch
+## `watch`
 
 A mapping of names to polled sources. They run concurrently, and they all
 re-poll on the [`interval`](#app) the `app:` block sets. Their results are what
@@ -143,17 +143,13 @@ What a watch binds depends on its kind:
 An `exists` watch binds only `.ok`, so `json:` on one is an error rather than a
 no-op.
 
-A `launchagent` watch binds no `.ok`, because there are two answers and they
-differ: `.loaded` is launchd holding the label, `.running` is the job having a
-process. A job that has run and exited is loaded and not running. `.pid` is `0`
-unless it is running. The last four are strings for `launchctl` calls perch does
-not write for you: `.plist` with `~` expanded, `.domain` as `gui/<your uid>`,
-and `.target` as `<domain>/<label>`.
+What each `launchagent` field means, and why there is no `.ok`, is in
+[LaunchAgents](#launchagents).
 
 A watch that fails sets `.ok` false and leaves `.data` null. It never takes the
 app down, and the menu still opens.
 
-### shape
+### `shape`
 
 Without a declared shape, `.data` is untyped: `fleet.data.jobs` and
 `fleet.data.jbos` both compile, and the second produces a widget that silently
@@ -186,7 +182,7 @@ An inferred shape is a starting point, not an answer: it describes only the
 samples it saw, and a healthy sample omits every field that appears only when
 something is wrong — disproportionately the ones a widget branches on.
 
-## state
+## `state`
 
 An ordered list naming the conditions the widget can be in. The first whose
 condition holds wins, and the last takes no condition at all — so exactly one
@@ -238,7 +234,71 @@ ordering, so naming one could only ever be a constant, and a guard that looks
 like a guard while contributing nothing is the failure this schema exists to
 prevent.
 
-## status
+## What perch writes for you
+
+Some of what a widget needs is fiddly enough to get wrong by hand, so perch
+writes it rather than leaving it to a `run:` item. Most of it is LaunchAgents.
+
+### LaunchAgents
+
+A `launchagent` watch reads a job launchd holds, and the `agent:` action starts,
+stops or restarts it. The label is written once.
+
+```yaml
+app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
+
+watch:
+  worker:
+    launchagent: dev.example.worker
+
+menu:
+  - {text: Start, when: "!worker.loaded", agent: worker.start}
+  - {text: Stop, when: "worker.loaded", agent: worker.stop}
+  - {text: Restart, when: "worker.installed", agent: worker.restart}
+  - {text: Quit, quit: true}
+```
+
+The plist is assumed to be `~/Library/LaunchAgents/<label>.plist`; say `plist:`
+beside `launchagent:` if it is somewhere else. The watch binds:
+
+| Field | Is |
+|---|---|
+| `.installed` | The plist exists. |
+| `.loaded` | launchd holds the label. |
+| `.running` | The job has a process. |
+| `.pid` | Its pid, or `0` when it is not running. |
+| `.label` | The label. |
+| `.plist` | The plist path, `~` expanded. |
+| `.domain` | `gui/<your uid>`. |
+| `.target` | `<domain>/<label>`, for a `launchctl` call perch does not write. |
+
+There is no `.ok`, because loaded and running are different answers: a job that
+has run and exited is loaded and not running.
+
+`agent:` takes `<watch>.<verb>`. `worker.start` bootstraps the plist into your
+GUI domain, `worker.stop` boots it out, and `worker.restart` boots it out, waits
+up to two seconds for launchd to release the label, and bootstraps it again.
+Two `run:` items cannot do that last one: `bootout` returns before the label is
+free, and bootstrapping into that gap fails with `Input/output error`. The
+domain and the plist path are worked out on the Mac the widget runs on, so the
+same file works on every machine.
+
+An `agent:` also works as a button on a [quit prompt](#quit), which is how an
+app offers to stop its server on the way out. [Start and stop a
+LaunchAgent](recipes/launchagent.md) is the whole widget.
+
+### Also done for you
+
+| What | Where |
+|---|---|
+| A separator with nothing beside it is dropped. | [`menu`](#menu) |
+| Every action re-polls the watches when it finishes. | [Actions](#actions) |
+| `perch shape` writes a shape from a sample. | [`shape`](#shape) |
+| A window gets a main menu, and ⌘Q closes it instead of quitting. | [`window`](#window) |
+| `menubar/AppIcon.png` is rendered into every size the Dock asks for. | [The Dock tile](#the-dock-tile) |
+| A quit prompt stands aside for logout, restart and shutdown. | [`quit`](#quit) |
+
+## `status`
 
 A list of rules deciding how the status item looks. **The first rule whose
 `when:` holds wins.** A rule with no `when:` always matches, so it has to be
@@ -253,7 +313,7 @@ last; anything after it is refused rather than left unreachable.
 
 One rule may set several of them — an `icon:` and `dim:` together, say.
 
-## window
+## `window`
 
 One WebKit window, opened from a menu item. One per app, matching one status
 item per app — which is why nothing names it.
@@ -298,7 +358,7 @@ The frame is remembered across launches. Zoom is not — it resets to 1.0.
 
 A Dock tile wants artwork: see [The Dock tile](#the-dock-tile).
 
-## menu
+## `menu`
 
 A list of items, rebuilt from the last poll every time the menu opens, so the
 menu never offers an action that cannot work.
@@ -338,26 +398,8 @@ Every action re-polls the watches as soon as it finishes, which is what makes a
 Start item feel like it did something. A failure raises an alert naming what was
 attempted.
 
-`agent:` is the one action perch writes the command for. `worker.start` boots
-the LaunchAgent that `worker` watches into your GUI domain, `worker.stop` boots
-it out, and `worker.restart` does both with a wait between — which is not two
-`run:` items, because `bootout` returns before launchd has released the label.
-
-```yaml
-app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
-
-watch:
-  worker:
-    launchagent: dev.example.worker
-
-menu:
-  - {text: Start, when: "!worker.loaded", agent: worker.start}
-  - {text: Stop, when: "worker.loaded", agent: worker.stop}
-  - {text: Restart, when: "worker.installed", agent: worker.restart}
-  - {text: Quit, quit: true}
-```
-
-[Start and stop a LaunchAgent](recipes/launchagent.md) is the whole widget.
+`agent:` is the one action perch writes the command for: see
+[LaunchAgents](#launchagents).
 
 `swift:` calls hand-written Swift. It names a static method — dotted, so your
 names cannot collide with the emitted ones — and perch emits the call without
@@ -369,7 +411,7 @@ action, and raises no alert on failure: there is no exit status to inspect.
 This is the menu-side half of [hooking the app from
 Sources/](#hooking-the-app-from-sources), which is otherwise launch-only.
 
-### each
+### `each`
 
 `each:` names a list. The item — and its submenu — is repeated once per
 element, with `it` bound to that element.
@@ -434,7 +476,7 @@ Ejecting is moving a file across that line and deleting the YAML that made it.
 
 Generated Swift is committed, so the repo builds without perch installed.
 
-### Hooking the app from Sources/
+### Hooking the app from `Sources/`
 
 Everything in both directories compiles into one binary, so a hand-written file
 can reach the emitted app. What it reaches is `Controller`, which declares

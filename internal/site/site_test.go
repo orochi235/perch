@@ -55,6 +55,22 @@ func TestHighlightEscapesWhatItDoesNotColor(t *testing.T) {
 	}
 }
 
+func TestTitleSetsABackquotedSpanAsCode(t *testing.T) {
+	if got := string(titleHTML("`menu` & <more>")); got != "<code>menu</code> &amp; &lt;more&gt;" {
+		t.Errorf("titleHTML is %q", got)
+	}
+	if got := plainTitle("`menubar.yaml`"); got != "menubar.yaml" {
+		t.Errorf("plainTitle is %q", got)
+	}
+}
+
+// A heading set as code still has to be the section its slug names.
+func TestSchemaSectionMatchesACodeHeading(t *testing.T) {
+	if _, ok := schemaSection("# x\n\n## `watch`\n\nbody\n", "watch"); !ok {
+		t.Error("no watch section")
+	}
+}
+
 func TestSchemaSectionIsItsOwnPageWithHeadingsPromoted(t *testing.T) {
 	src := "# menubar.yaml\n\nintro\n\n## watch\n\nbody\n\n### shape\n\ndeeper\n\n## status\n\nother\n"
 	section, ok := schemaSection(src, "watch")

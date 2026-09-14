@@ -127,6 +127,8 @@ a:hover { text-decoration: underline; }
 }
 
 .sidebar a:hover { color: var(--ink); text-decoration: none; }
+.sidebar .label code { text-transform: none; letter-spacing: 0; font-size: 12px; }
+
 .sidebar a.current { color: var(--accent); border-left-color: var(--accent); background: var(--bg-sunk); }
 
 main { min-width: 0; max-width: 760px; }
@@ -172,7 +174,7 @@ pre {
 
 pre code { font-size: inherit; }
 
-p code, li code, td code, h2 code, h3 code {
+p code, li code, td code, h1 code, h2 code, h3 code {
   padding: 1px 5px;
   background: var(--bg-sunk);
   border: 1px solid var(--line);
