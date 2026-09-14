@@ -41,7 +41,7 @@ func nav() []*Section {
 			{Title: "`app`", URL: "menubar/app/", Source: "docs/schema.md", Schema: "app"},
 			{Title: "`watch`", URL: "menubar/watch/", Source: "docs/schema.md", Schema: "watch"},
 			{Title: "`state`", URL: "menubar/state/", Source: "docs/schema.md", Schema: "state"},
-			{Title: "What perch writes for you", URL: "menubar/for-you/", Source: "docs/schema.md", Schema: "what-perch-writes-for-you"},
+			{Title: "LaunchAgents, and what else perch handles", URL: "menubar/launchagents/", Source: "docs/schema.md", Schema: "launchagents-and-what-else-perch-handles"},
 			{Title: "`status`", URL: "menubar/status/", Source: "docs/schema.md", Schema: "status"},
 			{Title: "`window`", URL: "menubar/window/", Source: "docs/schema.md", Schema: "window"},
 			{Title: "`menu`", URL: "menubar/menu/", Source: "docs/schema.md", Schema: "menu"},
