@@ -99,35 +99,49 @@ func ParseState(name string, src []byte, s *spec.Spec) (State, error) {
 	if err := unmarshal(src, &doc); err != nil {
 		return st, fmt.Errorf("state %q: %w", name, err)
 	}
+	seen := map[string]bool{}
+	record := func(key string, w spec.Watch, v value) error {
+		if seen[w.Key()] {
+			return fmt.Errorf("state %q: %s is stated twice", name, w.Key())
+		}
+		seen[w.Key()] = true
+		sample, err := parseSample(w, v)
+		if err != nil {
+			return fmt.Errorf("state %q: %s: %w", name, key, err)
+		}
+		st.Watches[w.Key()] = sample
+		return nil
+	}
 	for _, entry := range doc.entries {
 		if u, ok := useNamed(s, entry.key); ok {
 			fields, err := entry.value.fields()
 			if err != nil {
-				return st, fmt.Errorf("state %q: %s: want a mapping of its watches, %s", name, entry.key, strings.Join(namesOf(u.Watches), ", "))
+				return st, fmt.Errorf("state %q: use %s: want a mapping of its watches (%s)", name, entry.key, joinOr(namesOf(u.Watches), "no watches"))
 			}
 			for _, f := range fields {
 				w, ok := watchIn(u.Watches, f.key)
 				if !ok {
-					return st, fmt.Errorf("state %q: use %s has no watch named %q; it has %s", name, u.Name, f.key, strings.Join(namesOf(u.Watches), ", "))
+					return st, fmt.Errorf("state %q: use %s: no watch named %q; it has %s", name, u.Name, f.key, joinOr(namesOf(u.Watches), "no watches"))
 				}
-				sample, err := parseSample(w, f.value)
-				if err != nil {
-					return st, fmt.Errorf("state %q: %s.%s: %w", name, u.Name, f.key, err)
+				if err := record(u.Name+"."+f.key, w, f.value); err != nil {
+					return st, err
 				}
-				st.Watches[w.Key()] = sample
 			}
 			continue
+		}
+		if prefix, rest, ok := strings.Cut(entry.key, "."); ok {
+			if _, ok := useNamed(s, prefix); ok {
+				return st, fmt.Errorf("state %q: write %s as %s: {%s: …}", name, entry.key, prefix, rest)
+			}
 		}
 		w, ok := watchIn(s.Watches, entry.key)
 		if !ok {
 			return st, fmt.Errorf("state %q: no watch or use named %q; this file declares %s",
-				name, entry.key, strings.Join(watchNames(s), ", "))
+				name, entry.key, describeDeclared(s))
 		}
-		sample, err := parseSample(w, entry.value)
-		if err != nil {
-			return st, fmt.Errorf("state %q: %s: %w", name, entry.key, err)
+		if err := record(entry.key, w, entry.value); err != nil {
+			return st, err
 		}
-		st.Watches[w.Key()] = sample
 	}
 	return st, nil
 }
@@ -158,15 +172,25 @@ func namesOf(watches []spec.Watch) []string {
 	return out
 }
 
-func watchNames(s *spec.Spec) []string {
-	out := namesOf(s.Watches)
+func useNames(s *spec.Spec) []string {
+	out := make([]string, 0, len(s.Uses))
 	for _, u := range s.Uses {
 		out = append(out, u.Name)
 	}
-	if len(out) == 0 {
-		return []string{"no watches"}
-	}
 	return out
+}
+
+// joinOr lists names separated by ", ", or empty when there are none.
+func joinOr(names []string, empty string) string {
+	if len(names) == 0 {
+		return empty
+	}
+	return strings.Join(names, ", ")
+}
+
+// describeDeclared lists what a state fence in this file may name.
+func describeDeclared(s *spec.Spec) string {
+	return fmt.Sprintf("watches %s and uses %s", joinOr(namesOf(s.Watches), "no watches"), joinOr(useNames(s), "no uses"))
 }
 
 func parseSample(w spec.Watch, v value) (Sample, error) {

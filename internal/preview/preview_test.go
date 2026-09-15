@@ -227,8 +227,104 @@ func TestParseStateReadsAUsesWatches(t *testing.T) {
 func TestParseStateRefusesWhatAUseDoesNotHave(t *testing.T) {
 	s := parse(t, useDoc)
 	for src, want := range map[string]string{
-		"daemon: {nope: {running: true}}": `use daemon has no watch named "nope"; it has agent`,
-		"daemon: true":                    "want a mapping of its watches",
+		"daemon: {nope: {running: true}}": `use daemon: no watch named "nope"; it has agent`,
+		"daemon: true":                    "use daemon: want a mapping of its watches (agent)",
+	} {
+		_, err := ParseState("x", []byte(src), s)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: err = %v, want it to mention %q", src, err, want)
+		}
+	}
+}
+
+// fakeTemplates stands in for a repo's own templates, so a test can give a
+// use no watches without depending on which shipped template has none.
+type fakeTemplates map[string]string
+
+func (f fakeTemplates) Template(name string) ([]byte, string, bool, error) {
+	src, ok := f[name]
+	return []byte(src), "templates/" + name + ".yaml", ok, nil
+}
+
+func (f fakeTemplates) Names() []string {
+	var out []string
+	for name := range f {
+		out = append(out, name)
+	}
+	slices.Sort(out)
+	return out
+}
+
+const bareUseDoc = `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+use:
+  idle:
+    bare:
+menu:
+  - outlet
+  - {text: Quit, quit: true}
+`
+
+func TestParseStateNamesAUseWithNoWatches(t *testing.T) {
+	s, err := spec.ParseWith([]byte(bareUseDoc), fakeTemplates{"bare": "state:\n  - a: \"true\"\n  - b:\nmenu:\n  default:\n    - {text: a, when: self.a}\n"})
+	if err != nil {
+		t.Fatalf("spec.ParseWith: %v", err)
+	}
+	for src, want := range map[string]string{
+		"idle: {x: true}": `use idle: no watch named "x"; it has no watches`,
+		"idle: true":      "use idle: want a mapping of its watches (no watches)",
+	} {
+		_, err := ParseState("x", []byte(src), s)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: err = %v, want it to mention %q", src, err, want)
+		}
+	}
+}
+
+const watchAndUseDoc = `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+watch:
+  health: {exists: /tmp}
+use:
+  daemon:
+    service: {label: dev.example.daemon}
+menu:
+  - outlet
+  - {text: Quit, quit: true}
+`
+
+func TestParseStateReadsAFileWatchAndAUseTogether(t *testing.T) {
+	s := parse(t, watchAndUseDoc)
+	st := state(t, s, "up", "health: true\ndaemon: {agent: {running: true}}\n")
+	if _, ok := st.Watches["health"]; !ok {
+		t.Errorf("watches = %+v, want health", st.Watches)
+	}
+	if _, ok := st.Watches["daemon.agent"]; !ok {
+		t.Errorf("watches = %+v, want daemon.agent", st.Watches)
+	}
+}
+
+func TestParseStateErrorListsWatchesAndUses(t *testing.T) {
+	s := parse(t, watchAndUseDoc)
+	_, err := ParseState("x", []byte("nope: true\n"), s)
+	if err == nil || !strings.Contains(err.Error(), "this file declares watches health and uses daemon") {
+		t.Errorf("err = %v, want it to list watches and uses", err)
+	}
+}
+
+func TestParseStateOffersTheNestFormForADottedUseKey(t *testing.T) {
+	s := parse(t, useDoc)
+	_, err := ParseState("x", []byte("daemon.agent: {running: true}\n"), s)
+	if err == nil || !strings.Contains(err.Error(), "write daemon.agent as daemon: {agent: …}") {
+		t.Errorf("err = %v, want the nest hint", err)
+	}
+}
+
+func TestParseStateRefusesAKeyStatedTwice(t *testing.T) {
+	s := parse(t, watchAndUseDoc)
+	for src, want := range map[string]string{
+		"health: true\nhealth: false\n":                               "health is stated twice",
+		"daemon: {agent: {running: true}}\ndaemon: {agent: {pid: 1}}": "daemon.agent is stated twice",
 	} {
 		_, err := ParseState("x", []byte(src), s)
 		if err == nil || !strings.Contains(err.Error(), want) {

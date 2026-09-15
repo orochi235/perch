@@ -219,27 +219,31 @@ func TestItemsCrossBetweenATemplatesScopeAndTheFiles(t *testing.T) {
 	for _, want := range []string{
 		"var `case`: Bool { (!(self.default.installed)) }",
 		"var `repeat`: Bool { !self.case && (!(self.default.loaded)) }",
-		// The template's pid item, reached through its use, is still a submenu.
-		`.submenu("pid \(String(results.default.default.pid))"`,
 	} {
 		if !strings.Contains(render, want) {
 			t.Errorf("Render.swift is missing %q:\n%s", want, render)
 		}
 	}
 
-	// The template's item, reached through its use: it, bound inside the
-	// template's submenu, is still it there.
+	// The pid submenu's body is the var declared just before the template's
+	// each: loop, tying the two without depending on the counter's numbering.
+	subRe := regexp.MustCompile(`var (sub\d+): \[MenuNode\] = \[\]\s*\n\s*for it\d+ in results\.default\.list\.data \{`)
+	m := subRe.FindStringSubmatch(render)
+	if m == nil {
+		t.Fatalf("Render.swift has no submenu var declared just before the default.list.data loop:\n%s", render)
+	}
+	if want := fmt.Sprintf(`.submenu("pid \(String(results.default.default.pid))", %s)`, m[1]); !strings.Contains(render, want) {
+		t.Errorf("Render.swift is missing %q:\n%s", want, render)
+	}
+
+	// it, bound inside the template's submenu, is still it there.
 	assertLoopVarUsed(t, render, `for (it\d+) in results\.default\.list\.data \{`, "name")
-	// The file's each: after the outlet is back among the file's own names.
-	// results.rows.data is walked twice (a plain append and a submenu), so
-	// every loop the menu-wide counter names must use its own variable.
+	// results.rows.data is walked twice; each loop must use its own variable.
 	assertLoopVarUsed(t, render, `for (it\d+) in results\.rows\.data \{`, "id")
 }
 
-// assertLoopVarUsed finds each `for <var> in <collection> {` loop matching
-// loopPattern and checks <var> is what gets interpolated inside that specific
-// loop's own body (its text up to the matching closing brace), rather than
-// asserting the counter's exact numbering or matching anywhere in the file.
+// assertLoopVarUsed checks a matched loop's variable is used inside that
+// loop's own (indentation-bound) body, not just somewhere in the file.
 func assertLoopVarUsed(t *testing.T, render, loopPattern, field string) {
 	t.Helper()
 	locs := regexp.MustCompile(loopPattern).FindAllStringSubmatchIndex(render, -1)
@@ -247,8 +251,11 @@ func assertLoopVarUsed(t *testing.T, render, loopPattern, field string) {
 		t.Fatalf("Render.swift has no loop matching %q:\n%s", loopPattern, render)
 	}
 	for _, loc := range locs {
+		if !strings.HasSuffix(render[loc[0]:loc[1]], "{") {
+			t.Fatalf("loop header %q does not end in {", render[loc[0]:loc[1]])
+		}
 		v := render[loc[2]:loc[3]]
-		body := loopBody(render, loc[1]-1)
+		body := loopBody(render, loc[0])
 		want := fmt.Sprintf(`.append(.item("\(%s.%s)"`, v, field)
 		if !strings.Contains(body, want) {
 			t.Errorf("Render.swift's loop over %s does not use %s.%s in its own body:\n%s", v, v, field, body)
@@ -256,22 +263,25 @@ func assertLoopVarUsed(t *testing.T, render, loopPattern, field string) {
 	}
 }
 
-// loopBody returns the text strictly between the brace at openBrace and its
-// matching close, so a match can't be satisfied by a sibling loop's line.
-func loopBody(render string, openBrace int) string {
-	depth := 0
-	for i := openBrace; i < len(render); i++ {
-		switch render[i] {
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				return render[openBrace+1 : i]
-			}
-		}
+// loopBody returns the lines after a `for ... {` header that are indented
+// deeper than it, stopping at the first line back at or above that indent.
+func loopBody(render string, forStart int) string {
+	lineStart := strings.LastIndexByte(render[:forStart], '\n') + 1
+	indent := forStart - lineStart
+	rest := render[forStart:]
+	nl := strings.IndexByte(rest, '\n')
+	if nl < 0 {
+		return ""
 	}
-	return render[openBrace+1:]
+	var body []string
+	for _, line := range strings.Split(rest[nl+1:], "\n") {
+		trimmed := strings.TrimLeft(line, " ")
+		if trimmed != "" && len(line)-len(trimmed) <= indent {
+			break
+		}
+		body = append(body, line)
+	}
+	return strings.Join(body, "\n")
 }
 
 func TestThePreviewDriverFillsAUsesWatches(t *testing.T) {
