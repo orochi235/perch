@@ -43,9 +43,9 @@ worker: {agent: {installed: false}}
 ```
 
 The label is written once. [`service`](../schema.md#service) watches it, keeps
-its own four states, and puts a readout at the default outlet and Start,
-Restart and Stop at `controls` — each shown only when it can work, so the menu
-never offers Start on a job launchd already holds.
+its own four states, and puts a readout at the default outlet and Start Worker,
+Restart Worker and Stop Worker at `controls` — each shown only when it can
+work, so the menu never offers Start on a job launchd already holds.
 
 The states are fields of the use: `worker.running`, `worker.stopped`. The watch
 is `worker.agent`, and for a `launchctl` call perch does not write,

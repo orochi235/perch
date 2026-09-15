@@ -75,9 +75,9 @@ menu:
     - {text: "${noun}: loaded, not running", when: self.idle}
     - {text: "${noun}: running · pid {{self.agent.pid}}", when: self.running}
   controls:
-    - agent: self.agent.start
-    - agent: self.agent.restart
-    - agent: self.agent.stop
+    - {text: "Start ${noun}", agent: self.agent.start}
+    - {text: "Restart ${noun}", agent: self.agent.restart}
+    - {text: "Stop ${noun}", agent: self.agent.stop}
 ```
 
 Shipped templates live in `internal/templates/` and are embedded in the binary.

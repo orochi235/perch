@@ -144,22 +144,22 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("pid \(String(results.daemon.agent.pid))", nil))
     }
     if (results.daemon.agent.installed && !(results.daemon.agent.loaded)) {
-        menu.append(.item("Start", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .start)))
+        menu.append(.item("Start Service", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .start)))
     }
     if results.daemon.agent.installed {
-        menu.append(.item("Restart", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .restart)))
+        menu.append(.item("Restart Service", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .restart)))
     }
     if results.daemon.agent.loaded {
-        menu.append(.item("Stop", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .stop)))
+        menu.append(.item("Stop Service", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .stop)))
     }
     if (results.client.agent.installed && !(results.client.agent.loaded)) {
-        menu.append(.item("Start", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .start)))
+        menu.append(.item("Start Client", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .start)))
     }
     if results.client.agent.installed {
-        menu.append(.item("Restart", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .restart)))
+        menu.append(.item("Restart Client", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .restart)))
     }
     if results.client.agent.loaded {
-        menu.append(.item("Stop", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .stop)))
+        menu.append(.item("Stop Client", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .stop)))
     }
     menu.append(.separator)
     menu.append(.item("Quit", .quit))

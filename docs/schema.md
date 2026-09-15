@@ -341,7 +341,7 @@ run it. It takes `label`, required, and `noun`, which defaults to `Service`.
 | States | `uninstalled`, `stopped`, `idle`, `running`. |
 | `status` default | A warning icon while uninstalled. |
 | `menu` default | One readout line: `<noun>: running · pid 4821`. |
-| `menu` controls | Start, Restart and Stop, each shown only when it can work. |
+| `menu` controls | `Start <noun>`, `Restart <noun>` and `Stop <noun>`, each shown only when it can work. |
 
 To change its labels, copy it into `menubar/templates/` under another name —
 `perch schema -template -o menubar/templates/schema.json` gives an editor its
