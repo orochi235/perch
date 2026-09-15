@@ -124,6 +124,42 @@ func dataField(w spec.Watch) []spec.Field {
 	return []spec.Field{{Name: "data", Type: t}}
 }
 
+// WithUses returns a copy of e with each use bound to its object — its watches
+// and its states — spelled in Swift by the use's own name.
+func (e *Env) WithUses(uses []spec.Use) *Env {
+	out := &Env{vars: append([]binding(nil), e.vars...)}
+	for _, u := range uses {
+		out.vars = append(out.vars, binding{name: u.Name, typ: useType(u, true), swift: u.Name})
+	}
+	return out
+}
+
+// ForUse is what a template's items and status rules lower against: self, and
+// nothing of the file's. Prefixed reaches self through the results like any
+// watch.
+func ForUse(u spec.Use, swift string) *Env {
+	return &Env{vars: []binding{{name: "self", typ: useType(u, true), swift: swift}}}
+}
+
+// ForUseStates is what a template's own state conditions lower against: self's
+// watches without its states. swift is spelled as given; Prefixed leaves it.
+func ForUseStates(u spec.Use, swift string) *Env {
+	return &Env{vars: []binding{{name: "self", typ: useType(u, false), swift: swift, local: true}}}
+}
+
+func useType(u spec.Use, withStates bool) *spec.Type {
+	t := obj()
+	for _, w := range u.Watches {
+		t.Fields = append(t.Fields, spec.Field{Name: w.Name, Type: watchType(w)})
+	}
+	if withStates {
+		for _, st := range u.States {
+			t.Fields = append(t.Fields, field(st.Name, spec.TypeBool))
+		}
+	}
+	return t
+}
+
 // Prefixed returns a copy of e whose watch bindings are spelled with prefix in
 // generated Swift, so expressions reach them through the results record rather
 // than through locals the emitted code might never use. `it` is a loop
