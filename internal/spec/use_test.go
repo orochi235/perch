@@ -218,7 +218,7 @@ func TestUseRefusals(t *testing.T) {
 		},
 		"a ${ holding a space": {
 			"use:\n  d:\n    spaced:\n",
-			`"${a b}" has a ${ with no closing }`,
+			`"${a b}" has a ${ with no closing }, or a name with a space in it`,
 		},
 		"an empty ${}": {
 			"use:\n  d:\n    empty:\n",
@@ -226,11 +226,11 @@ func TestUseRefusals(t *testing.T) {
 		},
 		"a ${x} that is not a name": {
 			"use:\n  d:\n    notname:\n",
-			"${a-b} is not a parameter name",
+			"${a-b} is not a parameter name; write $${ for a literal ${",
 		},
 		"an unknown ${x}": {
 			"use:\n  d:\n    unknown:\n",
-			"${nope} is not a parameter of this template; it takes no parameters",
+			"${nope} is not a parameter of this template; it takes no parameters; write $${ for a literal ${",
 		},
 		"a use named self": {
 			"use:\n  self:\n    svc: {label: dev.example.d}\n",

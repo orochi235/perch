@@ -132,14 +132,14 @@ func expand(s string, values map[string]string, where string) (string, error) {
 			// A space or $ before the } means this ${ was never closed.
 			if end < 0 || strings.ContainsFunc(s[i+2:i+2+end], func(r rune) bool { return r == '$' || unicode.IsSpace(r) }) {
 				line, _, _ := strings.Cut(s[i:], "\n")
-				return "", fmt.Errorf("%s: %q has a ${ with no closing }", where, line)
+				return "", fmt.Errorf("%s: %q has a ${ with no closing }, or a name with a space in it", where, line)
 			}
 			name := s[i+2 : i+2+end]
 			switch {
 			case name == "":
 				return "", fmt.Errorf("%s: ${} names no parameter", where)
 			case !identifier.MatchString(name):
-				return "", fmt.Errorf("%s: ${%s} is not a parameter name", where, name)
+				return "", fmt.Errorf("%s: ${%s} is not a parameter name; write $${ for a literal ${", where, name)
 			}
 			v, ok := values[name]
 			if !ok {
@@ -165,5 +165,5 @@ func unknownParam(name string, values map[string]string, where string) error {
 	if len(names) > 0 {
 		takes = strings.Join(names, ", ")
 	}
-	return fmt.Errorf("%s: ${%s} is not a parameter of this template; it takes %s", where, name, takes)
+	return fmt.Errorf("%s: ${%s} is not a parameter of this template; it takes %s; write $${ for a literal ${", where, name, takes)
 }

@@ -8,7 +8,7 @@
 
 **Architecture:** Templates are expanded inside `spec.Parse`: each use's watches and states land on a new `Spec.Uses`, and its status rules and menu items are placed into the file's own lists at outlets, tagged with a `Scope`. Nothing downstream sees an outlet or a template. `celswift` binds a use's name, and `self` inside a template, to an object type; the backend emits each use as a Swift struct nested in `Results`, so `daemon.agent.pid` lowers to ordinary member access.
 
-**Tech Stack:** Go (`gopkg.in/yaml.v3`, `os.Expand`, `embed`), CEL lowered to Swift at build time, `swiftc` for typecheck and previews.
+**Tech Stack:** Go (`gopkg.in/yaml.v3`, a small `${name}` expander, `embed`), CEL lowered to Swift at build time, `swiftc` for typecheck and previews.
 
 **Spec:** [`docs/superpowers/specs/2026-09-14-templates-design.md`](../specs/2026-09-14-templates-design.md)
 
