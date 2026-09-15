@@ -125,6 +125,10 @@ func TestAgentPathRefusals(t *testing.T) {
 			"watch:\n  worker: {launchagent: dev.example.x}\nmenu:\n  - {text: Go, agent: worker.agent.start}\n",
 			`"worker" is a watch, not a use; write worker.<verb>`,
 		},
+		"a non-launchagent file watch named as a use": {
+			"watch:\n  r: {run: [x]}\nmenu:\n  - {text: Go, agent: r.x.start}\n",
+			`"r" is a run watch, not a use, and agent: acts only on a launchagent watch`,
+		},
 		"a use's watch that is not a launchagent": {
 			"use:\n  d:\n    ctl: {label: dev.example.d}\nmenu:\n  - outlet\n  - {text: Go, agent: d.other.start}\n",
 			`"d.other" is an exists watch`,

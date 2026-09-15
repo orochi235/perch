@@ -140,7 +140,10 @@ func (s *Spec) AgentWatch(scope, target string) (Watch, error) {
 	if u, ok := s.use(useName); ok {
 		return launchAgentIn(parts[0]+".", parts[1], u.Watches, "use."+u.Name)
 	}
-	if slices.ContainsFunc(s.Watches, func(w Watch) bool { return w.Name == useName }) {
+	if i := slices.IndexFunc(s.Watches, func(w Watch) bool { return w.Name == useName }); i >= 0 {
+		if s.Watches[i].Kind != WatchLaunchAgent {
+			return Watch{}, fmt.Errorf("%q: %q is %s watch, not a use, and agent: acts only on a launchagent watch", target, useName, withArticle(s.Watches[i].Kind.String()))
+		}
 		return Watch{}, fmt.Errorf("%q: %q is a watch, not a use; write %s.<verb>", target, useName, useName)
 	}
 	if len(s.Uses) == 0 {
