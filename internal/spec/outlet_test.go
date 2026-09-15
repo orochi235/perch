@@ -162,6 +162,7 @@ func TestErrorsNameWhereTheAuthorWroteIt(t *testing.T) {
 	src := fakeTemplates{
 		"frag":   fragTemplate,
 		"badrun": "menu:\n  default:\n    - {text: bad, run: []}\n",
+		"subrun": "menu:\n  default:\n    - {text: More, run: [x], menu: [{text: y}]}\n",
 	}
 	for name, tc := range map[string]struct{ doc, want string }{
 		"a file rule with no when: ahead of another": {
@@ -175,6 +176,10 @@ func TestErrorsNameWhereTheAuthorWroteIt(t *testing.T) {
 		"a template item": {
 			"use:\n  a:\n    badrun:\nmenu: [outlet]\n",
 			"use.a (templates/badrun.yaml): menu.default[0].run: empty",
+		},
+		"a template item with a submenu and an action": {
+			"use:\n  a:\n    subrun:\nmenu: [outlet]\n",
+			"use.a (templates/subrun.yaml): menu.default[0]: has a submenu and a run action",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -212,6 +217,10 @@ func TestOutletRefusals(t *testing.T) {
 		"an action whose submenu holds only an empty outlet": {
 			"menu:\n  - {text: More, run: [x], menu: [outlet]}\n",
 			"menu[0]: has a submenu and a run action",
+		},
+		"an open action beside a submenu": {
+			"menu:\n  - {text: More, open: /tmp, menu: [{text: y}]}\n",
+			"menu[0]: has a submenu and an open action",
 		},
 		"an outlet declared twice": {
 			"use:\n  a:\n    frag:\nmenu:\n  - outlet\n  - outlet\n",

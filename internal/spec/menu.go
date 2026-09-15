@@ -170,7 +170,7 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	}
 	// Refused here, not in validation: an outlet nothing fills empties the submenu.
 	if len(sub) > 0 && act.Kind != ActionNone {
-		return Item{}, fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", path, act.Kind)
+		return Item{}, fmt.Errorf("%s: has a submenu and %s action; opening a submenu supersedes the action, so it would never run", path, withArticle(act.Kind.String()))
 	}
 	return Item{Text: f.Text, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
@@ -266,6 +266,13 @@ func parseWindowAction(src, path string) (WindowVerb, error) {
 		names = append(names, string(v))
 	}
 	return "", fmt.Errorf("%s.window: %q is not something perch can do to a window; it does %s", path, src, strings.Join(names, ", "))
+}
+
+func withArticle(word string) string {
+	if word != "" && strings.ContainsRune("aeiou", rune(word[0])) {
+		return "an " + word
+	}
+	return "a " + word
 }
 
 func verbList() []string {
