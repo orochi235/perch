@@ -94,6 +94,11 @@ type Item struct {
 	Each      string
 	Menu      []Item
 	Action    Action
+	// Scope is the use this item came from, or "" for the file's own.
+	Scope string
+
+	outlet   string // set with isOutlet: the outlet's name, "" for the default
+	isOutlet bool
 }
 
 type itemFields struct {
@@ -134,11 +139,16 @@ func parseMenu(n *yaml.Node, path string) ([]Item, error) {
 }
 
 func parseItem(n *yaml.Node, path string) (Item, error) {
+	if name, ok, err := outletMark(n, path); err != nil {
+		return Item{}, err
+	} else if ok {
+		return Item{outlet: name, isOutlet: true}, nil
+	}
 	if n.Kind == yaml.ScalarNode {
 		if n.Value == "separator" {
 			return Item{Separator: true}, nil
 		}
-		return Item{}, fmt.Errorf("%s: bare %q is not a menu item; only 'separator' is", path, n.Value)
+		return Item{}, fmt.Errorf("%s: bare %q is not a menu item; only 'separator' and 'outlet' are", path, n.Value)
 	}
 	if n.Kind != yaml.MappingNode {
 		return Item{}, fmt.Errorf("%s: want a menu item mapping", path)
@@ -158,6 +168,30 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 		return Item{}, err
 	}
 	return Item{Text: f.Text, When: f.When, Each: f.Each, Menu: sub, Action: act}, nil
+}
+
+// outletMark reads `- outlet`, the default outlet, or `- outlet: <name>`.
+func outletMark(n *yaml.Node, path string) (string, bool, error) {
+	if n.Kind == yaml.ScalarNode && n.Value == "outlet" {
+		return "", true, nil
+	}
+	if n.Kind != yaml.MappingNode || len(n.Content) < 2 || n.Content[0].Value != "outlet" {
+		return "", false, nil
+	}
+	if len(n.Content) != 2 {
+		return "", false, fmt.Errorf("%s: an outlet takes nothing but its name", path)
+	}
+	v := n.Content[1]
+	if v.Kind == yaml.ScalarNode && v.Tag == "!!null" {
+		return "", true, nil
+	}
+	if v.Kind != yaml.ScalarNode {
+		return "", false, fmt.Errorf("%s: an outlet's name is a string", path)
+	}
+	if err := checkName("outlet", path, v.Value); err != nil {
+		return "", false, err
+	}
+	return v.Value, true, nil
 }
 
 func actionFrom(f itemFields, path string) (Action, error) {

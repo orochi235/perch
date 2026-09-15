@@ -13,6 +13,11 @@ type StatusRule struct {
 	Icon  Icon
 	Dim   bool
 	Badge string
+	// Scope is the use this rule came from, or "" for the file's own.
+	Scope string
+
+	outlet   string
+	isOutlet bool
 }
 
 type rawStatusRule struct {
@@ -32,6 +37,12 @@ func parseStatus(n *yaml.Node) ([]StatusRule, error) {
 	out := make([]StatusRule, 0, len(n.Content))
 	for i, c := range n.Content {
 		path := fmt.Sprintf("status[%d]", i)
+		if name, ok, err := outletMark(c, path); err != nil {
+			return nil, err
+		} else if ok {
+			out = append(out, StatusRule{outlet: name, isOutlet: true})
+			continue
+		}
 		var raw rawStatusRule
 		if err := decodeStrict(c, &raw, path); err != nil {
 			return nil, err

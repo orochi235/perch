@@ -120,12 +120,16 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.Status = st
+	if s.Status, err = placeStatus(st, uses); err != nil {
+		return nil, err
+	}
 	menu, err := parseMenu(&raw.Menu, "menu")
 	if err != nil {
 		return nil, err
 	}
-	s.Menu = menu
+	if s.Menu, err = placeMenu(menu, uses); err != nil {
+		return nil, err
+	}
 	s.Uses = uses
 	if err := s.validate(); err != nil {
 		return nil, err
