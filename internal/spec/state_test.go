@@ -54,6 +54,14 @@ func TestStatesRefused(t *testing.T) {
 			doc:  "state:\n  - it: \"agent.ok\"\n  - b:\n",
 			want: "bound by perch itself",
 		},
+		"a name that emits as a watch's property": {
+			doc:  "  state_up: {run: [x]}\nstate:\n  - down: \"agent.ok\"\n  - up:\n",
+			want: `"up" becomes the property state_up in the emitted app, which a watch named state_up already takes`,
+		},
+		"a name that emits as a use's property": {
+			doc:  "use:\n  state_up:\n    service: {label: dev.example.up}\nstate:\n  - down: \"agent.ok\"\n  - up:\n",
+			want: `"up" becomes the property state_up in the emitted app, which a use named state_up already takes`,
+		},
 		"a name Swift reserves after a dot": {
 			doc:  "state:\n  - Protocol: \"agent.ok\"\n  - b:\n",
 			want: "a name Swift reserves even after a dot",

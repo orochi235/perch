@@ -97,8 +97,8 @@ extension ClientUse {
 
 extension Results {
     var state_down: Bool { (!(self.daemon.running)) }
-    var state_wedged: Bool { !state_down && (!(self.health.ok)) }
-    var state_up: Bool { !state_down && !state_wedged }
+    var state_wedged: Bool { !self.state_down && (!(self.health.ok)) }
+    var state_up: Bool { !self.state_down && !self.state_wedged }
 }
 
 func renderFace(_ results: Results) -> Face {

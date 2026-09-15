@@ -77,6 +77,9 @@ func checkStates(states []State, watches []Watch, uses []Use, where string) erro
 		if kind, ok := taken[st.Name]; ok {
 			return fmt.Errorf("%s: %q is already %s; an expression names states, watches and uses the same way, so it could not tell them apart", path, st.Name, kind)
 		}
+		if kind, ok := taken["state_"+st.Name]; ok && where == "" {
+			return fmt.Errorf("%s: %q becomes the property state_%s in the emitted app, which %s named state_%s already takes; rename one of them", path, st.Name, st.Name, kind, st.Name)
+		}
 		if last := i == len(states)-1; last {
 			if st.Cond != "" {
 				return fmt.Errorf("%s: %q is last, so it is the fallback and takes no condition; without one state that always holds, a poll can match none of them", path, st.Name)

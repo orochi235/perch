@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/orochi235/perch/internal/backend"
 	"github.com/orochi235/perch/internal/spec"
 )
 
@@ -243,22 +244,74 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Emit: %v", err)
 			}
-			dir := t.TempDir()
-			var paths []string
-			for _, f := range files {
-				p := filepath.Join(dir, f.Name)
-				if err := os.WriteFile(p, f.Body, 0o644); err != nil {
-					t.Fatal(err)
-				}
-				paths = append(paths, p)
+			typecheck(t, swiftc, files)
+		})
+	}
+}
+
+// TestTemplatedSwiftTypechecks carries uses through swiftc, the preview
+// driver's output as well as the app's, including templates perch does not
+// ship.
+func TestTemplatedSwiftTypechecks(t *testing.T) {
+	swiftc, err := exec.LookPath("swiftc")
+	if err != nil {
+		t.Skip("swiftc not on PATH")
+	}
+	for name, c := range map[string]struct {
+		doc  string
+		tmpl fakeTemplates // nil for the shipped templates
+		app  bool          // false when TestEmittedSwiftTypechecks already covers the app
+	}{
+		"templates":  {doc: templatesDoc},
+		"keywordUse": {doc: keywordUse},
+		"kwTemplate": {doc: kwTemplateDoc, tmpl: kwTemplates, app: true},
+		"usesOnly":   {doc: usesOnlyDoc, tmpl: usesOnlyTemplates, app: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var s *spec.Spec
+			var err error
+			if c.tmpl == nil {
+				s, err = spec.Parse([]byte(c.doc))
+			} else {
+				s, err = spec.ParseWith([]byte(c.doc), c.tmpl)
 			}
-			out, err := exec.Command(swiftc, append([]string{"-typecheck"}, paths...)...).CombinedOutput()
 			if err != nil {
-				t.Fatalf("emitted Swift does not typecheck: %v\n%s", err, out)
+				t.Fatalf("parse: %v", err)
 			}
-			if len(out) > 0 {
-				t.Errorf("emitted Swift typechecks with warnings:\n%s", out)
+			emits := map[string]func(*spec.Spec) ([]backend.File, error){"preview": New().EmitPreview}
+			if c.app {
+				emits["app"] = New().Emit
+			}
+			for kind, emit := range emits {
+				t.Run(kind, func(t *testing.T) {
+					files, err := emit(s)
+					if err != nil {
+						t.Fatalf("emit: %v", err)
+					}
+					typecheck(t, swiftc, files)
+				})
 			}
 		})
+	}
+}
+
+// typecheck fails t unless swiftc takes files with no error and no warning.
+func typecheck(t *testing.T, swiftc string, files []backend.File) {
+	t.Helper()
+	dir := t.TempDir()
+	var paths []string
+	for _, f := range files {
+		p := filepath.Join(dir, f.Name)
+		if err := os.WriteFile(p, f.Body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, p)
+	}
+	out, err := exec.Command(swiftc, append([]string{"-typecheck"}, paths...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("emitted Swift does not typecheck: %v\n%s", err, out)
+	}
+	if len(out) > 0 {
+		t.Errorf("emitted Swift typechecks with warnings:\n%s", out)
 	}
 }

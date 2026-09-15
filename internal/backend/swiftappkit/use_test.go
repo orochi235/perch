@@ -126,3 +126,130 @@ use:
 		t.Errorf("err = %v, want it to start %q", err, want)
 	}
 }
+
+// kwTemplates names a template's watches and states with Swift keywords and
+// nests an each: inside one of its items' submenus.
+var kwTemplates = fakeTemplates{"kw": `
+watch:
+  default: {launchagent: dev.kw.x}
+  list: {run: [x], json: true, shape: [{name: string}]}
+state:
+  - case: "!self.default.installed"
+  - repeat: "!self.default.loaded"
+  - fine:
+status:
+  default:
+    - {when: self.case, icon: exclamationmark.triangle}
+menu:
+  default:
+    - text: "pid {{self.default.pid}}"
+      when: "self.fine || self.repeat"
+      menu:
+        - {text: "{{it.name}}", each: self.list.data, when: "it.name != ''"}
+    - {agent: self.default.start, when: "self.fine || self.repeat"}
+    - {text: "{{it.name}}", each: self.list.data}
+`}
+
+// kwTemplateDoc places kw's items through an outlet inside a file submenu,
+// beside a file item and a file each: of its own.
+const kwTemplateDoc = `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+use:
+  default:
+    kw:
+  switch:
+    kw:
+watch:
+  defaultDefault: {launchagent: dev.kw.y}
+  rows: {run: [y], json: true, shape: [{id: string}]}
+state:
+  - down: "!default.default.running && !switch.fine"
+  - up:
+status:
+  - outlet
+  - {when: down, dim: true}
+menu:
+  - text: Sub
+    menu:
+      - outlet
+      - {text: "{{it.id}}", each: rows.data}
+  - text: Rows
+    each: rows.data
+    menu:
+      - {text: "{{it.id}}"}
+  - {agent: defaultDefault.stop, when: "up || down"}
+  - {agent: default.default.stop}
+  - {text: Quit, quit: true}
+`
+
+// usesOnlyTemplates has a use with states and no watches, and one named like
+// the local the render functions declare.
+var usesOnlyTemplates = fakeTemplates{
+	"bare": "state:\n  - a: \"true\"\n  - b:\nmenu:\n  default:\n    - {text: a, when: self.a}\n",
+	"svc":  "watch:\n  agent: {launchagent: dev.x}\nmenu:\n  default:\n    - {text: \"{{self.agent.pid}}\"}\n",
+}
+
+const usesOnlyDoc = `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+use:
+  results:
+    bare:
+  menu:
+    svc:
+menu: [outlet]
+`
+
+func TestItemsCrossBetweenATemplatesScopeAndTheFiles(t *testing.T) {
+	s, err := spec.ParseWith([]byte(kwTemplateDoc), kwTemplates)
+	if err != nil {
+		t.Fatalf("spec.ParseWith: %v", err)
+	}
+	files, err := New().Emit(s)
+	if err != nil {
+		t.Fatalf("Emit: %v", err)
+	}
+	render := ""
+	for _, f := range files {
+		if f.Name == "Render.swift" {
+			render = string(f.Body)
+		}
+	}
+	for _, want := range []string{
+		"var `case`: Bool { (!(self.default.installed)) }",
+		"var `repeat`: Bool { !self.case && (!(self.default.loaded)) }",
+		// The template's item, reached through its use.
+		`sub1.append(.submenu("pid \(String(results.default.default.pid))", sub2))`,
+		// it, bound inside the template's submenu, is still it there.
+		"for it3 in results.default.list.data {",
+		`sub2.append(.item("\(it3.name)", nil))`,
+		// The file's item after the outlet is back among the file's names.
+		"for it8 in results.rows.data {",
+		`sub1.append(.item("\(it8.id)", nil))`,
+		`sub10.append(.item("\(it9.id)", nil))`,
+	} {
+		if !strings.Contains(render, want) {
+			t.Errorf("Render.swift is missing %q:\n%s", want, render)
+		}
+	}
+}
+
+func TestThePreviewDriverFillsAUsesWatches(t *testing.T) {
+	for doc, want := range map[string]string{
+		templatesDoc: `if let o = state.watches["daemon.agent"] {`,
+		keywordUse:   "results.`default`.agent = ",
+	} {
+		s, err := spec.Parse([]byte(doc))
+		if err != nil {
+			t.Fatalf("spec.Parse: %v", err)
+		}
+		files, err := New().EmitPreview(s)
+		if err != nil {
+			t.Fatalf("EmitPreview: %v", err)
+		}
+		for _, f := range files {
+			if f.Name == "main.swift" && !strings.Contains(string(f.Body), want) {
+				t.Errorf("the preview driver is missing %q:\n%s", want, f.Body)
+			}
+		}
+	}
+}

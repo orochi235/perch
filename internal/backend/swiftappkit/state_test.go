@@ -67,8 +67,8 @@ func TestStatesAreEmittedAsPropertiesOfResults(t *testing.T) {
 	}
 	for _, want := range []string{
 		"var state_uninstalled: Bool",
-		"var state_stopped: Bool { !state_uninstalled &&",
-		"var state_running: Bool { !state_uninstalled && !state_stopped }",
+		"var state_stopped: Bool { !self.state_uninstalled &&",
+		"var state_running: Bool { !self.state_uninstalled && !self.state_stopped }",
 	} {
 		if !strings.Contains(render, want) {
 			t.Errorf("Render.swift is missing %q", want)
@@ -88,7 +88,7 @@ state:
   - rest:
 menu: [{text: Quit, quit: true}]
 `)
-	want := "var state_loose: Bool { !state_first && (((self.agent.code == 1) || (self.agent.code == 2))) }"
+	want := "var state_loose: Bool { !self.state_first && (((self.agent.code == 1) || (self.agent.code == 2))) }"
 	if got := files["Render.swift"]; !strings.Contains(got, want) {
 		t.Errorf("Render.swift is missing %q", want)
 	}

@@ -87,8 +87,9 @@ var swiftKeywords = map[string]bool{
 	"Protocol": true, "Type": true,
 }
 
-// decl escapes a name for a Swift declaration site. Member access does not need
-// this: x.default parses, while var default: Int does not.
+// decl escapes a name for a Swift declaration site: var default: Int does not
+// parse. Member access does not need it, since x.default parses, but accepts
+// it, so resultPath's backticked assignments still compile.
 func decl(name string) string {
 	if swiftKeywords[name] {
 		return "`" + name + "`"
