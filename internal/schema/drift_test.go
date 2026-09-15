@@ -22,7 +22,7 @@ var sections = map[string]string{
 	"rawSpec":       "properties",
 	"rawApp":        "properties.app.properties",
 	"rawWatch":      "properties.watch.additionalProperties.properties",
-	"rawStatusRule": "properties.status.items.properties",
+	"rawStatusRule": "properties.status.items.oneOf.0.properties",
 	"rawWindow":     "properties.window.properties",
 	"rawQuitRule":   "properties.app.properties.quit.items.properties",
 	"rawZoom":       "properties.window.properties.zoom.properties",
@@ -203,5 +203,19 @@ app: {name: a, id: dev.a, icon: circle, interval: 1s}
 watch: {w: {run: [x], json: true, shape: {f: `+name+`}}}
 menu: [{text: Q, quit: true}]
 `)
+	}
+}
+
+func TestTemplateSchemaDeclaresExactlyTheKeysATemplateTakes(t *testing.T) {
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(TemplateJSON()), &doc); err != nil {
+		t.Fatalf("TemplateJSON is not JSON: %v", err)
+	}
+	got := keysAt(t, doc, "properties")
+	if want := yamlTags(t)["rawTemplate"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("template schema %v\n parser %v", got, want)
+	}
+	if doc["additionalProperties"] != false {
+		t.Error("the template schema accepts unknown keys")
 	}
 }

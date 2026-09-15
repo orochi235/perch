@@ -2,6 +2,8 @@
 // inline errors, via the yaml-language-server header in menubar.yaml.
 package schema
 
+import "encoding/json"
+
 // JSON is the schema for menubar.yaml. It mirrors what spec.Parse accepts;
 // where the two could drift, spec.Parse is the authority.
 func JSON() string { return body }
@@ -47,7 +49,7 @@ const body = `{
                     "run": {"type": "array", "minItems": 1, "items": {"type": "string"}},
                     "open": {"type": "string"},
                     "post": {"type": "object", "required": ["url"], "additionalProperties": false, "properties": {"url": {"type": "string"}, "body": {}}},
-                    "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$"},
+                    "agent": {"type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}(start|stop|restart)$"},
                     "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"}
                   }
                 }
@@ -89,7 +91,7 @@ const body = `{
         "minProperties": 1,
         "maxProperties": 1,
         "additionalProperties": {"type": ["string", "null"], "description": "CEL condition reaching this state; omit on the last one."},
-        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self"]}}
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "init", "Type", "Protocol"]}}
       }
     },
     "use": {
@@ -105,16 +107,22 @@ const body = `{
     },
     "status": {
       "type": "array",
-      "description": "First matching rule wins.",
+      "description": "First matching rule wins. - outlet places the uses' status rules.",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "when": {"type": "string", "description": "CEL condition; omit to always match."},
-          "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
-          "dim": {"type": "boolean"},
-          "badge": {"type": "string", "description": "CEL expression shown beside the icon."}
-        }
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "when": {"type": "string", "description": "CEL condition; omit to always match."},
+              "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
+              "dim": {"type": "boolean"},
+              "badge": {"type": "string", "description": "CEL expression shown beside the icon."}
+            }
+          },
+          {"$ref": "#/definitions/outletMark"},
+          {"$ref": "#/definitions/namedOutlet"}
+        ]
       }
     },
     "window": {
@@ -147,14 +155,14 @@ const body = `{
       "oneOf": [
         {"type": "string", "enum": ["string", "int", "double", "bool", "any"]},
         {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/definitions/shape"}},
-        {"type": "object", "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}, "additionalProperties": {"$ref": "#/definitions/shape"}}
+        {"type": "object", "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["init", "Type", "Protocol"]}}, "additionalProperties": {"$ref": "#/definitions/shape"}}
       ]
     },
     "menu": {
       "type": "array",
       "items": {
         "oneOf": [
-          {"type": "string", "enum": ["separator"]},
+          {"type": "string", "enum": ["separator", "outlet"]},
           {
             "type": "object",
             "additionalProperties": false,
@@ -172,14 +180,65 @@ const body = `{
                 "properties": {"url": {"type": "string"}, "body": {}}
               },
               "quit": {"type": "boolean"},
-              "agent": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.(start|stop|restart)$", "description": "<launchagent watch>.start, .stop or .restart."},
+              "agent": {"type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}(start|stop|restart)$", "description": "<watch>, <use>.<watch> or self.<watch>, then .start, .stop or .restart."},
               "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$", "description": "A static method in menubar/Sources/, written Type.method."},
               "window": {"enum": ["open", "close", "reload"], "description": "Act on the declared window."}
             }
-          }
+          },
+          {"$ref": "#/definitions/namedOutlet"}
         ]
       }
+    },
+    "outletMark": {"type": "string", "enum": ["outlet"], "description": "The default outlet: where uses' fragments land."},
+    "namedOutlet": {
+      "type": "object",
+      "required": ["outlet"],
+      "additionalProperties": false,
+      "properties": {"outlet": {"type": ["string", "null"], "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "A named outlet; a use's fragment of that name lands here."}}
     }
   }
 }
 `
+
+// TemplateJSON is the schema for a template file. It is cut from JSON rather
+// than written again, so a watch, state, rule or item means the same in both.
+func TemplateJSON() string {
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(body), &doc); err != nil {
+		panic("schema: " + err.Error())
+	}
+	props := doc["properties"].(map[string]any)
+	tmpl := map[string]any{
+		"$schema":              doc["$schema"],
+		"title":                "perch template",
+		"description":          "A template a menubar.yaml reaches under use:.",
+		"type":                 "object",
+		"additionalProperties": false,
+		"definitions":          doc["definitions"],
+		"properties": map[string]any{
+			"params": map[string]any{
+				"type":                 "object",
+				"description":          "Parameter names and their defaults; ~ makes one required.",
+				"propertyNames":        map[string]any{"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+				"additionalProperties": map[string]any{"type": []string{"string", "null"}},
+			},
+			"watch": props["watch"],
+			"state": props["state"],
+			"status": map[string]any{
+				"type":                 "object",
+				"description":          "Outlet names to status rules; default is the default outlet. Every rule needs when:.",
+				"additionalProperties": props["status"],
+			},
+			"menu": map[string]any{
+				"type":                 "object",
+				"description":          "Outlet names to menu items; default is the default outlet.",
+				"additionalProperties": map[string]any{"$ref": "#/definitions/menu"},
+			},
+		},
+	}
+	out, err := json.MarshalIndent(tmpl, "", "  ")
+	if err != nil {
+		panic("schema: " + err.Error())
+	}
+	return string(out) + "\n"
+}

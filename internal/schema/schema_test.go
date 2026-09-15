@@ -44,12 +44,21 @@ func nameRule(t *testing.T, path ...string) func(string) bool {
 	t.Helper()
 	var node any = decoded(t)
 	for _, key := range path {
-		m, ok := node.(map[string]any)
-		if !ok {
+		switch container := node.(type) {
+		case map[string]any:
+			next, ok := container[key]
+			if !ok {
+				t.Fatalf("%v: no %q", path, key)
+			}
+			node = next
+		case []any:
+			i, err := strconv.Atoi(key)
+			if err != nil || i >= len(container) {
+				t.Fatalf("%v: %q does not index a list of %d", path, key, len(container))
+			}
+			node = container[i]
+		default:
 			t.Fatalf("%v: not a schema object", path)
-		}
-		if node, ok = m[key]; !ok {
-			t.Fatalf("%v: no %q", path, key)
 		}
 	}
 	sub, ok := node.(map[string]any)
@@ -112,6 +121,42 @@ app: {name: a, id: dev.a, icon: circle, interval: 1s}
 use: {`+strconv.Quote(name)+`: {service: {label: dev.a.x}}}
 menu: [{text: Q, quit: true}]
 `)
+	}
+
+	stateName := nameRule(t, "properties", "state", "items", "propertyNames")
+	for _, name := range []string{"init", "Type", "Protocol", "self", "widget"} {
+		agree(t, name, stateName, `
+app: {name: a, id: dev.a, icon: circle, interval: 1s}
+state: [{`+strconv.Quote(name)+`: null}]
+menu: [{text: Q, quit: true}]
+`)
+	}
+
+	fieldName := nameRule(t, "definitions", "shape", "oneOf", "2", "propertyNames")
+	for _, name := range []string{"init", "Type", "Protocol", "self", "count"} {
+		agree(t, name, fieldName, `
+app: {name: a, id: dev.a, icon: circle, interval: 1s}
+watch: {w: {run: [x], json: true, shape: {`+strconv.Quote(name)+`: string}}}
+menu: [{text: Q, quit: true}]
+`)
+	}
+}
+
+func TestAgentPatternTakesPaths(t *testing.T) {
+	var doc map[string]any
+	if err := json.Unmarshal([]byte(JSON()), &doc); err != nil {
+		t.Fatal(err)
+	}
+	item := doc["definitions"].(map[string]any)["menu"].(map[string]any)["items"].(map[string]any)["oneOf"].([]any)[1]
+	pattern := item.(map[string]any)["properties"].(map[string]any)["agent"].(map[string]any)["pattern"].(string)
+	re := regexp.MustCompile(pattern)
+	for v, want := range map[string]bool{
+		"worker.start": true, "daemon.agent.stop": true, "self.agent.restart": true,
+		"worker": false, "a.b.c.start": false, "worker.reload": false,
+	} {
+		if re.MatchString(v) != want {
+			t.Errorf("%q: matches = %v, want %v", v, !want, want)
+		}
 	}
 }
 

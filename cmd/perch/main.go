@@ -364,10 +364,14 @@ func runOnce(argv []string) ([]byte, error) {
 func runSchema(args []string, e *env) error {
 	fs := newFlags("schema", e)
 	out := fs.String("o", "", "write to a file instead of stdout")
+	template := fs.Bool("template", false, "write the schema for a template file instead")
 	if err := parse(fs, args); err != nil {
 		return err
 	}
 	body := schema.JSON()
+	if *template {
+		body = schema.TemplateJSON()
+	}
 	if *out == "" {
 		fmt.Fprint(e.out, body)
 		return nil
