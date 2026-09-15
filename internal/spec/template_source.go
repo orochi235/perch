@@ -31,7 +31,7 @@ func TemplatesIn(dir string) TemplateSource { return repoTemplates{dir: dir} }
 type repoTemplates struct{ dir string }
 
 func (r repoTemplates) Template(name string) ([]byte, string, bool, error) {
-	if err := checkName("template", "use", name); err != nil {
+	if err := checkTemplateName("use", name); err != nil {
 		return nil, "", false, err
 	}
 	shipped, isShipped := templates.Source(name)
@@ -65,7 +65,7 @@ func (r repoTemplates) Names() []string {
 				continue
 			}
 			name, ok := strings.CutSuffix(e.Name(), ".yaml")
-			if !ok || !identifier.MatchString(name) {
+			if !ok || checkTemplateName("", name) != nil {
 				continue
 			}
 			names = append(names, name)

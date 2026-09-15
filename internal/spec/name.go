@@ -35,6 +35,14 @@ func checkName(kind, path, name string) error {
 	return nil
 }
 
+// checkTemplateName keeps a template name to one file in menubar/templates.
+func checkTemplateName(path, name string) error {
+	if !identifier.MatchString(name) {
+		return fmt.Errorf("%s: %q is not a template name; a template is named by its file in menubar/templates, so it is letters, digits and underscores", path, name)
+	}
+	return nil
+}
+
 // bundleID is what launchd will take as a label and what install will use as a
 // plist filename.
 var bundleID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)

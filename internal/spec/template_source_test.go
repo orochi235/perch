@@ -48,7 +48,7 @@ func TestARepoTemplateCannotTakeAShippedName(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "perch ships") {
 		t.Errorf("err = %v, want a refusal naming the shipped template", err)
 	}
-	if err != nil && !strings.Contains(err.Error(), "service.yaml") {
+	if err != nil && !strings.Contains(err.Error(), "perch's service.yaml") {
 		t.Errorf("err = %v, want it to name the shipped file too", err)
 	}
 }
