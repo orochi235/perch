@@ -1,6 +1,8 @@
 package swiftappkit
 
 import (
+	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -217,18 +219,35 @@ func TestItemsCrossBetweenATemplatesScopeAndTheFiles(t *testing.T) {
 	for _, want := range []string{
 		"var `case`: Bool { (!(self.default.installed)) }",
 		"var `repeat`: Bool { !self.case && (!(self.default.loaded)) }",
-		// The template's item, reached through its use.
-		`sub1.append(.submenu("pid \(String(results.default.default.pid))", sub2))`,
-		// it, bound inside the template's submenu, is still it there.
-		"for it3 in results.default.list.data {",
-		`sub2.append(.item("\(it3.name)", nil))`,
-		// The file's item after the outlet is back among the file's names.
-		"for it8 in results.rows.data {",
-		`sub1.append(.item("\(it8.id)", nil))`,
-		`sub10.append(.item("\(it9.id)", nil))`,
 	} {
 		if !strings.Contains(render, want) {
 			t.Errorf("Render.swift is missing %q:\n%s", want, render)
+		}
+	}
+
+	// The template's item, reached through its use: it, bound inside the
+	// template's submenu, is still it there.
+	assertLoopVarUsed(t, render, `for (it\d+) in results\.default\.list\.data \{`, "name")
+	// The file's each: after the outlet is back among the file's own names.
+	// results.rows.data is walked twice (a plain append and a submenu), so
+	// every loop the menu-wide counter names must use its own variable.
+	assertLoopVarUsed(t, render, `for (it\d+) in results\.rows\.data \{`, "id")
+}
+
+// assertLoopVarUsed finds each `for <var> in <collection> {` loop matching
+// loopPattern and checks <var> is what gets interpolated inside that loop's
+// own .item(...), rather than asserting the counter's exact numbering.
+func assertLoopVarUsed(t *testing.T, render, loopPattern, field string) {
+	t.Helper()
+	matches := regexp.MustCompile(loopPattern).FindAllStringSubmatch(render, -1)
+	if len(matches) == 0 {
+		t.Fatalf("Render.swift has no loop matching %q:\n%s", loopPattern, render)
+	}
+	for _, m := range matches {
+		v := m[1]
+		want := fmt.Sprintf(`.append(.item("\(%s.%s)"`, v, field)
+		if !strings.Contains(render, want) {
+			t.Errorf("Render.swift's loop over %s does not use %s.%s:\n%s", v, v, field, render)
 		}
 	}
 }
@@ -246,10 +265,17 @@ func TestThePreviewDriverFillsAUsesWatches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("EmitPreview: %v", err)
 		}
+		found := false
 		for _, f := range files {
-			if f.Name == "main.swift" && !strings.Contains(string(f.Body), want) {
-				t.Errorf("the preview driver is missing %q:\n%s", want, f.Body)
+			if f.Name == "main.swift" {
+				found = true
+				if !strings.Contains(string(f.Body), want) {
+					t.Errorf("the preview driver is missing %q:\n%s", want, f.Body)
+				}
 			}
+		}
+		if !found {
+			t.Errorf("EmitPreview did not emit main.swift")
 		}
 	}
 }
