@@ -63,13 +63,13 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("Not installed", nil))
     }
     menu.append(.separator)
-    if (results.state_stopped && (results.worker.installed && !(results.worker.loaded))) {
+    if results.state_stopped && (results.worker.installed && !(results.worker.loaded)) {
         menu.append(.item("Start", .agent(label: "dev.example.worker", plist: "~/Library/LaunchAgents/dev.example.worker.plist", verb: .start)))
     }
-    if ((results.state_running || results.state_idle) && results.worker.loaded) {
+    if (results.state_running || results.state_idle) && results.worker.loaded {
         menu.append(.item("Stop", .agent(label: "dev.example.worker", plist: "~/Library/LaunchAgents/dev.example.worker.plist", verb: .stop)))
     }
-    if (!(results.state_uninstalled) && results.worker.installed) {
+    if !(results.state_uninstalled) && results.worker.installed {
         menu.append(.item("Restart", .agent(label: "dev.example.worker", plist: "~/Library/LaunchAgents/dev.example.worker.plist", verb: .restart)))
     }
     if results.worker.loaded {

@@ -96,6 +96,8 @@ type Item struct {
 	Action    Action
 	// Scope is the use this item came from, or "" for the file's own.
 	Scope string
+	// Guard is the condition its agent: verb needs to work; empty for other items.
+	Guard string
 
 	outlet   string // set with isOutlet: the outlet's name, "" for the default
 	isOutlet bool

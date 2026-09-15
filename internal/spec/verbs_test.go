@@ -12,18 +12,18 @@ menu:
   - {text: Bounce, agent: worker.restart}
   - {text: More, menu: [{agent: worker.stop, when: "worker.running"}]}
 `)
-	for i, want := range []struct{ text, when string }{
+	for i, want := range []struct{ text, guard string }{
 		{"Start", "worker.installed && !worker.loaded"},
 		{"Stop", "worker.loaded"},
 		{"Bounce", "worker.installed"},
 	} {
-		if got := s.Menu[i]; got.Text != want.text || got.When != want.when {
-			t.Errorf("menu[%d] = %q when %q, want %q when %q", i, got.Text, got.When, want.text, want.when)
+		if got := s.Menu[i]; got.Text != want.text || got.Guard != want.guard || got.When != "" {
+			t.Errorf("menu[%d] = %q guard %q when %q, want %q guard %q and no when", i, got.Text, got.Guard, got.When, want.text, want.guard)
 		}
 	}
 	sub := s.Menu[3].Menu[0]
-	if sub.Text != "Stop" || sub.When != "(worker.running\n) && (worker.loaded)" {
-		t.Errorf("submenu item = %q when %q; an author's when: combines with the verb's", sub.Text, sub.When)
+	if sub.Text != "Stop" || sub.When != "worker.running" || sub.Guard != "worker.loaded" {
+		t.Errorf("submenu item = %q when %q guard %q; an author's when: is kept verbatim beside the verb's guard", sub.Text, sub.When, sub.Guard)
 	}
 }
 
@@ -34,8 +34,8 @@ watch:
 menu:
   - agent: worker.restart
 `)
-	if got := s.Menu[0]; got.Text != "Restart" || got.When != "worker.installed" {
-		t.Errorf("menu[0] = %q when %q, want Restart when worker.installed", got.Text, got.When)
+	if got := s.Menu[0]; got.Text != "Restart" || got.Guard != "worker.installed" || got.When != "" {
+		t.Errorf("menu[0] = %q guard %q when %q, want Restart guarded by worker.installed with no when", got.Text, got.Guard, got.When)
 	}
 }
 
@@ -46,25 +46,25 @@ watch:
 menu:
   - {agent: worker.stop, when: "worker.running // up"}
 `)
-	want := "(worker.running // up\n) && (worker.loaded)"
-	if got := s.Menu[0].When; got != want {
-		t.Errorf("when = %q, want %q", got, want)
+	got := s.Menu[0]
+	if got.When != "worker.running // up" || got.Guard != "worker.loaded" {
+		t.Errorf("when = %q guard = %q, want the author's when: kept verbatim and the guard set separately", got.When, got.Guard)
 	}
 }
 
 func TestATemplatesAgentItemIsGuardedThroughSelf(t *testing.T) {
 	s := parseWith(t, useHead+"use:\n  daemon:\n    ctl: {label: dev.example.daemon}\nmenu: [outlet]\n", ctl)
-	if got := s.Menu[0].When; got != "self.agent.installed && !self.agent.loaded" {
-		t.Errorf("when = %q", got)
+	if got := s.Menu[0]; got.Guard != "self.agent.installed && !self.agent.loaded" || got.When != "" {
+		t.Errorf("guard = %q when %q", got.Guard, got.When)
 	}
 }
 
-func TestATemplatesAgentItemCombinesAnAuthorsWhenWithSelf(t *testing.T) {
+func TestATemplatesAgentItemKeepsAnAuthorsWhenBesideSelfsGuard(t *testing.T) {
 	src := fakeTemplates{"ctl": "params:\n  label: ~\nwatch:\n  agent:\n    launchagent: ${label}\n  other: {exists: /tmp}\nmenu:\n  default:\n    - {text: Start, agent: self.agent.start, when: self.other.ok}\n"}
 	s := parseWith(t, useHead+"use:\n  daemon:\n    ctl: {label: dev.example.daemon}\nmenu: [outlet]\n", src)
-	want := "(self.other.ok\n) && (self.agent.installed && !self.agent.loaded)"
-	if got := s.Menu[0].When; got != want {
-		t.Errorf("when = %q, want %q", got, want)
+	got := s.Menu[0]
+	if got.When != "self.other.ok" || got.Guard != "self.agent.installed && !self.agent.loaded" {
+		t.Errorf("when = %q guard = %q", got.When, got.Guard)
 	}
 }
 
@@ -77,20 +77,19 @@ app:
   interval: 10s
   quit:
     - confirm: "Quit?"
-      buttons: [{text: Quit}]
+      buttons: [{text: Bail, agent: worker.stop}]
 watch:
   worker: {launchagent: dev.example.worker}
 menu:
   - {text: Refresh, run: [ls]}
-  - {agent: worker.stop, when: "worker.running"}
 `)
-	if got := s.Menu[0]; got.Text != "Refresh" || got.When != "" {
-		t.Errorf("non-agent item = %q when %q, want unchanged", got.Text, got.When)
+	if got := s.Menu[0]; got.Text != "Refresh" || got.When != "" || got.Guard != "" {
+		t.Errorf("non-agent item = %q when %q guard %q, want unchanged", got.Text, got.When, got.Guard)
 	}
 	if len(s.App.Quit) == 0 || len(s.App.Quit[0].Buttons) == 0 {
 		t.Fatal("no quit button parsed")
 	}
-	if b := s.App.Quit[0].Buttons[0]; b.Text != "Quit" {
-		t.Errorf("quit button text = %q, want unchanged Quit", b.Text)
+	if b := s.App.Quit[0].Buttons[0]; b.Text != "Bail" {
+		t.Errorf("quit button text = %q, want unchanged Bail (a quit button requires its own label; verb defaults never see it)", b.Text)
 	}
 }

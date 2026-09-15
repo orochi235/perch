@@ -1750,6 +1750,8 @@ git commit -m "let agent: name a use's watch, or self's inside a template"
 
 ### Task 5: Verb defaults
 
+> **Landed differently:** the guard is Item.Guard, lowered beside the author's when: in render.go, not spliced into it.
+
 **Files:**
 - Create: `internal/spec/verbs.go`
 - Modify: `internal/spec/spec.go`

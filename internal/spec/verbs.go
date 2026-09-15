@@ -19,8 +19,8 @@ func verbGuard(target string, v AgentVerb) string {
 	return target + ".installed"
 }
 
-// applyVerbDefaults labels every agent: item that has no text:, so a menu
-// never offers a verb that fails.
+// applyVerbDefaults labels every agent: item that has no text: and guards it,
+// so a menu never offers a verb that fails.
 func applyVerbDefaults(items []Item) {
 	for i := range items {
 		it := &items[i]
@@ -31,13 +31,6 @@ func applyVerbDefaults(items []Item) {
 		if it.Text == "" {
 			it.Text = verbLabel[it.Action.Verb]
 		}
-		guard := verbGuard(it.Action.Agent, it.Action.Verb)
-		if it.When == "" {
-			it.When = guard
-		} else {
-			// A "\n" before the close paren keeps a trailing "//" comment in
-			// an author's when: from swallowing the guard that follows it.
-			it.When = "(" + it.When + "\n) && (" + guard + ")"
-		}
+		it.Guard = verbGuard(it.Action.Agent, it.Action.Verb)
 	}
 }

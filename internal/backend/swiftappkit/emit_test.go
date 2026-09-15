@@ -133,9 +133,6 @@ func TestEmitGivesEveryGeneratedStructItsOwnName(t *testing.T) {
 	}
 }
 
-// A verb guard is appended after an author's when:, and CEL treats "//" as a
-// line comment; a bare "&&" join would let it swallow the guard. Emit must
-// still lower the combined expression cleanly.
 func TestEmitLowersAnAgentWhenWithATrailingComment(t *testing.T) {
 	files := emit(t, `
 app: {name: w, id: dev.example.w, icon: circle, interval: 10s}

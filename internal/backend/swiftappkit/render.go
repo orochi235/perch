@@ -380,12 +380,23 @@ func (g *menuGen) item(it spec.Item, into string, e *celswift.Env, path string) 
 		inner = e.WithEach(elem, loopVar)
 	}
 
+	var conds []string
 	if it.When != "" {
 		cond, err := inner.LowerCondition(it.When)
 		if err != nil {
 			return fmt.Errorf("%s.when: %w", path, err)
 		}
-		g.b.line("if %s {", cond)
+		conds = append(conds, cond)
+	}
+	if it.Guard != "" {
+		cond, err := inner.LowerCondition(it.Guard)
+		if err != nil {
+			return fmt.Errorf("%s.agent: the guard %q: %w", path, it.Guard, err)
+		}
+		conds = append(conds, cond)
+	}
+	if len(conds) > 0 {
+		g.b.line("if %s {", strings.Join(conds, " && "))
 		g.b.in()
 		closes++
 	}

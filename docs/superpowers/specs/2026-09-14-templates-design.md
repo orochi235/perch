@@ -177,8 +177,10 @@ is 2.0.
   and out. Outlets are resolved here and never reach the backend.
 - **The spec.** `Spec` gains `Uses`, each a name, a template and its own
   watches and states. `StatusRule` and `Item` gain a `Scope`: the use they came
-  from, or empty. Verb defaults are applied here, as an ordinary expression
-  combined with the author's `when:`.
+  from, or empty. Verb defaults are applied here: an `agent:` item carries its
+  guard in its own `Guard` field, beside its author's `when:` rather than
+  spliced into it; the backend lowers and joins the two, so an author's
+  mistake quotes only what they wrote.
 - **`agent:` takes a path.** `self.agent.start` and `daemon.agent.restart` are a
   path to a `launchagent` watch and a verb; `server.start` still parses. Quit
   buttons take the same form.
