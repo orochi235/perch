@@ -79,7 +79,7 @@ type Action struct {
 	Open     string
 	PostURL  string
 	PostBody string // compact JSON, template holes preserved
-	Agent    string // ActionAgent: the launchagent watch acted on
+	Agent    string // ActionAgent: <watch>, <use>.<watch> or self.<watch>
 	Verb     AgentVerb
 	Swift    string // ActionSwift: a dotted path, Type.method
 	Window   WindowVerb
@@ -228,16 +228,18 @@ func actionFrom(f itemFields, path string) (Action, error) {
 	return a, nil
 }
 
-// parseAgentAction reads `<watch>.<verb>`. A watch name holds no dot, so the
-// one separator is unambiguous.
+// parseAgentAction reads `<target>.<verb>`, where the target is a watch, a
+// use's watch, or self's inside a template. The verb is always the last
+// segment, and no verb holds a dot.
 func parseAgentAction(src, path string) (string, AgentVerb, error) {
-	name, rest, found := strings.Cut(src, ".")
-	if !found {
+	i := strings.LastIndex(src, ".")
+	if i < 0 {
 		return "", "", fmt.Errorf("%s.agent: %q names no verb; write <watch>.%s", path, src, strings.Join(verbList(), ", <watch>."))
 	}
+	target, rest := src[:i], src[i+1:]
 	for _, v := range AgentVerbs {
 		if rest == string(v) {
-			return name, v, nil
+			return target, v, nil
 		}
 	}
 	return "", "", fmt.Errorf("%s.agent: %q is not something perch can do to a LaunchAgent; it does %s", path, rest, strings.Join(verbList(), ", "))

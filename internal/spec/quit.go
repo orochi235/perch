@@ -97,7 +97,7 @@ func (s *Spec) validateQuit() error {
 			if b.Text == "" {
 				return fmt.Errorf("%s.text: required; a button with no label cannot be told from Cancel", bp)
 			}
-			if err := b.Action.validate(bp, s.Watches, s.Window); err != nil {
+			if err := s.validateAction(b.Action, bp, ""); err != nil {
 				return err
 			}
 		}

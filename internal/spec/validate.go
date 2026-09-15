@@ -64,22 +64,24 @@ func (s *Spec) validate() error {
 	if err := s.validateQuit(); err != nil {
 		return err
 	}
-	return validateItems(s.Menu, s.Watches, s.Window)
+	return s.validateItems(s.Menu)
 }
 
-func validateItems(items []Item, watches []Watch, window *Window) error {
+// validateItems reports each item at it.path, where the author wrote it, so a
+// template's items already name their use and file.
+func (s *Spec) validateItems(items []Item) error {
 	for _, it := range items {
-		if err := it.Action.validate(it.path, watches, window); err != nil {
+		if err := s.validateAction(it.Action, it.path, it.Scope); err != nil {
 			return err
 		}
-		if err := validateItems(it.Menu, watches, window); err != nil {
+		if err := s.validateItems(it.Menu); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a Action) validate(path string, watches []Watch, window *Window) error {
+func (s *Spec) validateAction(a Action, path, scope string) error {
 	switch a.Kind {
 	case ActionRun:
 		if len(a.Run) == 0 {
@@ -90,19 +92,51 @@ func (a Action) validate(path string, watches []Watch, window *Window) error {
 			return fmt.Errorf("%s.post: needs a url", path)
 		}
 	case ActionAgent:
-		return checkAgentTarget(path, a.Agent, watches)
+		if _, err := s.AgentWatch(scope, a.Agent); err != nil {
+			return fmt.Errorf("%s.agent: %w", path, err)
+		}
 	case ActionWindow:
-		if window == nil {
+		if s.Window == nil {
 			return fmt.Errorf("%s.window: this file declares no window: block, so there is nothing to %s", path, a.Window)
 		}
 	}
 	return nil
 }
 
-// checkAgentTarget refuses an agent: naming anything but a launchagent watch.
-// The label and the plist path both come from that watch, so there is nothing
-// to act on without one.
-func checkAgentTarget(path, name string, watches []Watch) error {
+// AgentWatch finds the launchagent watch an agent: target names, as seen from
+// an item in scope: "" for the file's own, or the use a template's item came
+// from. A target is <watch>, <use>.<watch>, or self.<watch> inside a template.
+func (s *Spec) AgentWatch(scope, target string) (Watch, error) {
+	parts := strings.Split(target, ".")
+	switch len(parts) {
+	case 1:
+		if scope != "" {
+			return Watch{}, fmt.Errorf("%q: a template sees only self, so name its watch as self.%s", target, target)
+		}
+		return launchAgentIn(parts[0], s.Watches, "this file")
+	case 2:
+		useName := parts[0]
+		switch {
+		case useName == "self" && scope == "":
+			return Watch{}, fmt.Errorf("%q: self is bound only inside a template, where it is that use", target)
+		case useName == "self":
+			useName = scope
+		case scope != "":
+			return Watch{}, fmt.Errorf("%q: a template sees only self, so write self.%s", target, parts[1])
+		}
+		for _, u := range s.Uses {
+			if u.Name == useName {
+				return launchAgentIn(parts[1], u.Watches, "use."+u.Name)
+			}
+		}
+		return Watch{}, fmt.Errorf("%q: no use named %q", target, useName)
+	}
+	return Watch{}, fmt.Errorf("%q is not <watch>, <use>.<watch> or self.<watch>", target)
+}
+
+// launchAgentIn refuses anything but a launchagent watch: the label and the
+// plist path both come from it, so there is nothing to act on without one.
+func launchAgentIn(name string, watches []Watch, where string) (Watch, error) {
 	var agents []string
 	for _, w := range watches {
 		if w.Kind == WatchLaunchAgent {
@@ -112,14 +146,14 @@ func checkAgentTarget(path, name string, watches []Watch) error {
 			continue
 		}
 		if w.Kind != WatchLaunchAgent {
-			return fmt.Errorf("%s.agent: %q is a %s watch; agent: acts on a launchagent watch, which is where the label and the plist come from", path, name, w.Kind)
+			return Watch{}, fmt.Errorf("%q is a %s watch; agent: acts on a launchagent watch, which is where the label and the plist come from", name, w.Kind)
 		}
-		return nil
+		return w, nil
 	}
 	if len(agents) == 0 {
-		return fmt.Errorf("%s.agent: no watch named %q, and this file declares no launchagent watch", path, name)
+		return Watch{}, fmt.Errorf("no watch named %q, and %s declares no launchagent watch", name, where)
 	}
-	return fmt.Errorf("%s.agent: no watch named %q; the launchagent watches are %s", path, name, strings.Join(agents, ", "))
+	return Watch{}, fmt.Errorf("no watch named %q; the launchagent watches are %s", name, strings.Join(agents, ", "))
 }
 
 func (w Watch) validate() error {
