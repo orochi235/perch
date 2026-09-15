@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/orochi235/perch/internal/templates"
+	"github.com/orochi235/perch/v2/internal/templates"
 )
 
 // TemplateSource finds a template's YAML by the name use: gives it.

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochi235/perch/internal/install"
-	"github.com/orochi235/perch/internal/project"
+	"github.com/orochi235/perch/v2/internal/install"
+	"github.com/orochi235/perch/v2/internal/project"
 )
 
 const exampleSpec = `

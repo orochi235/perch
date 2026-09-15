@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // plainKey is the shape of a JSON key that can be written bare in YAML. Anything

@@ -17,9 +17,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/orochi235/perch/internal/backend"
-	"github.com/orochi235/perch/internal/backend/swiftappkit"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/backend"
+	"github.com/orochi235/perch/v2/internal/backend/swiftappkit"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // Icon is what the status item draws: one of the two is set.

@@ -1,9 +1,9 @@
 # Templates
 
-**Status: designed, not built.** Nothing in this document exists in perch yet.
-It is the first of two specs; the second — code-backed built-ins, and a
-`services` built-in that combines several services' state and controls — is not
-written. Both land as perch 2.0.
+**Status: built.** `use:`, outlets, `self`, verb defaults and the shipped
+`service` template land in perch 2.0. The second spec — code-backed built-ins,
+and a `services` built-in combining several services' state and controls — is
+not written.
 
 This is the design for whoever builds it and whoever changes it next. It
 answers: how a `menubar.yaml` reuses a block of watches, states and menu items,

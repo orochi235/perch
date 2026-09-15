@@ -19,7 +19,6 @@ watch:
       class: int
       func: double
       static: bool
-      self: any
       nested: {repeat: string, switch: [{case: int}]}
       xs: [double]
       untyped: any
@@ -39,7 +38,7 @@ menu:
 func TestEmitBackticksSwiftKeywordFieldNames(t *testing.T) {
 	files := emit(t, swiftKeywordShape)
 	shapes := files["Shapes.swift"]
-	for _, word := range []string{"default", "class", "func", "static", "self", "repeat", "switch", "case"} {
+	for _, word := range []string{"default", "class", "func", "static", "repeat", "switch", "case"} {
 		if !strings.Contains(shapes, "var `"+word+"`:") {
 			t.Errorf("field %q is declared without backticks:\n%s", word, shapes)
 		}

@@ -1,7 +1,7 @@
 # Install
 
 ```
-go install github.com/orochi235/perch/cmd/perch@latest
+go install github.com/orochi235/perch/v2/cmd/perch@latest
 ```
 
 perch runs on macOS and needs the Xcode command line tools, because it compiles

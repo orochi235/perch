@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // jobs is the docs' own example: a run watch with a declared shape, rules that

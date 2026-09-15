@@ -5,7 +5,7 @@ the icon shows, what the menu offers. It emits Swift, builds the `.app`, and
 loads it as a LaunchAgent, so it is there again after a restart.
 
 ```
-go install github.com/orochi235/perch/cmd/perch@latest
+go install github.com/orochi235/perch/v2/cmd/perch@latest
 ```
 
 macOS only, and you need `swiftc` — the Xcode command line tools — since Swift

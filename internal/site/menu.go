@@ -5,7 +5,7 @@ import (
 	"html"
 	"strings"
 
-	"github.com/orochi235/perch/internal/preview"
+	"github.com/orochi235/perch/v2/internal/preview"
 )
 
 // previewHTML draws what the emitted app decided: the status item in a menu

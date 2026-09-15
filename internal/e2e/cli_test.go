@@ -28,7 +28,7 @@ func perch(t *testing.T) string {
 			return
 		}
 		perchBin = filepath.Join(dir, "perch")
-		out, err := exec.Command("go", "build", "-o", perchBin, "github.com/orochi235/perch/cmd/perch").CombinedOutput()
+		out, err := exec.Command("go", "build", "-o", perchBin, "github.com/orochi235/perch/v2/cmd/perch").CombinedOutput()
 		if err != nil {
 			buildErr = fmt.Errorf("go build: %v\n%s", err, out)
 		}

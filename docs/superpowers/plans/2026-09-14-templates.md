@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status: not started.**
+**Status: built.**
 
 **Goal:** Let a `menubar.yaml` reuse a block of watches, states, status rules and menu items through `use:`, ship a `service` template for LaunchAgents, and give `agent:` items a default label and guard — as perch 2.0.
 

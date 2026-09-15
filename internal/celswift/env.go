@@ -3,7 +3,7 @@
 // is a build error, not a widget that silently shows nothing.
 package celswift
 
-import "github.com/orochi235/perch/internal/spec"
+import "github.com/orochi235/perch/v2/internal/spec"
 
 // Env is the type environment an expression is lowered against: one binding per
 // name an expression can reach.

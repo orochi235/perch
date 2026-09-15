@@ -3,8 +3,8 @@ package swiftappkit
 import (
 	"fmt"
 
-	"github.com/orochi235/perch/internal/celswift"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/celswift"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // emitWindowMembers writes the stored properties Controller needs for a window.

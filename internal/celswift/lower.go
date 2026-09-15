@@ -8,7 +8,7 @@ import (
 	"cel.dev/cel-go/cel"
 	celast "cel.dev/cel-go/common/ast"
 	"cel.dev/cel-go/common/types"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // value is a lowered subexpression: Swift source, the type it has there, and

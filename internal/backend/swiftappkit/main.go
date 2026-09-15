@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/orochi235/perch/internal/celswift"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/celswift"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // emitMain writes main.swift: the app itself. It polls, hands what came back to

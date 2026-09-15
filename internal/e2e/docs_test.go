@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochi235/perch/internal/backend/swiftappkit"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/backend/swiftappkit"
+	"github.com/orochi235/perch/v2/internal/spec"
 	"gopkg.in/yaml.v3"
 )
 

@@ -3,7 +3,7 @@ package swiftappkit
 import (
 	"fmt"
 
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // structNames assigns every object in every declared shape a Swift struct name

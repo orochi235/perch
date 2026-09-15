@@ -3,7 +3,7 @@ package celswift
 import (
 	"testing"
 
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 const fuzzSpec = `

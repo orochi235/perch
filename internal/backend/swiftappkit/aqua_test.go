@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/orochi235/perch/internal/install"
+	"github.com/orochi235/perch/v2/internal/install"
 )
 
 // requireAqua skips outside a GUI login session. launchd has no gui/<uid>

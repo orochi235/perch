@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/orochi235/perch/internal/backend"
+	"github.com/orochi235/perch/v2/internal/backend"
 )
 
 func specAt(t *testing.T, root, doc string) *Project {

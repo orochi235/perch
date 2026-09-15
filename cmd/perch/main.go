@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/orochi235/perch/internal/backend/swiftappkit"
-	"github.com/orochi235/perch/internal/install"
-	"github.com/orochi235/perch/internal/project"
-	"github.com/orochi235/perch/internal/schema"
-	"github.com/orochi235/perch/internal/shape"
+	"github.com/orochi235/perch/v2/internal/backend/swiftappkit"
+	"github.com/orochi235/perch/v2/internal/install"
+	"github.com/orochi235/perch/v2/internal/project"
+	"github.com/orochi235/perch/v2/internal/schema"
+	"github.com/orochi235/perch/v2/internal/shape"
 )
 
 const usage = `perch generates a macOS menu bar app from a menubar.yaml.

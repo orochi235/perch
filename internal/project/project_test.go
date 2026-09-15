@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/orochi235/perch/internal/backend"
+	"github.com/orochi235/perch/v2/internal/backend"
 )
 
 func scratch(t *testing.T) *Project {

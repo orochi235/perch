@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/orochi235/perch/internal/preview"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/preview"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 //go:embed assets

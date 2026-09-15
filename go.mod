@@ -1,4 +1,4 @@
-module github.com/orochi235/perch
+module github.com/orochi235/perch/v2
 
 go 1.26.3
 

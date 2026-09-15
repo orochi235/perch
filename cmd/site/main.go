@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/orochi235/perch/internal/site"
+	"github.com/orochi235/perch/v2/internal/site"
 )
 
 func main() {

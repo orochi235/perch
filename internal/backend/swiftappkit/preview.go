@@ -4,9 +4,9 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/orochi235/perch/internal/backend"
-	"github.com/orochi235/perch/internal/celswift"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/backend"
+	"github.com/orochi235/perch/v2/internal/celswift"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 //go:embed runtime/Preview.swift

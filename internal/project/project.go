@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/orochi235/perch/internal/backend"
-	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/v2/internal/backend"
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 const SpecFile = "menubar.yaml"

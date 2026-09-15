@@ -2,7 +2,7 @@
 // swift-appkit is the only implementation; others get a name and nothing else.
 package backend
 
-import "github.com/orochi235/perch/internal/spec"
+import "github.com/orochi235/perch/v2/internal/spec"
 
 // File is one emitted source file, written under menubar/Generated/.
 type File struct {
