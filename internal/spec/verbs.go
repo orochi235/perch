@@ -8,8 +8,7 @@ var verbLabel = map[AgentVerb]string{
 }
 
 // verbGuard is when a verb can work, written against the watch the item acts
-// on. start is bootstrap, which fails on a label launchd already holds; stop
-// is bootout, which fails on one it does not; restart works from either.
+// on. start is bootstrap, which fails on a label launchd already holds.
 func verbGuard(target string, v AgentVerb) string {
 	switch v {
 	case AgentStart:
@@ -20,8 +19,8 @@ func verbGuard(target string, v AgentVerb) string {
 	return target + ".installed"
 }
 
-// applyVerbDefaults labels every agent: item that has no text:, and combines
-// its when: with its verb's guard, so a menu never offers a verb that fails.
+// applyVerbDefaults labels every agent: item that has no text:, so a menu
+// never offers a verb that fails.
 func applyVerbDefaults(items []Item) {
 	for i := range items {
 		it := &items[i]
@@ -36,7 +35,9 @@ func applyVerbDefaults(items []Item) {
 		if it.When == "" {
 			it.When = guard
 		} else {
-			it.When = "(" + it.When + ") && (" + guard + ")"
+			// A "\n" before the close paren keeps a trailing "//" comment in
+			// an author's when: from swallowing the guard that follows it.
+			it.When = "(" + it.When + "\n) && (" + guard + ")"
 		}
 	}
 }
