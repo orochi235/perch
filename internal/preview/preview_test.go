@@ -312,11 +312,46 @@ func TestParseStateErrorListsWatchesAndUses(t *testing.T) {
 	}
 }
 
+// jobs is a pre-template file: it declares watches and no uses, so the group
+// naming uses is dropped rather than printed as "no uses".
+func TestParseStateErrorOmitsUsesWhenThereAreNone(t *testing.T) {
+	_, err := ParseState("x", []byte("nope: true\n"), parse(t, jobs))
+	if err == nil || !strings.Contains(err.Error(), "this file declares watches fleet") || strings.Contains(err.Error(), "uses") {
+		t.Errorf("err = %v, want it to name only watches", err)
+	}
+}
+
+// useDoc declares a use and no file-level watches, so the group naming
+// watches is dropped rather than printed as "no watches".
+func TestParseStateErrorOmitsWatchesWhenThereAreNone(t *testing.T) {
+	_, err := ParseState("x", []byte("nope: true\n"), parse(t, useDoc))
+	if err == nil || !strings.Contains(err.Error(), "this file declares uses daemon") || strings.Contains(err.Error(), "watches") {
+		t.Errorf("err = %v, want it to name only uses", err)
+	}
+}
+
 func TestParseStateOffersTheNestFormForADottedUseKey(t *testing.T) {
 	s := parse(t, useDoc)
 	_, err := ParseState("x", []byte("daemon.agent: {running: true}\n"), s)
 	if err == nil || !strings.Contains(err.Error(), "write daemon.agent as daemon: {agent: …}") {
 		t.Errorf("err = %v, want the nest hint", err)
+	}
+}
+
+// A dotted key whose use exists but whose single remaining segment names no
+// watch of it, or that carries a second dot, is not a nesting mistake: the
+// first falls to the use's own "no watch named" error, and the second to the
+// ordinary unknown-key error.
+func TestParseStateFallsThroughForOtherDottedKeys(t *testing.T) {
+	s := parse(t, useDoc)
+	for src, want := range map[string]string{
+		"daemon.nope: {running: true}": `use daemon: no watch named "nope"; it has agent`,
+		"daemon.agent.pid: 42":         `no watch or use named "daemon.agent.pid"; this file declares uses daemon`,
+	} {
+		_, err := ParseState("x", []byte(src), s)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: err = %v, want it to mention %q", src, err, want)
+		}
 	}
 }
 

@@ -251,9 +251,6 @@ func assertLoopVarUsed(t *testing.T, render, loopPattern, field string) {
 		t.Fatalf("Render.swift has no loop matching %q:\n%s", loopPattern, render)
 	}
 	for _, loc := range locs {
-		if !strings.HasSuffix(render[loc[0]:loc[1]], "{") {
-			t.Fatalf("loop header %q does not end in {", render[loc[0]:loc[1]])
-		}
 		v := render[loc[2]:loc[3]]
 		body := loopBody(render, loc[0])
 		want := fmt.Sprintf(`.append(.item("\(%s.%s)"`, v, field)

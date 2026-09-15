@@ -129,9 +129,12 @@ func ParseState(name string, src []byte, s *spec.Spec) (State, error) {
 			}
 			continue
 		}
-		if prefix, rest, ok := strings.Cut(entry.key, "."); ok {
-			if _, ok := useNamed(s, prefix); ok {
-				return st, fmt.Errorf("state %q: write %s as %s: {%s: …}", name, entry.key, prefix, rest)
+		if prefix, rest, ok := strings.Cut(entry.key, "."); ok && !strings.Contains(rest, ".") {
+			if u, ok := useNamed(s, prefix); ok {
+				if _, ok := watchIn(u.Watches, rest); ok {
+					return st, fmt.Errorf("state %q: write %s as %s: {%s: …}", name, entry.key, prefix, rest)
+				}
+				return st, fmt.Errorf("state %q: use %s: no watch named %q; it has %s", name, u.Name, rest, joinOr(namesOf(u.Watches), "no watches"))
 			}
 		}
 		w, ok := watchIn(s.Watches, entry.key)
@@ -188,9 +191,20 @@ func joinOr(names []string, empty string) string {
 	return strings.Join(names, ", ")
 }
 
-// describeDeclared lists what a state fence in this file may name.
+// describeDeclared lists what a state fence in this file may name, omitting
+// whichever of watches and uses this file has none of.
 func describeDeclared(s *spec.Spec) string {
-	return fmt.Sprintf("watches %s and uses %s", joinOr(namesOf(s.Watches), "no watches"), joinOr(useNames(s), "no uses"))
+	watches, uses := namesOf(s.Watches), useNames(s)
+	switch {
+	case len(watches) > 0 && len(uses) > 0:
+		return fmt.Sprintf("watches %s and uses %s", strings.Join(watches, ", "), strings.Join(uses, ", "))
+	case len(watches) > 0:
+		return fmt.Sprintf("watches %s", strings.Join(watches, ", "))
+	case len(uses) > 0:
+		return fmt.Sprintf("uses %s", strings.Join(uses, ", "))
+	default:
+		return "no watches or uses"
+	}
 }
 
 func parseSample(w spec.Watch, v value) (Sample, error) {
