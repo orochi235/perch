@@ -1,0 +1,30 @@
+# A LaunchAgent: whether it is installed, loaded and running, and the controls
+# to run it. Copy it under another name to change its labels.
+params:
+  label: ~          # the launchd label, e.g. dev.example.worker
+  noun: Service     # what the readout calls it
+
+watch:
+  agent:
+    launchagent: ${label}
+
+state:
+  - uninstalled: "!self.agent.installed"
+  - stopped: "!self.agent.loaded"
+  - idle: "!self.agent.running"
+  - running:
+
+status:
+  default:
+    - {when: self.uninstalled, icon: exclamationmark.triangle}
+
+menu:
+  default:
+    - {text: "${noun}: not installed", when: self.uninstalled}
+    - {text: "${noun}: not loaded", when: self.stopped}
+    - {text: "${noun}: loaded, not running", when: self.idle}
+    - {text: "${noun}: running · pid {{self.agent.pid}}", when: self.running}
+  controls:
+    - agent: self.agent.start
+    - agent: self.agent.restart
+    - agent: self.agent.stop

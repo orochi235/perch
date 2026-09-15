@@ -50,8 +50,13 @@ type rawApp struct {
 	Quit     yaml.Node `yaml:"quit"`
 }
 
-// Parse reads a menubar.yaml document into a Spec.
-func Parse(src []byte) (*Spec, error) {
+// Parse reads a menubar.yaml document into a Spec, with perch's shipped
+// templates and no repo's.
+func Parse(src []byte) (*Spec, error) { return ParseWith(src, TemplatesIn("")) }
+
+// ParseWith reads a menubar.yaml document into a Spec, finding the templates its
+// use: block names in templates.
+func ParseWith(src []byte, templates TemplateSource) (*Spec, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(src, &doc); err != nil {
 		return nil, err

@@ -27,7 +27,7 @@ func Load(root string) (*Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", p.SpecPath(), err)
 	}
-	s, err := spec.Parse(src)
+	s, err := spec.ParseWith(src, spec.TemplatesIn(p.TemplatesDir()))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", p.SpecPath(), err)
 	}
@@ -43,6 +43,9 @@ func (p *Project) SpecPath() string { return filepath.Join(p.Root, SpecFile) }
 
 func (p *Project) GeneratedDir() string { return filepath.Join(p.Root, "menubar", "Generated") }
 func (p *Project) SourcesDir() string   { return filepath.Join(p.Root, "menubar", "Sources") }
+
+// TemplatesDir holds a repo's own templates, which use: finds beside perch's.
+func (p *Project) TemplatesDir() string { return filepath.Join(p.Root, "menubar", "templates") }
 
 // IconsDir holds artwork an icon: {asset: name} refers to. Copied into the
 // bundle's Resources whole, so a file nothing references costs only its bytes.
