@@ -91,14 +91,11 @@ CI.
 
 ## Parameters
 
-`${name}` is substituted with Go's `os.Expand`, the syntax `envsubst` and shells
-use. It runs after the template is parsed as YAML, on each string value, so a
-value holding `: ` or a newline stays one string and cannot change the file's
-structure. `$$` writes a literal `$`.
-
-`os.Expand` also expands a bare `$name`, so `awk '{print $1}'` looks up a
-parameter named `1`. That is a build error pointing at `$$1`, never a silent
-substitution.
+`${name}` is filled in after the template is parsed as YAML, on each string
+value, so a value holding `: ` or a newline stays one string and cannot change
+the file's structure. Substitution fills only `${name}`: `$$` writes a literal
+`$`, and any other `$` is left alone, so shell text like `$HOME` passes through.
+A malformed `${` (unclosed, empty, or not a name) is a build error.
 
 `{{ }}` is untouched: it is an expression the app evaluates on every poll, and
 `${}` is text perch fills in once, at build.
@@ -205,7 +202,7 @@ All are build errors naming the use and the template file.
 |---|---|
 | Unknown template | lists the shipped and repo templates |
 | A repo template named like a shipped one | names both files |
-| A missing required parameter, an undeclared argument, an unknown `${x}` | names it; `$1`-style text suggests `$$` |
+| A missing required parameter, an undeclared argument, an unknown or malformed `${…}` | names it |
 | `app:`, `window:` or `use:` in a template | templates do not nest |
 | A template naming a file's watch or state | a template sees only `self` |
 | `self` outside a template | it has nothing to refer to |

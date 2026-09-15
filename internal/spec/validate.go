@@ -43,7 +43,7 @@ func (s *Spec) validate() error {
 		if seen[u.Name] {
 			return fmt.Errorf("use.%s: %q is already a watch; an expression names watches and uses the same way, so it could not tell them apart", u.Name, u.Name)
 		}
-		where := fmt.Sprintf("use.%s (%s): ", u.Name, u.File)
+		where := u.where() + ": "
 		for _, w := range u.Watches {
 			if err := w.validate(); err != nil {
 				return fmt.Errorf("%s%w", where, err)

@@ -43,6 +43,24 @@ func checkTemplateName(path, name string) error {
 	return nil
 }
 
+// checkParamName keeps a parameter name to what ${name} can select.
+func checkParamName(path, name string) error {
+	if !identifier.MatchString(name) {
+		return fmt.Errorf("%s: %q is not a parameter name; a template fills it in as ${name}, so it is letters, digits and underscores", path, name)
+	}
+	return nil
+}
+
+// checkBound refuses the two names perch binds itself: it inside an each:, and
+// self inside a template.
+func checkBound(path, name, kind string) error {
+	binder := map[string]string{"it": "each: binds its element to it", "self": "a template binds its own use to self"}[name]
+	if binder == "" {
+		return nil
+	}
+	return fmt.Errorf("%s: %q is bound by perch itself (%s), so a %s cannot take that name", path, name, binder, kind)
+}
+
 // bundleID is what launchd will take as a label and what install will use as a
 // plist filename.
 var bundleID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)

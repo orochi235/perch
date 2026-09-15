@@ -106,39 +106,101 @@ func TestADefaultParameterIsUsedWhenAUsePassesNone(t *testing.T) {
 	}
 }
 
+func TestShellTextPassesThroughATemplate(t *testing.T) {
+	src := fakeTemplates{"sh": "params:\n  msg: ~\nwatch:\n  w: {run: [sh, -c, \"echo $HOME $$5 ${msg}\"]}\n"}
+	s := parseWith(t, useHead+"use:\n  e:\n    sh: {msg: hi}\nmenu: [{text: Quit, quit: true}]\n", src)
+	if got := s.Uses[0].Watches[0].Run[2]; got != "echo $HOME $5 hi" {
+		t.Errorf("run[2] = %q, want $HOME left alone, $$ as $ and ${msg} filled", got)
+	}
+}
+
+func TestAParameterMayTakeAWordCELReserves(t *testing.T) {
+	src := fakeTemplates{"p": "params:\n  package: hello\nwatch:\n  w: {run: [echo, \"${package}\"]}\n"}
+	s := parseWith(t, useHead+"use:\n  e:\n    p:\nmenu: [{text: Quit, quit: true}]\n", src)
+	if got := s.Uses[0].Watches[0].Run[1]; got != "hello" {
+		t.Errorf("run[1] = %q, want the default", got)
+	}
+}
+
+// A quoted or explicitly tagged ${x} keeps its string tag, so it cannot turn
+// into the bool a json: field wants.
+func TestAQuotedOrTaggedParameterStaysAString(t *testing.T) {
+	for name, field := range map[string]string{"quoted": `"${d}"`, "tagged": "!!str ${d}"} {
+		t.Run(name, func(t *testing.T) {
+			src := fakeTemplates{"j": "params:\n  d: ~\nwatch:\n  w:\n    run: [echo]\n    json: " + field + "\n"}
+			_, err := ParseWith([]byte(useHead+"use:\n  e:\n    j: {d: \"true\"}\nmenu: [{text: Quit, quit: true}]\n"), src)
+			if err == nil || !strings.Contains(err.Error(), "want true or false, got a string") {
+				t.Errorf("error = %v, want json: to refuse a string", err)
+			}
+		})
+	}
+}
+
 func TestUseRefusals(t *testing.T) {
 	src := fakeTemplates{
-		"svc":      agentTemplate,
-		"nested":   "app: {name: x}\n",
-		"dollar":   "watch:\n  w: {run: [echo, $1]}\n",
-		"unknown":  "watch:\n  w: {run: [echo, \"${nope}\"]}\n",
-		"badwatch": "watch:\n  w: {run: []}\n",
-		"badstate": "watch:\n  w: {exists: /tmp}\nstate:\n  - a:\n  - b: \"w.ok\"\n",
+		"svc":       agentTemplate,
+		"nested":    "app: {name: x}\n",
+		"unclosed":  "watch:\n  w: {run: [echo, \"${abc\"]}\n",
+		"empty":     "watch:\n  w: {run: [echo, \"x${}y\"]}\n",
+		"notname":   "watch:\n  w: {run: [echo, \"${a-b}\"]}\n",
+		"unknown":   "watch:\n  w: {run: [echo, \"${nope}\"]}\n",
+		"badwatch":  "watch:\n  w: {run: []}\n",
+		"badstate":  "watch:\n  w: {exists: /tmp}\nstate:\n  - a:\n  - b: \"w.ok\"\n",
+		"badparams": "params: [a]\n",
+		"badparam":  "params:\n  a-b: x\n",
 	}
 	for name, tc := range map[string]struct{ doc, want string }{
+		"use: that is not a mapping": {
+			"use: [d]\n",
+			"use: want a mapping of names to templates",
+		},
 		"an unknown template": {
 			"use:\n  d:\n    nope: {}\n",
-			`no template named "nope"; the templates are badstate, badwatch, dollar, nested, svc, unknown`,
+			`no template named "nope"; the templates are badparam, badparams, badstate, badwatch, empty, nested, notname, svc, unclosed, unknown`,
 		},
 		"a missing required parameter": {
 			"use:\n  d:\n    svc: {}\n",
-			"requires label",
+			"use.d (templates/svc.yaml): the template requires label",
+		},
+		"a required parameter passed as null": {
+			"use:\n  d:\n    svc: {label: ~}\n",
+			"use.d (templates/svc.yaml): label: pass a value; the template requires it",
+		},
+		"a defaulted parameter passed empty": {
+			"use:\n  d:\n    svc:\n      label: dev.example.d\n      noun:\n",
+			"use.d (templates/svc.yaml): noun: pass a value, or leave it out to take the default",
 		},
 		"an argument the template does not take": {
 			"use:\n  d:\n    svc: {label: dev.example.d, color: red}\n",
-			`"color" is not a parameter of this template; it takes label, noun`,
+			`use.d (templates/svc.yaml): "color" is not a parameter of this template; it takes label, noun`,
+		},
+		"params: that is not a mapping": {
+			"use:\n  d:\n    badparams:\n",
+			"use.d (templates/badparams.yaml): params: want a mapping",
+		},
+		"a param that is not a name": {
+			"use:\n  d:\n    badparam:\n",
+			`params: "a-b" is not a parameter name`,
 		},
 		"a template that nests": {
 			"use:\n  d:\n    nested:\n",
 			"templates do not nest",
 		},
-		"a bare $ in a template": {
-			"use:\n  d:\n    dollar:\n",
-			"write $$ for a literal $",
+		"a ${ with no closing }": {
+			"use:\n  d:\n    unclosed:\n",
+			`"${abc" has a ${ with no closing }`,
+		},
+		"an empty ${}": {
+			"use:\n  d:\n    empty:\n",
+			"${} names no parameter",
+		},
+		"a ${x} that is not a name": {
+			"use:\n  d:\n    notname:\n",
+			"${a-b} is not a parameter name",
 		},
 		"an unknown ${x}": {
 			"use:\n  d:\n    unknown:\n",
-			"${nope} is not a parameter",
+			"${nope} is not a parameter of this template; it takes no parameters",
 		},
 		"a use named self": {
 			"use:\n  self:\n    svc: {label: dev.example.d}\n",
