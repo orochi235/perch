@@ -32,6 +32,12 @@ menu:
 ## Install
 
 ```
+brew install orochi235/tap/perch
+```
+
+or
+
+```
 go install github.com/orochi235/perch/v2/cmd/perch@latest
 ```
 

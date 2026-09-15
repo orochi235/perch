@@ -1,6 +1,12 @@
 # Install
 
 ```
+brew install orochi235/tap/perch
+```
+
+or, with Go:
+
+```
 go install github.com/orochi235/perch/v2/cmd/perch@latest
 ```
 

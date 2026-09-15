@@ -1,7 +1,7 @@
 # Handoff — 2026-09-15
 
-Branch `main` in `~/src/perch`: the templates work is merged locally (fast-forward
-from the `templates` branch, now deleted), green, **not pushed, not tagged**.
+Branch `main` in `~/src/perch`: the templates work is merged, pushed and
+released as [`v2.0.0`](https://github.com/orochi235/perch/releases/tag/v2.0.0).
 
 ## Landed
 
@@ -11,6 +11,11 @@ from the `templates` branch, now deleted), green, **not pushed, not tagged**.
   from its text says so under its heading.
 - **Module path is `github.com/orochi235/perch/v2`**, and the install lines say
   so. `v1.0.0` is tagged on `aa7cf95`.
+- **Homebrew tap `orochi235/homebrew-tap`** (`~/src/homebrew-tap`):
+  `brew install orochi235/tap/perch` builds the tagged tarball from source, and
+  `brew test` and `brew audit --strict --online` pass. A release bumps `url` and
+  `sha256` in `Formula/perch.rb`. homebrew-core would refuse perch until it has
+  75 stars, 30 forks or 30 watchers (three times that if self-submitted).
 
 ## Decisions made during the build, not in the original design
 
@@ -28,21 +33,8 @@ from the `templates` branch, now deleted), green, **not pushed, not tagged**.
 
 ## Next
 
-**Push and release are waiting on a decision.** Tagging `v2.0.0` should carry
-notes on what existing files see differently:
-- an `agent:` item now hides when its verb can't work, and one with no `text:`
-  gets Start, Stop or Restart;
-- `init`, `Type`, `Protocol` and `self` are refused as names, and a file state
-  `x` beside a watch or use named `state_x` is refused (it never compiled);
-- install is `go install github.com/orochi235/perch/v2/cmd/perch@latest`.
-
 **Spec 2 is not written**: code-backed built-ins, and a `services` built-in that
 combines several services' state with one-click Start/Stop for all of them.
-
-**Homebrew**: a draft source-build formula is in the session scratchpad only,
-and a tap needs a home (`orochi235/homebrew-hued` or a new
-`orochi235/homebrew-tap`). homebrew-core would refuse perch today (repo under 30
-days, no stars). The test install upgraded brew's Go to 1.27.1.
 
 **30 stale Local Network rules** named `dev.perch.smoke.<pid>` remain in
 `/Library/Preferences/com.apple.networkextension.plist`. The smoke test now uses
@@ -68,7 +60,8 @@ supported tool.
 
 ## Traps
 
-- **`~/.local/bin/perch` shadows `~/go/bin/perch`**, and `~/go/bin` is not on
-  PATH. `go install` alone changes nothing; copy the binary across.
+- **Three perch binaries are installed.** `/opt/homebrew/bin/perch` (brew,
+  `v2.0.0`) is first on PATH, then `~/.local/bin/perch`; `~/go/bin` is not on
+  PATH. Testing a local build means running it by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
