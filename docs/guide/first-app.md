@@ -74,7 +74,7 @@ status:
   - when: "!gh.ok"
     icon: exclamationmark.triangle
   - when: 'gh.data.status.indicator != "none"'
-    icon: exclamationmark.cloud
+    icon: exclamationmark.icloud
   - dim: true
 
 menu:
@@ -118,7 +118,7 @@ status:
   - when: "!gh.ok"
     icon: exclamationmark.triangle
   - when: 'gh.data.status.indicator != "none"'
-    icon: exclamationmark.cloud
+    icon: exclamationmark.icloud
   - dim: true
 
 menu:

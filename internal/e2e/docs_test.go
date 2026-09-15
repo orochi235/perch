@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -167,4 +168,78 @@ func TestREADMEListsTheCommandsPerchAnswersTo(t *testing.T) {
 			t.Errorf("the README does not mention perch %s", cmd)
 		}
 	}
+}
+
+// Every SF Symbol a documented example names has to resolve. perch does not
+// check symbol names — the list is macOS's and grows with each release — and an
+// app that names one macOS does not know draws nothing at all.
+func TestDocumentedSymbolsResolve(t *testing.T) {
+	where := map[string][]string{}
+	note := func(b block, s *spec.Spec) {
+		for path, icon := range s.Icons() {
+			if icon.Symbol == "" {
+				continue
+			}
+			at := b.file + ":" + strconv.Itoa(b.line) + " " + path
+			where[icon.Symbol] = append(where[icon.Symbol], at)
+		}
+	}
+	for _, doc := range docFiles(t) {
+		// A fence that does not parse is TestDocumentedExamplesBuild's to report.
+		for _, b := range fences(t, doc, "yaml") {
+			if s, err := spec.Parse([]byte(b.body)); err == nil {
+				note(b, s)
+			}
+		}
+		for _, b := range fences(t, doc, "yaml template") {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "example.yaml"), []byte(b.body), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if s, err := spec.ParseWith([]byte(templateStub(t, b)), spec.TemplatesIn(dir)); err == nil {
+				note(b, s)
+			}
+		}
+	}
+	names := make([]string, 0, len(where))
+	for name := range where {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	if len(names) == 0 {
+		t.Fatal("no symbols found; the docs list or the fence marker changed")
+	}
+	for _, name := range missingSymbols(t, names) {
+		t.Errorf("%q is not a symbol macOS knows, and draws as nothing; named at %s",
+			name, strings.Join(where[name], ", "))
+	}
+}
+
+// missingSymbols asks AppKit which of these names it cannot draw, since only
+// the running macOS knows its own catalog.
+func missingSymbols(t *testing.T, names []string) []string {
+	t.Helper()
+	swiftc, _ := exec.LookPath("swiftc")
+	if swiftc == "" {
+		t.Skip("swiftc not on PATH")
+	}
+	dir := t.TempDir()
+	source := filepath.Join(dir, "symbols.swift")
+	src := "import AppKit\n" +
+		"for name in CommandLine.arguments.dropFirst()\n" +
+		"where NSImage(systemSymbolName: name, accessibilityDescription: nil) == nil {\n" +
+		"    print(name)\n" +
+		"}\n"
+	if err := os.WriteFile(source, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(dir, "symbols")
+	if out, err := exec.Command(swiftc, "-o", bin, source).CombinedOutput(); err != nil {
+		t.Fatalf("compiling the symbol check: %v\n%s", err, out)
+	}
+	out, err := exec.Command(bin, names...).Output()
+	if err != nil {
+		t.Fatalf("running the symbol check: %v", err)
+	}
+	return strings.Fields(string(out))
 }

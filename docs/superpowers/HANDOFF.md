@@ -41,6 +41,17 @@ combines several services' state with one-click Start/Stop for all of them.
 one fixed id, so no more accrue; removing the old ones needs root and has no
 supported tool.
 
+## What the docs tests do and don't prove
+
+Every `yaml` fence in `docs/guide`, `docs/recipes`, `docs/schema.md` and the
+README parses, emits and passes `swiftc -typecheck`, the site build compiles and
+runs that Swift against each page's `state` fences, and every SF Symbol named
+resolves against the running macOS. **Nothing runs the commands the recipes
+poll**: their `shape:` declarations and stated outputs are hand-written, so a
+recipe can be green while `brew outdated --json=v2` prints something else.
+Checked by hand on 2026-09-15: brew, `onto top --once --json` and the `gh run
+list` fields all match. The `http:` recipes name example URLs nothing serves.
+
 ## Small follow-ups
 
 - The schema's state and shape field name rules don't list CEL's reserved
