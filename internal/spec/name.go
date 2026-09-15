@@ -51,6 +51,15 @@ func checkParamName(path, name string) error {
 	return nil
 }
 
+// checkOutletName keeps an outlet name to one a template's menu: or status: can
+// key. Nothing selects it in an expression, so CEL's reserved words are fine.
+func checkOutletName(path, name string) error {
+	if !identifier.MatchString(name) {
+		return fmt.Errorf("%s: %q is not an outlet name; it is letters, digits and underscores, starting with a letter or underscore", path, name)
+	}
+	return nil
+}
+
 // checkBound refuses the two names perch binds itself: it inside an each:, and
 // self inside a template.
 func checkBound(path, name, kind string) error {

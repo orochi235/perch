@@ -55,6 +55,11 @@ func FuzzParse(f *testing.F) {
 			}
 		}
 		checkItems(t, doc, s.Menu)
+		for _, r := range s.Status {
+			if r.isOutlet {
+				t.Fatalf("%q left an outlet mark in status", doc)
+			}
+		}
 	})
 }
 
@@ -82,6 +87,9 @@ func checkShape(t *testing.T, doc string, ty *Type) {
 func checkItems(t *testing.T, doc string, items []Item) {
 	t.Helper()
 	for _, it := range items {
+		if it.isOutlet {
+			t.Fatalf("%q left an outlet mark in the menu", doc)
+		}
 		if len(it.Menu) > 0 && it.Action.Kind != ActionNone {
 			t.Fatalf("%q accepted a submenu item whose %v action can never run", doc, it.Action.Kind)
 		}

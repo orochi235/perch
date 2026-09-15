@@ -99,6 +99,7 @@ type Item struct {
 
 	outlet   string // set with isOutlet: the outlet's name, "" for the default
 	isOutlet bool
+	path     string // where the author wrote it, for errors after placement
 }
 
 type itemFields struct {
@@ -142,11 +143,11 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if name, ok, err := outletMark(n, path); err != nil {
 		return Item{}, err
 	} else if ok {
-		return Item{outlet: name, isOutlet: true}, nil
+		return Item{outlet: name, isOutlet: true, path: path}, nil
 	}
 	if n.Kind == yaml.ScalarNode {
 		if n.Value == "separator" {
-			return Item{Separator: true}, nil
+			return Item{Separator: true, path: path}, nil
 		}
 		return Item{}, fmt.Errorf("%s: bare %q is not a menu item; only 'separator' and 'outlet' are", path, n.Value)
 	}
@@ -167,31 +168,7 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
-	return Item{Text: f.Text, When: f.When, Each: f.Each, Menu: sub, Action: act}, nil
-}
-
-// outletMark reads `- outlet`, the default outlet, or `- outlet: <name>`.
-func outletMark(n *yaml.Node, path string) (string, bool, error) {
-	if n.Kind == yaml.ScalarNode && n.Value == "outlet" {
-		return "", true, nil
-	}
-	if n.Kind != yaml.MappingNode || len(n.Content) < 2 || n.Content[0].Value != "outlet" {
-		return "", false, nil
-	}
-	if len(n.Content) != 2 {
-		return "", false, fmt.Errorf("%s: an outlet takes nothing but its name", path)
-	}
-	v := n.Content[1]
-	if v.Kind == yaml.ScalarNode && v.Tag == "!!null" {
-		return "", true, nil
-	}
-	if v.Kind != yaml.ScalarNode {
-		return "", false, fmt.Errorf("%s: an outlet's name is a string", path)
-	}
-	if err := checkName("outlet", path, v.Value); err != nil {
-		return "", false, err
-	}
-	return v.Value, true, nil
+	return Item{Text: f.Text, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 
 func actionFrom(f itemFields, path string) (Action, error) {

@@ -18,6 +18,7 @@ type StatusRule struct {
 
 	outlet   string
 	isOutlet bool
+	path     string // where the author wrote it, for errors after placement
 }
 
 type rawStatusRule struct {
@@ -27,31 +28,31 @@ type rawStatusRule struct {
 	Badge string    `yaml:"badge"`
 }
 
-func parseStatus(n *yaml.Node) ([]StatusRule, error) {
+func parseStatus(n *yaml.Node, path string) ([]StatusRule, error) {
 	if n == nil || n.Kind == 0 {
 		return nil, nil
 	}
 	if n.Kind != yaml.SequenceNode {
-		return nil, fmt.Errorf("status: want a list of rules")
+		return nil, fmt.Errorf("%s: want a list of rules", path)
 	}
 	out := make([]StatusRule, 0, len(n.Content))
 	for i, c := range n.Content {
-		path := fmt.Sprintf("status[%d]", i)
-		if name, ok, err := outletMark(c, path); err != nil {
+		at := fmt.Sprintf("%s[%d]", path, i)
+		if name, ok, err := outletMark(c, at); err != nil {
 			return nil, err
 		} else if ok {
-			out = append(out, StatusRule{outlet: name, isOutlet: true})
+			out = append(out, StatusRule{outlet: name, isOutlet: true, path: at})
 			continue
 		}
 		var raw rawStatusRule
-		if err := decodeStrict(c, &raw, path); err != nil {
+		if err := decodeStrict(c, &raw, at); err != nil {
 			return nil, err
 		}
-		icon, err := parseIcon(&raw.Icon, path+".icon")
+		icon, err := parseIcon(&raw.Icon, at+".icon")
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, StatusRule{When: raw.When, Icon: icon, Dim: raw.Dim, Badge: raw.Badge})
+		out = append(out, StatusRule{When: raw.When, Icon: icon, Dim: raw.Dim, Badge: raw.Badge, path: at})
 	}
 	return out, nil
 }

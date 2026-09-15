@@ -116,7 +116,7 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 		return nil, err
 	}
 	s.States = states
-	st, err := parseStatus(&raw.Status)
+	st, err := parseStatus(&raw.Status, "status")
 	if err != nil {
 		return nil, err
 	}
