@@ -63,11 +63,34 @@ menu: [outlet]
 	}
 }
 
+func TestAQuitButtonSeesNoSelf(t *testing.T) {
+	_, err := ParseWith([]byte(`
+app:
+  name: w
+  id: dev.example.w
+  icon: circle
+  interval: 10s
+  quit:
+    - confirm: Quit?
+      buttons: [{text: Stop too, agent: self.agent.stop}]
+use:
+  daemon:
+    ctl: {label: dev.example.daemon}
+menu: [outlet]
+`), ctl)
+	want := `app.quit[0].buttons[0].agent: "self.agent": self is bound only inside a template`
+	if err == nil || !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("error = %v, want it to start %q", err, want)
+	}
+}
+
 func TestAgentPathRefusals(t *testing.T) {
 	src := fakeTemplates{
 		"ctl":  ctlTemplate,
 		"bare": "watch:\n  agent: {launchagent: dev.example.x}\nmenu:\n  default:\n    - {text: Go, agent: agent.start}\n",
 		"peek": "watch:\n  agent: {launchagent: dev.example.x}\nmenu:\n  default:\n    - {text: Go, agent: daemon.agent.start}\n",
+		"self": "watch:\n  agent: {launchagent: dev.example.x}\nmenu:\n  default:\n    - {text: Go, agent: self.start}\n",
+		"typo": "watch:\n  agent: {launchagent: dev.example.x}\nmenu:\n  default:\n    - {text: Go, agent: self.agnt.start}\n",
 	}
 	for name, tc := range map[string]struct{ doc, want string }{
 		"self outside a template": {
@@ -82,17 +105,53 @@ func TestAgentPathRefusals(t *testing.T) {
 			"use:\n  daemon:\n    peek:\nmenu: [outlet]\n",
 			"a template sees only self",
 		},
+		"a bare self inside a template": {
+			"use:\n  d:\n    self:\nmenu: [outlet]\n",
+			`"self" is the use itself; name one of its watches, e.g. self.<watch>.<verb>; the launchagent watches are self.agent`,
+		},
+		"a bare self outside a template": {
+			"watch:\n  agent: {launchagent: dev.example.x}\nmenu:\n  - {text: Go, agent: self.start}\n",
+			`"self": self is bound only inside a template`,
+		},
 		"a use that is not there": {
 			"menu:\n  - {text: Go, agent: nope.agent.start}\n",
-			`no use named "nope"`,
+			`"nope.agent": no use named "nope", and this file declares no use: block`,
+		},
+		"a use that is not there, among others": {
+			"use:\n  d:\n    ctl: {label: dev.example.d}\nmenu:\n  - outlet\n  - {text: Go, agent: nope.agent.start}\n",
+			`no use named "nope"; the uses are d`,
+		},
+		"a file watch named as a use": {
+			"watch:\n  worker: {launchagent: dev.example.x}\nmenu:\n  - {text: Go, agent: worker.agent.start}\n",
+			`"worker" is a watch, not a use; write worker.<verb>`,
 		},
 		"a use's watch that is not a launchagent": {
 			"use:\n  d:\n    ctl: {label: dev.example.d}\nmenu:\n  - outlet\n  - {text: Go, agent: d.other.start}\n",
-			"is a exists watch",
+			`"d.other" is an exists watch`,
+		},
+		"a typo in a use's watch": {
+			"use:\n  d:\n    ctl: {label: dev.example.d}\nmenu:\n  - outlet\n  - {text: Go, agent: d.agnt.start}\n",
+			`no watch named "d.agnt"; the launchagent watches are d.agent`,
+		},
+		"a typo in self's watch inside a template": {
+			"use:\n  d:\n    typo:\nmenu: [outlet]\n",
+			`no watch named "self.agnt"; the launchagent watches are self.agent`,
 		},
 		"too many segments": {
 			"menu:\n  - {text: Go, agent: a.b.c.start}\n",
 			"is not <watch>, <use>.<watch> or self.<watch>",
+		},
+		"an empty target": {
+			"menu:\n  - {text: Go, agent: .start}\n",
+			`"" is not <watch>, <use>.<watch> or self.<watch>`,
+		},
+		"an empty watch after a use": {
+			"menu:\n  - {text: Go, agent: d..start}\n",
+			`"d." is not <watch>, <use>.<watch> or self.<watch>`,
+		},
+		"an empty watch after self": {
+			"menu:\n  - {text: Go, agent: self..start}\n",
+			`"self." is not <watch>, <use>.<watch> or self.<watch>`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

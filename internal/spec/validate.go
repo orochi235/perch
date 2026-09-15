@@ -2,6 +2,7 @@ package spec
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -108,52 +109,87 @@ func (s *Spec) validateAction(a Action, path, scope string) error {
 // from. A target is <watch>, <use>.<watch>, or self.<watch> inside a template.
 func (s *Spec) AgentWatch(scope, target string) (Watch, error) {
 	parts := strings.Split(target, ".")
-	switch len(parts) {
-	case 1:
-		if scope != "" {
+	if len(parts) > 2 || slices.Contains(parts, "") {
+		return Watch{}, fmt.Errorf("%q is not <watch>, <use>.<watch> or self.<watch>", target)
+	}
+	if parts[0] == "self" && scope == "" {
+		return Watch{}, fmt.Errorf("%q: self is bound only inside a template, where it is that use", target)
+	}
+	if len(parts) == 1 {
+		switch {
+		case target == "self":
+			u, _ := s.use(scope)
+			agents := launchAgentNames("self.", u.Watches)
+			list := ""
+			if len(agents) > 0 {
+				list = "; the launchagent watches are " + strings.Join(agents, ", ")
+			}
+			return Watch{}, fmt.Errorf("%q is the use itself; name one of its watches, e.g. self.<watch>.<verb>%s", target, list)
+		case scope != "":
 			return Watch{}, fmt.Errorf("%q: a template sees only self, so name its watch as self.%s", target, target)
 		}
-		return launchAgentIn(parts[0], s.Watches, "this file")
-	case 2:
-		useName := parts[0]
-		switch {
-		case useName == "self" && scope == "":
-			return Watch{}, fmt.Errorf("%q: self is bound only inside a template, where it is that use", target)
-		case useName == "self":
-			useName = scope
-		case scope != "":
-			return Watch{}, fmt.Errorf("%q: a template sees only self, so write self.%s", target, parts[1])
-		}
-		for _, u := range s.Uses {
-			if u.Name == useName {
-				return launchAgentIn(parts[1], u.Watches, "use."+u.Name)
-			}
-		}
-		return Watch{}, fmt.Errorf("%q: no use named %q", target, useName)
+		return launchAgentIn("", target, s.Watches, "this file")
 	}
-	return Watch{}, fmt.Errorf("%q is not <watch>, <use>.<watch> or self.<watch>", target)
+	useName := parts[0]
+	switch {
+	case useName == "self":
+		useName = scope
+	case scope != "":
+		return Watch{}, fmt.Errorf("%q: a template sees only self, so write self.%s", target, parts[1])
+	}
+	if u, ok := s.use(useName); ok {
+		return launchAgentIn(parts[0]+".", parts[1], u.Watches, "use."+u.Name)
+	}
+	if slices.ContainsFunc(s.Watches, func(w Watch) bool { return w.Name == useName }) {
+		return Watch{}, fmt.Errorf("%q: %q is a watch, not a use; write %s.<verb>", target, useName, useName)
+	}
+	if len(s.Uses) == 0 {
+		return Watch{}, fmt.Errorf("%q: no use named %q, and this file declares no use: block", target, useName)
+	}
+	names := make([]string, len(s.Uses))
+	for i, u := range s.Uses {
+		names[i] = u.Name
+	}
+	return Watch{}, fmt.Errorf("%q: no use named %q; the uses are %s", target, useName, strings.Join(names, ", "))
+}
+
+func (s *Spec) use(name string) (Use, bool) {
+	for _, u := range s.Uses {
+		if u.Name == name {
+			return u, true
+		}
+	}
+	return Use{}, false
+}
+
+func launchAgentNames(prefix string, watches []Watch) []string {
+	var out []string
+	for _, w := range watches {
+		if w.Kind == WatchLaunchAgent {
+			out = append(out, prefix+w.Name)
+		}
+	}
+	return out
 }
 
 // launchAgentIn refuses anything but a launchagent watch: the label and the
 // plist path both come from it, so there is nothing to act on without one.
-func launchAgentIn(name string, watches []Watch, where string) (Watch, error) {
-	var agents []string
+// prefix is what the author wrote before the watch's name: "", "<use>." or "self.".
+func launchAgentIn(prefix, name string, watches []Watch, where string) (Watch, error) {
 	for _, w := range watches {
-		if w.Kind == WatchLaunchAgent {
-			agents = append(agents, w.Name)
-		}
 		if w.Name != name {
 			continue
 		}
 		if w.Kind != WatchLaunchAgent {
-			return Watch{}, fmt.Errorf("%q is a %s watch; agent: acts on a launchagent watch, which is where the label and the plist come from", name, w.Kind)
+			return Watch{}, fmt.Errorf("%q is %s watch; agent: acts on a launchagent watch, which is where the label and the plist come from", prefix+name, withArticle(w.Kind.String()))
 		}
 		return w, nil
 	}
+	agents := launchAgentNames(prefix, watches)
 	if len(agents) == 0 {
-		return Watch{}, fmt.Errorf("no watch named %q, and %s declares no launchagent watch", name, where)
+		return Watch{}, fmt.Errorf("no watch named %q, and %s declares no launchagent watch", prefix+name, where)
 	}
-	return Watch{}, fmt.Errorf("no watch named %q; the launchagent watches are %s", name, strings.Join(agents, ", "))
+	return Watch{}, fmt.Errorf("no watch named %q; the launchagent watches are %s", prefix+name, strings.Join(agents, ", "))
 }
 
 func (w Watch) validate() error {
