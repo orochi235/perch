@@ -160,7 +160,7 @@ watch:
     json: true
     shape: {live: int, awaiting_input: int}
 state:
-  - down: "!server.running"
+  - down: "!server.agent.loaded"
   - wedged: "!summary.ok"
   - up:
 status:

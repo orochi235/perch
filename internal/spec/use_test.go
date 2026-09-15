@@ -236,6 +236,10 @@ func TestUseRefusals(t *testing.T) {
 			"use:\n  d:\n    unknown:\n",
 			"${nope} is not a parameter of this template; it takes no parameters; write $${ for a literal ${",
 		},
+		"an argument to a template that takes none": {
+			"use:\n  d:\n    unknown: {x: y}\n",
+			`use.d (templates/unknown.yaml): "x" is not a parameter of this template; it takes no parameters`,
+		},
 		"a use named self": {
 			"use:\n  self:\n    svc: {label: dev.example.d}\n",
 			"bound by perch itself",

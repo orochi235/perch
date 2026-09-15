@@ -53,7 +53,7 @@ func bindParams(declared, args *yaml.Node, where string) (map[string]string, err
 		name, v := args.Content[i].Value, args.Content[i+1]
 		switch {
 		case !slices.Contains(takes, name):
-			return nil, fmt.Errorf("%s: %q is not a parameter of this template; it takes %s", where, name, strings.Join(takes, ", "))
+			return nil, fmt.Errorf("%s: %q is not a parameter of this template; it takes %s", where, name, takesList(takes))
 		case isNull(v) && required[name]:
 			return nil, fmt.Errorf("%s: %s: pass a value; the template requires it", where, name)
 		case isNull(v):
@@ -161,9 +161,12 @@ func unknownParam(name string, values map[string]string, where string) error {
 		names = append(names, k)
 	}
 	sort.Strings(names)
-	takes := "no parameters"
-	if len(names) > 0 {
-		takes = strings.Join(names, ", ")
+	return fmt.Errorf("%s: ${%s} is not a parameter of this template; it takes %s; write $${ for a literal ${", where, name, takesList(names))
+}
+
+func takesList(names []string) string {
+	if len(names) == 0 {
+		return "no parameters"
 	}
-	return fmt.Errorf("%s: ${%s} is not a parameter of this template; it takes %s; write $${ for a literal ${", where, name, takes)
+	return strings.Join(names, ", ")
 }

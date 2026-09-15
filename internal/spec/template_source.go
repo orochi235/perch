@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 
@@ -36,15 +35,28 @@ func (r repoTemplates) Template(name string) ([]byte, string, bool, error) {
 	}
 	shipped, isShipped := templates.Source(name)
 	if r.dir != "" {
-		path := filepath.Join(r.dir, name+".yaml")
-		src, err := os.ReadFile(path)
-		switch {
-		case err == nil && isShipped:
-			return nil, path, false, fmt.Errorf("%s has the name of a template perch ships (perch's %s.yaml); a reader could not tell which one runs, so give it another name", path, name)
-		case err == nil:
+		entries, err := os.ReadDir(r.dir)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return nil, r.dir, false, err
+		}
+		for _, e := range entries {
+			stem, ok := strings.CutSuffix(e.Name(), ".yaml")
+			if !ok || !strings.EqualFold(stem, name) {
+				continue
+			}
+			path := filepath.Join(r.dir, e.Name())
+			// Compared ignoring case: on macOS use: service would read Service.yaml.
+			if s := shippedName(stem); s != "" {
+				return nil, path, false, fmt.Errorf("%s has the name of a template perch ships (perch's %s.yaml); a reader could not tell which one runs, so give it another name", path, s)
+			}
+			if stem != name {
+				continue
+			}
+			src, err := os.ReadFile(path)
+			if err != nil {
+				return nil, path, false, err
+			}
 			return src, path, true, nil
-		case !errors.Is(err, fs.ErrNotExist):
-			return nil, path, false, err
 		}
 	}
 	if isShipped {
@@ -53,10 +65,20 @@ func (r repoTemplates) Template(name string) ([]byte, string, bool, error) {
 	return nil, "", false, nil
 }
 
+// shippedName is the shipped template that name matches ignoring case, or "".
+func shippedName(name string) string {
+	for _, s := range templates.Names() {
+		if strings.EqualFold(s, name) {
+			return s
+		}
+	}
+	return ""
+}
+
 // Names lists every usable template: perch's shipped ones plus the repo's own,
-// sorted and deduplicated so a repo file shadowing a shipped name lists once.
-// A repo file that is not a valid template name, or a directory, is skipped
-// rather than offered as something use: could ask for.
+// sorted. A repo file that is not a valid template name, a directory, or one
+// shadowing a shipped name is skipped rather than offered as something use:
+// could ask for.
 func (r repoTemplates) Names() []string {
 	names := templates.Names()
 	if entries, err := os.ReadDir(r.dir); err == nil {
@@ -65,12 +87,12 @@ func (r repoTemplates) Names() []string {
 				continue
 			}
 			name, ok := strings.CutSuffix(e.Name(), ".yaml")
-			if !ok || checkTemplateName("", name) != nil {
+			if !ok || checkTemplateName("", name) != nil || shippedName(name) != "" {
 				continue
 			}
 			names = append(names, name)
 		}
 	}
 	sort.Strings(names)
-	return slices.Compact(names)
+	return names
 }

@@ -78,19 +78,6 @@ menu: [{text: Quit, quit: true}]
 	}
 }
 
-func TestValidateRejectsDuplicateWatchNames(t *testing.T) {
-	got := parseErr(t, `
-app: {name: a, id: b, icon: circle, interval: 1s}
-watch:
-  w: {run: [x]}
-  w: {run: [y]}
-menu: [{text: Quit, quit: true}]
-`)
-	if !strings.Contains(got, "watch.w") || !strings.Contains(got, "twice") {
-		t.Errorf("error = %q, want it to name watch.w as declared twice", got)
-	}
-}
-
 func TestValidateAcceptsTheDesignDocExample(t *testing.T) {
 	_, err := Parse([]byte(`
 app:
@@ -215,8 +202,8 @@ app: {name: a, id: b, icon: circle, interval: 1s}
 watch: {w: {run: [x], json: true, shape: {n: [{id: string, id: int}]}}}
 menu: [{text: Quit, quit: true}]
 `)
-	if !strings.Contains(got, "twice") {
-		t.Errorf("error = %q, want it to report the repeated field", got)
+	if want := `watch.w.shape.n[0]: "id" is written twice in one mapping`; !strings.Contains(got, want) {
+		t.Errorf("error = %q, want it to mention %q", got, want)
 	}
 }
 

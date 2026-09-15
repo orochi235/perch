@@ -186,7 +186,7 @@ func group[T any](marks []mark, uses []Use, fragments func(Use) []fragment[T], s
 // placeMenu puts every use's menu fragments at the outlets the file declares.
 // With no default declared, the default is the end of the menu.
 func placeMenu(items []Item, uses []Use) ([]Item, error) {
-	marks, err := menuMarks(items, nil)
+	marks, err := menuMarks(items, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -201,13 +201,16 @@ func placeMenu(items []Item, uses []Use) ([]Item, error) {
 	return placed, nil
 }
 
-func menuMarks(items []Item, marks []mark) ([]mark, error) {
+func menuMarks(items []Item, marks []mark, underEach bool) ([]mark, error) {
 	var err error
 	for _, it := range items {
-		if it.isOutlet {
+		switch {
+		case it.isOutlet && underEach:
+			return nil, fmt.Errorf("%s: an outlet cannot sit under each:, which would repeat every use's items once per element", it.path)
+		case it.isOutlet:
 			marks, err = declare(marks, mark{it.outlet, it.path})
-		} else {
-			marks, err = menuMarks(it.Menu, marks)
+		default:
+			marks, err = menuMarks(it.Menu, marks, underEach || it.Each != "")
 		}
 		if err != nil {
 			return nil, err

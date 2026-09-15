@@ -32,9 +32,6 @@ func (s *Spec) validate() error {
 	}
 	seen := map[string]bool{}
 	for _, w := range s.Watches {
-		if seen[w.Name] {
-			return fmt.Errorf("watch.%s: declared twice", w.Name)
-		}
 		seen[w.Name] = true
 		if err := w.validate(); err != nil {
 			return err
@@ -235,7 +232,6 @@ func validateType(t *Type, path string) error {
 	case TypeList:
 		return validateType(t.Elem, path+"[]")
 	case TypeObject:
-		seen := map[string]bool{}
 		for _, f := range t.Fields {
 			if err := checkName("field", path, f.Name); err != nil {
 				return err
@@ -243,10 +239,6 @@ func validateType(t *Type, path string) error {
 			if f.Name == "self" {
 				return fmt.Errorf("%s: a field named self cannot be reached; Swift reads .self as the value itself", path)
 			}
-			if seen[f.Name] {
-				return fmt.Errorf("%s: field %q declared twice", path, f.Name)
-			}
-			seen[f.Name] = true
 			if err := validateType(f.Type, path+"."+f.Name); err != nil {
 				return err
 			}

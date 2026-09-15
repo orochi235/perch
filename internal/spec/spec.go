@@ -148,9 +148,12 @@ const aliasBudget = 100000
 // unknown keys, and an anchor defined in a sibling subtree is not in the copy
 // it encodes — which is what an author sharing one shape between two watches
 // writes.
+//
+// It also refuses a key written twice in one mapping, which yaml.v3 keeps in a
+// node rather than refusing.
 func resolveAliases(n *yaml.Node) (*yaml.Node, error) {
 	r := &aliasResolver{path: map[*yaml.Node]bool{}, left: aliasBudget}
-	return r.resolve(n)
+	return r.resolve(n, "")
 }
 
 type aliasResolver struct {
@@ -158,7 +161,7 @@ type aliasResolver struct {
 	left int
 }
 
-func (r *aliasResolver) resolve(n *yaml.Node) (*yaml.Node, error) {
+func (r *aliasResolver) resolve(n *yaml.Node, at string) (*yaml.Node, error) {
 	if n == nil {
 		return nil, nil
 	}
@@ -174,7 +177,7 @@ func (r *aliasResolver) resolve(n *yaml.Node) (*yaml.Node, error) {
 		}
 		r.path[n.Alias] = true
 		defer delete(r.path, n.Alias)
-		return r.resolve(n.Alias)
+		return r.resolve(n.Alias, at)
 	}
 	if len(n.Content) == 0 {
 		return n, nil
@@ -182,12 +185,40 @@ func (r *aliasResolver) resolve(n *yaml.Node) (*yaml.Node, error) {
 	out := *n
 	out.Anchor = ""
 	out.Content = make([]*yaml.Node, len(n.Content))
+	lines := map[string]int{}
 	for i, c := range n.Content {
-		sub, err := r.resolve(c)
+		sub, err := r.resolve(c, childPath(n, i, at, out.Content))
 		if err != nil {
 			return nil, err
+		}
+		if n.Kind == yaml.MappingNode && i%2 == 0 && sub.Kind == yaml.ScalarNode {
+			if first, ok := lines[sub.Value]; ok {
+				return nil, fmt.Errorf("%s%q is written twice in one mapping, on lines %d and %d", prefix(at), sub.Value, first, sub.Line)
+			}
+			lines[sub.Value] = sub.Line
 		}
 		out.Content[i] = sub
 	}
 	return &out, nil
+}
+
+// childPath is where the i'th node of n sits, in the document's own paths:
+// a mapping value under its key, a sequence element by index.
+func childPath(n *yaml.Node, i int, at string, resolved []*yaml.Node) string {
+	switch {
+	case n.Kind == yaml.SequenceNode:
+		return fmt.Sprintf("%s[%d]", at, i)
+	case n.Kind != yaml.MappingNode || i%2 == 0:
+		return at
+	case at == "":
+		return resolved[i-1].Value
+	}
+	return at + "." + resolved[i-1].Value
+}
+
+func prefix(at string) string {
+	if at == "" {
+		return ""
+	}
+	return at + ": "
 }

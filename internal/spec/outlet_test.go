@@ -238,6 +238,14 @@ func TestOutletRefusals(t *testing.T) {
 			"use:\n  a:\n    warn:\nstatus:\n  - outlet: warn\n  - outlet: warn\n",
 			`status[1]: the outlet "warn" is declared twice`,
 		},
+		"an outlet under each:": {
+			"use:\n  a:\n    frag:\nmenu:\n  - {text: x, each: xs, menu: [outlet]}\n",
+			"menu[0].menu[0]: an outlet cannot sit under each:, which would repeat every use's items once per element",
+		},
+		"an outlet deeper under each:": {
+			"use:\n  a:\n    frag:\nmenu:\n  - {text: x, each: xs, menu: [{text: y, menu: [outlet: controls]}]}\n",
+			"menu[0].menu[0].menu[0]: an outlet cannot sit under each:",
+		},
 		"a status outlet no use fills": {
 			"use:\n  a:\n    frag:\nstatus:\n  - outlet: warn\n",
 			`status[0]: no use fills the outlet "warn"; the uses fill default`,

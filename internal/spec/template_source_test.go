@@ -98,3 +98,32 @@ func TestATemplateNameThatWalksOutOfTheDirIsRefused(t *testing.T) {
 		t.Errorf("ok = %v, err = %v; want a refusal, not a lookup", ok, err)
 	}
 }
+
+// Lookup goes by the directory's own entry names, so on a case-insensitive
+// filesystem as on any other, use: gets the file it names and no other.
+func TestARepoTemplateIsFoundOnlyByItsExactName(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "health.yaml"), []byte("watch: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, ok, err := TemplatesIn(dir).Template("Health")
+	if ok || err != nil {
+		t.Errorf("Health: ok = %v, err = %v; want not found and no error", ok, err)
+	}
+}
+
+func TestARepoTemplateCannotTakeAShippedNameInAnotherCase(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Service.yaml"), []byte("watch: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"Service", "service"} {
+		_, _, _, err := TemplatesIn(dir).Template(name)
+		if err == nil || !strings.Contains(err.Error(), "Service.yaml has the name of a template perch ships (perch's service.yaml)") {
+			t.Errorf("%s: err = %v, want a refusal naming both files", name, err)
+		}
+	}
+	if names := TemplatesIn(dir).Names(); slices.Contains(names, "Service") {
+		t.Errorf("Names() = %v, want Service left out: use: could not ask for it", names)
+	}
+}
