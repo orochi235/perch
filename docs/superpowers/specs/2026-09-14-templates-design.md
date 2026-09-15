@@ -93,9 +93,9 @@ CI.
 
 `${name}` is filled in after the template is parsed as YAML, on each string
 value, so a value holding `: ` or a newline stays one string and cannot change
-the file's structure. Substitution fills only `${name}`: `$$` writes a literal
-`$`, and any other `$` is left alone, so shell text like `$HOME` passes through.
-A malformed `${` (unclosed, empty, or not a name) is a build error.
+the file's structure. Substitution fills only `${name}`: `$${` writes a literal
+`${`, and any other `$` is left alone, so shell text like `$HOME` or `$$` passes
+through. A malformed `${` (unclosed, empty, or not a name) is a build error.
 
 `{{ }}` is untouched: it is an expression the app evaluates on every poll, and
 `${}` is text perch fills in once, at build.
@@ -226,7 +226,7 @@ No runtime failure is new: a failed `agent:` raises the alert it does today.
 ## Testing
 
 - **`internal/spec`:** a refusal case per row of the error table; substitution
-  (`$$`, a value holding `: `, `{{ }}` untouched); outlet placement (default at
+  (`$${`, a value holding `: `, `{{ }}` untouched); outlet placement (default at
   the end of `menu:` and the start of `status:`, named, fall-through, `use:`
   order).
 - **`internal/celswift`:** `self` and a use's name lower to the right member

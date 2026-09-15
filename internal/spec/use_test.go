@@ -90,8 +90,8 @@ use:
 menu: [{text: Quit, quit: true}]
 `, src)
 	w := s.Uses[0].Watches[0]
-	if !slices.Equal(w.Run, []string{"echo", "a: b", "cost $5"}) {
-		t.Errorf("run = %q; a value holding \": \" has to stay one string, and $$ is a literal $", w.Run)
+	if !slices.Equal(w.Run, []string{"echo", "a: b", "cost $$5"}) {
+		t.Errorf("run = %q; a value holding \": \" has to stay one string, and $$ is left as written", w.Run)
 	}
 	if !w.JSON {
 		t.Error("json: ${decode} did not read back as a bool")
@@ -107,10 +107,30 @@ func TestADefaultParameterIsUsedWhenAUsePassesNone(t *testing.T) {
 }
 
 func TestShellTextPassesThroughATemplate(t *testing.T) {
-	src := fakeTemplates{"sh": "params:\n  msg: ~\nwatch:\n  w: {run: [sh, -c, \"echo $HOME $$5 ${msg}\"]}\n"}
+	src := fakeTemplates{"sh": "params:\n  msg: ~\nwatch:\n  w: {run: [sh, -c, \"echo $$ > /tmp/pid.$$; echo $HOME $1 $${x} ${msg} $\"]}\n"}
 	s := parseWith(t, useHead+"use:\n  e:\n    sh: {msg: hi}\nmenu: [{text: Quit, quit: true}]\n", src)
-	if got := s.Uses[0].Watches[0].Run[2]; got != "echo $HOME $5 hi" {
-		t.Errorf("run[2] = %q, want $HOME left alone, $$ as $ and ${msg} filled", got)
+	if got, want := s.Uses[0].Watches[0].Run[2], "echo $$ > /tmp/pid.$$; echo $HOME $1 ${x} hi $"; got != want {
+		t.Errorf("run[2] = %q, want %q: only ${msg} filled and $${ written as ${", got, want)
+	}
+}
+
+func TestAParameterFillsBothSidesOfAnAlias(t *testing.T) {
+	src := fakeTemplates{"a": "params:\n  msg: ~\nwatch:\n  a: {run: [echo, &m \"${msg}\"]}\n  b: {run: [echo, *m]}\n"}
+	s := parseWith(t, useHead+"use:\n  e:\n    a: {msg: hi}\nmenu: [{text: Quit, quit: true}]\n", src)
+	for _, w := range s.Uses[0].Watches {
+		if w.Run[1] != "hi" {
+			t.Errorf("watch %s: run[1] = %q, want hi", w.Name, w.Run[1])
+		}
+	}
+}
+
+// Were an empty argument's tag reset, it would resolve as null, and a null
+// json: reads as false instead of being refused.
+func TestAnEmptyArgumentStaysAnEmptyString(t *testing.T) {
+	src := fakeTemplates{"j": "params:\n  d: ~\nwatch:\n  w:\n    run: [echo]\n    json: ${d}\n"}
+	_, err := ParseWith([]byte(useHead+"use:\n  e:\n    j: {d: \"\"}\nmenu: [{text: Quit, quit: true}]\n"), src)
+	if err == nil || !strings.Contains(err.Error(), "want true or false, got a string") {
+		t.Errorf("error = %v, want json: to refuse an empty string", err)
 	}
 }
 
@@ -143,6 +163,8 @@ func TestUseRefusals(t *testing.T) {
 		"unclosed":  "watch:\n  w: {run: [echo, \"${abc\"]}\n",
 		"empty":     "watch:\n  w: {run: [echo, \"x${}y\"]}\n",
 		"notname":   "watch:\n  w: {run: [echo, \"${a-b}\"]}\n",
+		"multiline": "watch:\n  w: {run: [sh, -c, \"echo ${abc\\nls -l\"]}\n",
+		"spaced":    "watch:\n  w: {run: [echo, \"${a b}\"]}\n",
 		"unknown":   "watch:\n  w: {run: [echo, \"${nope}\"]}\n",
 		"badwatch":  "watch:\n  w: {run: []}\n",
 		"badstate":  "watch:\n  w: {exists: /tmp}\nstate:\n  - a:\n  - b: \"w.ok\"\n",
@@ -156,7 +178,7 @@ func TestUseRefusals(t *testing.T) {
 		},
 		"an unknown template": {
 			"use:\n  d:\n    nope: {}\n",
-			`no template named "nope"; the templates are badparam, badparams, badstate, badwatch, empty, nested, notname, svc, unclosed, unknown`,
+			`no template named "nope"; the templates are badparam, badparams, badstate, badwatch, empty, multiline, nested, notname, spaced, svc, unclosed, unknown`,
 		},
 		"a missing required parameter": {
 			"use:\n  d:\n    svc: {}\n",
@@ -189,6 +211,14 @@ func TestUseRefusals(t *testing.T) {
 		"a ${ with no closing }": {
 			"use:\n  d:\n    unclosed:\n",
 			`"${abc" has a ${ with no closing }`,
+		},
+		"a ${ unclosed before a newline": {
+			"use:\n  d:\n    multiline:\n",
+			`"${abc" has a ${ with no closing }`,
+		},
+		"a ${ holding a space": {
+			"use:\n  d:\n    spaced:\n",
+			`"${a b}" has a ${ with no closing }`,
 		},
 		"an empty ${}": {
 			"use:\n  d:\n    empty:\n",

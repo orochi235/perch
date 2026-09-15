@@ -311,6 +311,8 @@ git commit -m "look templates up in the repo and in perch, and ship service"
 
 ### Task 2: `use:` expands a template's watches and states
 
+> **Landed differently:** parameters are braces-only, filled by a small expander in internal/spec/params.go rather than os.Expand; `$${` is the only escape. See the spec's Parameters section.
+
 **Files:**
 - Create: `internal/spec/use.go`
 - Modify: `internal/spec/spec.go`, `internal/spec/state.go`, `internal/spec/validate.go`, `internal/spec/watch.go`, `internal/schema/schema.go`
@@ -2995,9 +2997,10 @@ menu:
 | `status`, `menu` | A mapping of [outlet](#outlets) names to lists. `default` is the default outlet. |
 
 `${name}` fills in a parameter when perch builds the app, on each string value
-after the template is parsed, so a value holding `: ` stays one string. `$$`
-writes a literal `$`. Inside `[ ]` or `{ }`, quote it: `{http: "${url}"}`.
-`{{ }}` is untouched.
+after the template is parsed, so a value holding `: ` stays one string. `$${`
+writes a literal `${`, and any other `$` is left alone, so shell text like
+`$HOME` passes through; a malformed `${` is a build error. Inside `[ ]` or
+`{ }`, quote it: `{http: "${url}"}`. `{{ }}` is untouched.
 
 Inside a template, `self` is that use, and the only name it sees: a template
 cannot come to depend on a file it was not written for. Each use gets its own

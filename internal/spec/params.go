@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode"
 
 	"gopkg.in/yaml.v3"
 )
@@ -76,6 +77,9 @@ func bindParams(declared, args *yaml.Node, where string) (map[string]string, err
 
 func isNull(n *yaml.Node) bool { return n.Kind == yaml.ScalarNode && n.Tag == "!!null" }
 
+// plainNull are the plain scalars YAML resolves as null.
+var plainNull = map[string]bool{"": true, "~": true, "null": true, "Null": true, "NULL": true}
+
 // substitute fills ${name} into every string value of a parsed template, so a
 // value holding ": " or a newline stays one string and cannot change the file's
 // structure. Keys are left alone: they are names the template declares.
@@ -85,7 +89,7 @@ func substitute(n *yaml.Node, values map[string]string, where string) error {
 	}
 	switch n.Kind {
 	case yaml.ScalarNode:
-		if !strings.Contains(n.Value, "$") {
+		if !strings.Contains(n.Value, "${") {
 			return nil
 		}
 		out, err := expand(n.Value, values, where)
@@ -94,8 +98,8 @@ func substitute(n *yaml.Node, values map[string]string, where string) error {
 		}
 		n.Value = out
 		// An unquoted, untagged scalar is resolved again, so json: ${decode}
-		// still reads as a bool once it holds "true".
-		if n.Style&(yaml.TaggedStyle|yaml.DoubleQuotedStyle|yaml.SingleQuotedStyle|yaml.LiteralStyle|yaml.FoldedStyle) == 0 {
+		// reads as a bool once it holds "true" — but an empty one stays a string.
+		if n.Style&(yaml.TaggedStyle|yaml.DoubleQuotedStyle|yaml.SingleQuotedStyle|yaml.LiteralStyle|yaml.FoldedStyle) == 0 && !plainNull[out] {
 			n.Tag = ""
 		}
 	case yaml.MappingNode:
@@ -114,24 +118,21 @@ func substitute(n *yaml.Node, values map[string]string, where string) error {
 	return nil
 }
 
-// expand fills ${name} and turns $$ into $. Any other $ is left as written, so
-// shell text like $HOME passes through a template untouched.
+// expand fills ${name}, and $${ writes a literal ${. Any other $ is left as
+// written, so shell text like $HOME or $$ passes through a template untouched.
 func expand(s string, values map[string]string, where string) (string, error) {
 	var b strings.Builder
 	for i := 0; i < len(s); {
-		if s[i] != '$' || i+1 == len(s) {
-			b.WriteByte(s[i])
-			i++
-			continue
-		}
-		switch s[i+1] {
-		case '$':
-			b.WriteByte('$')
-			i += 2
-		case '{':
+		switch {
+		case strings.HasPrefix(s[i:], "$${"):
+			b.WriteString("${")
+			i += 3
+		case strings.HasPrefix(s[i:], "${"):
 			end := strings.IndexByte(s[i+2:], '}')
-			if end < 0 {
-				return "", fmt.Errorf("%s: %q has a ${ with no closing }", where, s)
+			// A space or $ before the } means this ${ was never closed.
+			if end < 0 || strings.ContainsFunc(s[i+2:i+2+end], func(r rune) bool { return r == '$' || unicode.IsSpace(r) }) {
+				line, _, _ := strings.Cut(s[i:], "\n")
+				return "", fmt.Errorf("%s: %q has a ${ with no closing }", where, line)
 			}
 			name := s[i+2 : i+2+end]
 			switch {
@@ -147,7 +148,7 @@ func expand(s string, values map[string]string, where string) (string, error) {
 			b.WriteString(v)
 			i += end + 3
 		default:
-			b.WriteByte('$')
+			b.WriteByte(s[i])
 			i++
 		}
 	}
