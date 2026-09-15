@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/orochi235/perch/internal/spec"
+	"github.com/orochi235/perch/internal/templates"
+	"gopkg.in/yaml.v3"
 )
 
 func decoded(t *testing.T) map[string]any {
@@ -179,6 +181,34 @@ func TestTemplateLaunchAgentPatternAllowsAParam(t *testing.T) {
 	}
 	if main["pattern"] != "^[A-Za-z0-9][A-Za-z0-9._-]*$" {
 		t.Errorf("JSON()'s launchagent pattern changed to %v", main["pattern"])
+	}
+}
+
+func TestTemplateLaunchAgentPatternTakesService(t *testing.T) {
+	src, ok := templates.Source("service")
+	if !ok {
+		t.Fatal("perch ships no service template")
+	}
+	var doc struct {
+		Watch struct {
+			Agent struct {
+				LaunchAgent string `yaml:"launchagent"`
+			} `yaml:"agent"`
+		} `yaml:"watch"`
+	}
+	if err := yaml.Unmarshal(src, &doc); err != nil {
+		t.Fatal(err)
+	}
+	label := doc.Watch.Agent.LaunchAgent
+	if label == "" {
+		t.Fatal("service.yaml: watch.agent.launchagent is empty")
+	}
+	field, ok := walk(t, templateDecoded(t), "properties.watch.additionalProperties.properties.launchagent").(map[string]any)
+	if !ok {
+		t.Fatal("template schema: watch launchagent is not an object")
+	}
+	if !regexp.MustCompile(field["pattern"].(string)).MatchString(label) {
+		t.Errorf("the template schema refuses service.yaml's launchagent %q", label)
 	}
 }
 

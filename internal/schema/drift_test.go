@@ -90,9 +90,7 @@ func yamlTags(t *testing.T) map[string][]string {
 	return out
 }
 
-// walk navigates a decoded JSON document along a dotted path, taking a
-// numeric segment as an index into a list. Both keysAt and nameRule read the
-// schema this way, so they share it rather than each walking it themselves.
+// walk follows a dotted path; a numeric segment indexes a list.
 func walk(t *testing.T, doc any, path string) any {
 	t.Helper()
 	node := doc

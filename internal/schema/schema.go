@@ -203,9 +203,8 @@ const body = `{
 }
 `
 
-// templateLaunchAgentPattern also allows a launchagent that is entirely a
-// ${param} hole, which menubar.yaml's own launchagent (a real launchd label)
-// never is.
+// templateLaunchAgentPattern also allows a value containing a ${param} hole,
+// which a menubar.yaml's launchagent, a real launchd label, never holds.
 const templateLaunchAgentPattern = `^([A-Za-z0-9][A-Za-z0-9._-]*|.*\$\{[A-Za-z_][A-Za-z0-9_]*\}.*)$`
 
 // TemplateJSON is the schema for a template file. It is cut from JSON rather
@@ -228,8 +227,7 @@ func TemplateJSON() string {
 	}
 	launchagent["pattern"] = templateLaunchAgentPattern
 
-	// A fragment's own status rules cannot themselves place another use's
-	// fragment, so the rule is just JSON()'s, with when: required.
+	// A template's status rule is JSON()'s with when: required.
 	statusRule, ok := deepCopy(at(props, "status", "items", "oneOf", 0)).(map[string]any)
 	if !ok {
 		panic("schema: TemplateJSON: status.items.oneOf.0 is not an object")
@@ -317,9 +315,7 @@ func at(v any, path ...any) any {
 	return v
 }
 
-// deepCopy round-trips a decoded fragment through JSON, so TemplateJSON can
-// edit its copy — the launchagent pattern, the status rule's required — without
-// changing JSON()'s.
+// deepCopy lets TemplateJSON edit a fragment without changing JSON()'s.
 func deepCopy(v any) any {
 	b, err := json.Marshal(v)
 	if err != nil {
