@@ -312,8 +312,15 @@ func TestParseStateErrorListsWatchesAndUses(t *testing.T) {
 	}
 }
 
-// jobs is a pre-template file: it declares watches and no uses, so the group
-// naming uses is dropped rather than printed as "no uses".
+func TestParseStateErrorSaysNoWatchesOrUsesWhenThereAreNeither(t *testing.T) {
+	s := parse(t, "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 5s}\nmenu: [{text: Q, quit: true}]\n")
+	_, err := ParseState("x", []byte("nope: true\n"), s)
+	if err == nil || !strings.Contains(err.Error(), "no watches or uses") {
+		t.Errorf("err = %v, want it to say no watches or uses", err)
+	}
+}
+
+// jobs has no uses, so the omitted group is uses rather than a printed "no uses".
 func TestParseStateErrorOmitsUsesWhenThereAreNone(t *testing.T) {
 	_, err := ParseState("x", []byte("nope: true\n"), parse(t, jobs))
 	if err == nil || !strings.Contains(err.Error(), "this file declares watches fleet") || strings.Contains(err.Error(), "uses") {
@@ -321,8 +328,7 @@ func TestParseStateErrorOmitsUsesWhenThereAreNone(t *testing.T) {
 	}
 }
 
-// useDoc declares a use and no file-level watches, so the group naming
-// watches is dropped rather than printed as "no watches".
+// useDoc has no file-level watches, so the omitted group is watches.
 func TestParseStateErrorOmitsWatchesWhenThereAreNone(t *testing.T) {
 	_, err := ParseState("x", []byte("nope: true\n"), parse(t, useDoc))
 	if err == nil || !strings.Contains(err.Error(), "this file declares uses daemon") || strings.Contains(err.Error(), "watches") {
@@ -338,10 +344,8 @@ func TestParseStateOffersTheNestFormForADottedUseKey(t *testing.T) {
 	}
 }
 
-// A dotted key whose use exists but whose single remaining segment names no
-// watch of it, or that carries a second dot, is not a nesting mistake: the
-// first falls to the use's own "no watch named" error, and the second to the
-// ordinary unknown-key error.
+// daemon.nope falls to the use's own "no watch named" error; a second dot
+// falls to the ordinary unknown-key error.
 func TestParseStateFallsThroughForOtherDottedKeys(t *testing.T) {
 	s := parse(t, useDoc)
 	for src, want := range map[string]string{
