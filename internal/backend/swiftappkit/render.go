@@ -391,7 +391,7 @@ func (g *menuGen) item(it spec.Item, into string, e *celswift.Env, path string) 
 	if it.Guard != "" {
 		cond, err := inner.LowerCondition(it.Guard)
 		if err != nil {
-			return fmt.Errorf("%s.agent: the guard %q: %w", path, it.Guard, err)
+			return fmt.Errorf("%s.agent: the verb's guard: %w", path, err)
 		}
 		conds = append(conds, cond)
 	}

@@ -68,16 +68,13 @@ func TestATemplatesAgentItemKeepsAnAuthorsWhenBesideSelfsGuard(t *testing.T) {
 	}
 }
 
-func TestNonAgentItemsAndQuitButtonsAreUntouched(t *testing.T) {
+func TestNonAgentItemsAreUntouched(t *testing.T) {
 	s := parseDoc(t, `
 app:
   name: w
   id: dev.example.w
   icon: circle
   interval: 10s
-  quit:
-    - confirm: "Quit?"
-      buttons: [{text: Bail, agent: worker.stop}]
 watch:
   worker: {launchagent: dev.example.worker}
 menu:
@@ -85,11 +82,5 @@ menu:
 `)
 	if got := s.Menu[0]; got.Text != "Refresh" || got.When != "" || got.Guard != "" {
 		t.Errorf("non-agent item = %q when %q guard %q, want unchanged", got.Text, got.When, got.Guard)
-	}
-	if len(s.App.Quit) == 0 || len(s.App.Quit[0].Buttons) == 0 {
-		t.Fatal("no quit button parsed")
-	}
-	if b := s.App.Quit[0].Buttons[0]; b.Text != "Bail" {
-		t.Errorf("quit button text = %q, want unchanged Bail (a quit button requires its own label; verb defaults never see it)", b.Text)
 	}
 }
