@@ -3,7 +3,7 @@
 The reference for the file perch reads. It is for someone writing one; for why
 the schema stops where it does, see [the design](superpowers/specs/2026-09-05-perch-design.md).
 
-A document has six top-level keys — `app`, `watch`, `state`, `status`,
+A document has seven top-level keys — `app`, `watch`, `state`, `use`, `status`,
 `window` and `menu`. Only `app` is required, though an app with no `menu` offers nothing but
 its icon.
 
@@ -106,8 +106,10 @@ re-poll on the [`interval`](#app) the `app:` block sets. Their results are what
 every expression in the document reads.
 
 A name is letters, digits and underscores, starting with a letter or
-underscore. `it` is taken — `each:` binds its element to that — and so are
-CEL's own keywords.
+underscore. `it` is taken — `each:` binds its element to that — and so is
+`self`, which a template binds to its own use. So are CEL's own keywords, and
+`init`, `Type` and `Protocol`, which the emitted Swift could not reach; those
+three are refused as state, use and [shape](#shape) field names too.
 
 Each watch is exactly one of four kinds. The kind is the key it carries:
 
@@ -225,14 +227,125 @@ says an agent that is not installed is not also stopped.
 
 The block is optional, and a name follows the rule a watch name follows:
 letters, digits and underscores, starting with a letter or underscore, and not
-`it`. States and watches are named the same way in an expression, so a state
-may not take a watch's name.
+`it`, `self`, `init`, `Type` or `Protocol`. States, watches and uses are named
+the same way in an expression, so a state may not take a watch's or a use's
+name.
 
-A condition names watches and nothing else. Naming another state is refused
-rather than resolved: a state declared earlier is already excluded by the
-ordering, so naming one could only ever be a constant, and a guard that looks
-like a guard while contributing nothing is the failure this schema exists to
-prevent.
+A condition names watches, and the states of a [use](#use), and nothing else.
+Naming another state from this list is refused rather than resolved: a state
+declared earlier is already excluded by the ordering, so naming one could only
+ever be a constant, and a guard that looks like a guard while contributing
+nothing is the failure this schema exists to prevent. A use's states are a list
+of their own, so naming one is not a constant.
+
+## `use`
+
+A mapping of names to templates. A template is a block of watches, states,
+status rules and menu items written once; perch ships [`service`](#service),
+and a repo's own live in `menubar/templates/<name>.yaml`.
+
+```yaml
+app: {name: wall, id: dev.example.wall.menubar, icon: rectangle.stack, interval: 5s}
+
+use:
+  daemon:
+    service: {label: dev.example.wall.daemon, noun: Daemon}
+  client:
+    service: {label: dev.example.wall.client, noun: Client}
+
+menu:
+  - outlet
+  - separator
+  - outlet: controls
+  - separator
+  - {text: Quit, quit: true}
+```
+
+```state both running
+daemon: {agent: {running: true, pid: 4821}}
+client: {agent: {running: true, pid: 4822}}
+```
+
+```state client stopped
+daemon: {agent: {running: true, pid: 4821}}
+client: {agent: {installed: true}}
+```
+
+Each entry takes exactly one key, the template, and its arguments. A use's name
+is an object in any expression: its watches and its states are fields —
+`daemon.agent.pid`, `client.stopped`.
+
+### Writing a template
+
+A template file takes `params`, `watch`, `state`, `status` and `menu`, and
+nothing else. Templates do not nest.
+
+```yaml template
+params:
+  url: ~            # ~ is required
+  noun: Server      # anything else is the default
+
+watch:
+  health:
+    http: ${url}
+
+state:
+  - down: "!self.health.ok"
+  - up:
+
+menu:
+  default:
+    - {text: "${noun} is down", when: self.down}
+```
+
+| Key | Takes |
+|---|---|
+| `params` | A mapping of names to defaults. `~` makes one required. |
+| `watch`, `state` | The same as in a `menubar.yaml`, but the use's own. |
+| `status`, `menu` | A mapping of [outlet](#outlets) names to lists. `default` is the default outlet. |
+
+`${name}` fills in a parameter when perch builds the app, on each string value
+after the template is parsed, so a value holding `: ` stays one string. `$${`
+writes a literal `${`, and any other `$` is left alone, so shell text like
+`$HOME` passes through; a malformed `${` is a build error. Inside `[ ]` or
+`{ }`, quote it: `{http: "${url}"}`. `{{ }}` is untouched.
+
+Inside a template, `self` is that use, and the only name it sees: a template
+cannot come to depend on a file it was not written for. Each use gets its own
+state list, so exactly one of its states holds whatever the file's do, and the
+file's `state:` may name a use's states.
+
+A status rule in a template needs a `when:`: it would otherwise land ahead of
+the file's rules and shadow every one of them.
+
+A repo template may not take the name of one perch ships, since a reader could
+not tell which one runs.
+
+### Outlets
+
+`- outlet` in a file's `menu:` or `status:` is the default outlet, and so is
+`- outlet: default`; `- outlet: controls` is a named one. Each use's fragments
+land at the matching outlet, in `use:` order. A fragment whose outlet the file
+does not declare goes to the default outlet, and with no default declared, that
+is the end of `menu:` and the start of `status:`. A named outlet no use fills is
+refused, which is what catches `control` written for `controls`.
+
+### `service`
+
+A LaunchAgent: whether it is installed, loaded and running, and the controls to
+run it. It takes `label`, required, and `noun`, which defaults to `Service`.
+
+| Part | Is |
+|---|---|
+| `self.agent` | A [`launchagent`](#launchagents) watch on `label`. |
+| States | `uninstalled`, `stopped`, `idle`, `running`. |
+| `status` default | A warning icon while uninstalled. |
+| `menu` default | One readout line: `<noun>: running · pid 4821`. |
+| `menu` controls | Start, Restart and Stop, each shown only when it can work. |
+
+To change its labels, copy it into `menubar/templates/` under another name —
+`perch schema -template -o menubar/templates/schema.json` gives an editor its
+schema.
 
 ## Builtins
 
@@ -252,9 +365,9 @@ watch:
     launchagent: dev.example.worker
 
 menu:
-  - {text: Start, when: "!worker.loaded", agent: worker.start}
-  - {text: Stop, when: "worker.loaded", agent: worker.stop}
-  - {text: Restart, when: "worker.installed", agent: worker.restart}
+  - agent: worker.start
+  - agent: worker.stop
+  - agent: worker.restart
   - {text: Quit, quit: true}
 ```
 
@@ -284,8 +397,16 @@ domain and the plist path are worked out on the Mac the widget runs on, so the
 same file works on every machine.
 
 An `agent:` also works as a button on a [quit prompt](#quit), which is how an
-app offers to stop its server on the way out. [Start and stop a
-LaunchAgent](recipes/launchagent.md) is the whole widget.
+app offers to stop its server on the way out. A button gets no verb guard, so
+offer one only under a rule whose `when:` means it can work — `svc.loaded` for a
+stop. [Start and stop a LaunchAgent](recipes/launchagent.md) is the whole
+widget.
+
+An `agent:` item shows only when its verb can work — Start while installed and
+not loaded, Stop while loaded, Restart while installed — and a `when:` you write
+is combined with that. With no `text:`, it is labeled Start, Stop or Restart.
+The readout and all three controls are also the shipped [`service`](#service)
+template.
 
 ### Handled without asking
 
@@ -297,6 +418,7 @@ LaunchAgent](recipes/launchagent.md) is the whole widget.
 | A window gets a main menu, and ⌘Q closes it instead of quitting. | [`window`](#window) |
 | `menubar/AppIcon.png` is rendered into every size the Dock asks for. | [The Dock tile](#the-dock-tile) |
 | A quit prompt stands aside for logout, restart and shutdown. | [`quit`](#quit) |
+| An `agent:` item with no `text:` is labeled Start, Stop or Restart, and shows only when its verb can work. | [LaunchAgents](#launchagents) |
 
 ## `status`
 
@@ -363,7 +485,7 @@ A Dock tile wants artwork: see [The Dock tile](#the-dock-tile).
 A list of items, rebuilt from the last poll every time the menu opens, so the
 menu never offers an action that cannot work.
 
-The only bare item is `separator`. Everything else is a mapping:
+The bare items are `separator` and [`outlet`](#outlets). Everything else is a mapping:
 
 | Key | Takes |
 |---|---|
@@ -379,7 +501,7 @@ Then at most one action, which is what activating the item does:
 | `run` | A list of at least one string: argv, never a shell. |
 | `open` | A string: a URL, or a path with `~` expanded. |
 | `post` | A mapping of `url` (a string) and `body` (any YAML, sent as JSON). |
-| `agent` | A string, `<watch>.<verb>`, where `<watch>` is a `launchagent` watch and `<verb>` is `start`, `stop` or `restart`. |
+| `agent` | A string, `<watch>.<verb>` — or `<use>.<watch>.<verb>`, or `self.<watch>.<verb>` inside a template — where the watch is a `launchagent` watch and `<verb>` is `start`, `stop` or `restart`. |
 | `quit` | `true`. Ends the app. |
 | `swift` | A string, `<Type>.<method>`: a static method in `menubar/Sources/`. |
 | `window` | `open`, `close` or `reload`. Needs a [`window:`](#window) block. |

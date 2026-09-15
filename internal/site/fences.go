@@ -52,6 +52,9 @@ func extractFences(src string) (string, []*block) {
 			// A state fence with no file above it has nothing to render, so it
 			// stays a code block rather than disappearing.
 			b.lang, b.code = "yaml", body
+		case info == "yaml template":
+			// A template file is not a menubar.yaml, so it has nothing to preview.
+			b.lang, b.code = "yaml", body
 		case strings.HasPrefix(info, "help "):
 			b.help = strings.TrimSpace(strings.TrimPrefix(info, "help"))
 		default:

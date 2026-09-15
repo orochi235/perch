@@ -48,6 +48,7 @@ func nav() []*Section {
 			{Title: "`app`", URL: "menubar/app/", Source: "docs/schema.md", Schema: "app"},
 			{Title: "`watch`", URL: "menubar/watch/", Source: "docs/schema.md", Schema: "watch"},
 			{Title: "`state`", URL: "menubar/state/", Source: "docs/schema.md", Schema: "state"},
+			{Title: "`use`", URL: "menubar/use/", Source: "docs/schema.md", Schema: "use"},
 			{Title: "Builtins", URL: "menubar/builtins/", Source: "docs/schema.md", Schema: "builtins", Sub: []Sub{{Title: "LaunchAgents", Anchor: "launchagents"}}},
 			{Title: "`status`", URL: "menubar/status/", Source: "docs/schema.md", Schema: "status"},
 			{Title: "`window`", URL: "menubar/window/", Source: "docs/schema.md", Schema: "window"},

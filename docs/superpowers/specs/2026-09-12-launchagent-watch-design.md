@@ -91,6 +91,11 @@ stop; taking the states as parameters is longer than the three items it
 replaces; and the first author who wants "Unload" instead of "Stop" abandons it
 and writes all three by hand.
 
+**Superseded in 2.0.** [Templates](2026-09-14-templates-design.md) answer these
+objections: a template's guards name its own state list, a template is a file
+an author copies to relabel, and outlets leave placement to the file. The
+shipped `service` template is what `control:` was for.
+
 Three more were designed and cut:
 
 - **Checking the plist's own `Label` against the watch.** It can only fire when
