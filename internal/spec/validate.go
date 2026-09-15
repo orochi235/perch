@@ -240,6 +240,9 @@ func validateType(t *Type, path string) error {
 			if err := checkName("field", path, f.Name); err != nil {
 				return err
 			}
+			if f.Name == "self" {
+				return fmt.Errorf("%s: a field named self cannot be reached; Swift reads .self as the value itself", path)
+			}
 			if seen[f.Name] {
 				return fmt.Errorf("%s: field %q declared twice", path, f.Name)
 			}

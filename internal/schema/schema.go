@@ -158,7 +158,7 @@ const body = `{
       "oneOf": [
         {"type": "string", "enum": ["string", "int", "double", "bool", "any"]},
         {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/definitions/shape"}},
-        {"type": "object", "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["init", "Type", "Protocol"]}}, "additionalProperties": {"$ref": "#/definitions/shape"}}
+        {"type": "object", "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["self", "init", "Type", "Protocol"]}}, "additionalProperties": {"$ref": "#/definitions/shape"}}
       ]
     },
     "menu": {
@@ -227,7 +227,6 @@ func TemplateJSON() string {
 	}
 	launchagent["pattern"] = templateLaunchAgentPattern
 
-	// A template's status rule is JSON()'s with when: required.
 	statusRule, ok := deepCopy(at(props, "status", "items", "oneOf", 0)).(map[string]any)
 	if !ok {
 		panic("schema: TemplateJSON: status.items.oneOf.0 is not an object")

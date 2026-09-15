@@ -48,12 +48,9 @@ func extractFences(src string) (string, []*block) {
 		case info == "yaml":
 			b.yaml = body
 			end = collectStates(lines, end, b)
-		case strings.HasPrefix(info, "state"):
-			// A state fence with no file above it has nothing to render, so it
-			// stays a code block rather than disappearing.
-			b.lang, b.code = "yaml", body
-		case info == "yaml template":
-			// A template file is not a menubar.yaml, so it has nothing to preview.
+		case strings.HasPrefix(info, "state"), info == "yaml template":
+			// Nothing to preview: a state fence with no file above it, or a
+			// template, which is not a menubar.yaml. Both stay code.
 			b.lang, b.code = "yaml", body
 		case strings.HasPrefix(info, "help "):
 			b.help = strings.TrimSpace(strings.TrimPrefix(info, "help"))

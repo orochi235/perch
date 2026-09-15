@@ -36,6 +36,13 @@ func TestExtractFencesLeavesAFileWithNoStatesAsCode(t *testing.T) {
 	}
 }
 
+func TestExtractFencesShowsATemplateAsCode(t *testing.T) {
+	_, blocks := extractFences("```yaml template\nparams: {}\n```\n")
+	if len(blocks) != 1 || blocks[0].yaml != "" || blocks[0].lang != "yaml" || blocks[0].code != "params: {}" {
+		t.Fatalf("blocks are %+v, want one yaml code block and no preview", blocks)
+	}
+}
+
 func TestHighlightMarksKeysStringsAndComments(t *testing.T) {
 	got := highlightYAML("# a note\napp:\n  name: \"fleet\"\n  interval: 5s\n")
 	for _, want := range []string{

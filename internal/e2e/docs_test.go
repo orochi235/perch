@@ -13,6 +13,7 @@ import (
 
 	"github.com/orochi235/perch/internal/backend/swiftappkit"
 	"github.com/orochi235/perch/internal/spec"
+	"gopkg.in/yaml.v3"
 )
 
 // docs are the files whose YAML a reader will copy. A doc example that no
@@ -49,8 +50,9 @@ type block struct {
 	body string
 }
 
-// yamlBlocks pulls every ```yaml fence out of a markdown file.
-func yamlBlocks(t *testing.T, path string) []block {
+// fences pulls every fence whose info string is exactly info out of a markdown
+// file.
+func fences(t *testing.T, path, info string) []block {
 	t.Helper()
 	src, err := os.ReadFile(path)
 	if err != nil {
@@ -59,7 +61,7 @@ func yamlBlocks(t *testing.T, path string) []block {
 	var out []block
 	lines := strings.Split(string(src), "\n")
 	for i := 0; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) != "```yaml" {
+		if strings.TrimSpace(lines[i]) != "```"+info {
 			continue
 		}
 		start := i + 1
@@ -70,46 +72,86 @@ func yamlBlocks(t *testing.T, path string) []block {
 	return out
 }
 
-// Every documented example has to parse, emit and compile. The design doc's
-// example is duplicated into typecheck_test.go by hand, so this is also what
-// notices when the copy stops matching the source.
+// Every documented example has to parse, emit and compile: every menubar.yaml,
+// and every template, used once by a stub file. The design doc's example is
+// duplicated into typecheck_test.go by hand, so this is also what notices when
+// the copy stops matching the source.
 func TestDocumentedExamplesBuild(t *testing.T) {
-	swiftc, _ := exec.LookPath("swiftc")
 	var found int
 	for _, doc := range docFiles(t) {
-		for _, b := range yamlBlocks(t, doc) {
+		for _, b := range fences(t, doc, "yaml") {
 			found++
-			name := filepath.Base(b.file) + ":" + strconv.Itoa(b.line)
-			t.Run(name, func(t *testing.T) {
+			t.Run(filepath.Base(b.file)+":"+strconv.Itoa(b.line), func(t *testing.T) {
 				s, err := spec.Parse([]byte(b.body))
 				if err != nil {
 					t.Fatalf("%s:%d does not parse:\n%s\n%v", b.file, b.line, b.body, err)
 				}
-				files, err := swiftappkit.New().Emit(s)
-				if err != nil {
-					t.Fatalf("%s:%d does not emit: %v", b.file, b.line, err)
-				}
-				if swiftc == "" {
-					t.Skip("swiftc not on PATH")
-				}
+				typecheck(t, b, s)
+			})
+		}
+		for _, b := range fences(t, doc, "yaml template") {
+			found++
+			t.Run(filepath.Base(b.file)+":"+strconv.Itoa(b.line), func(t *testing.T) {
 				dir := t.TempDir()
-				var paths []string
-				for _, f := range files {
-					p := filepath.Join(dir, f.Name)
-					if err := os.WriteFile(p, f.Body, 0o644); err != nil {
-						t.Fatal(err)
-					}
-					paths = append(paths, p)
+				if err := os.WriteFile(filepath.Join(dir, "example.yaml"), []byte(b.body), 0o644); err != nil {
+					t.Fatal(err)
 				}
-				out, err := exec.Command(swiftc, append([]string{"-typecheck"}, paths...)...).CombinedOutput()
+				stub := templateStub(t, b)
+				s, err := spec.ParseWith([]byte(stub), spec.TemplatesIn(dir))
 				if err != nil {
-					t.Fatalf("%s:%d emits Swift that does not compile: %v\n%s", b.file, b.line, err, out)
+					t.Fatalf("%s:%d does not parse as a template used by\n%s\n%v", b.file, b.line, stub, err)
 				}
+				typecheck(t, b, s)
 			})
 		}
 	}
 	if found == 0 {
 		t.Fatal("no YAML examples found; the docs list or the fence marker changed")
+	}
+}
+
+// templateStub is a menubar.yaml using the template once, passing a placeholder
+// that is also a valid launchd label for every parameter it requires.
+func templateStub(t *testing.T, b block) string {
+	t.Helper()
+	var tmpl struct {
+		Params yaml.Node `yaml:"params"`
+	}
+	if err := yaml.Unmarshal([]byte(b.body), &tmpl); err != nil {
+		t.Fatalf("%s:%d is not YAML: %v", b.file, b.line, err)
+	}
+	var args []string
+	for i := 0; i+1 < len(tmpl.Params.Content); i += 2 {
+		if v := tmpl.Params.Content[i+1]; v.Tag == "!!null" {
+			args = append(args, tmpl.Params.Content[i].Value+": dev.example.x")
+		}
+	}
+	return "app: {name: x, id: dev.example.x, icon: circle, interval: 5s}\n" +
+		"use: {x: {example: {" + strings.Join(args, ", ") + "}}}\n"
+}
+
+func typecheck(t *testing.T, b block, s *spec.Spec) {
+	t.Helper()
+	files, err := swiftappkit.New().Emit(s)
+	if err != nil {
+		t.Fatalf("%s:%d does not emit: %v", b.file, b.line, err)
+	}
+	swiftc, _ := exec.LookPath("swiftc")
+	if swiftc == "" {
+		t.Skip("swiftc not on PATH")
+	}
+	dir := t.TempDir()
+	var paths []string
+	for _, f := range files {
+		p := filepath.Join(dir, f.Name)
+		if err := os.WriteFile(p, f.Body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, p)
+	}
+	out, err := exec.Command(swiftc, append([]string{"-typecheck"}, paths...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s:%d emits Swift that does not compile: %v\n%s", b.file, b.line, err, out)
 	}
 }
 

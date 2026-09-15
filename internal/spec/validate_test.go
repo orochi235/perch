@@ -198,6 +198,17 @@ menu: [{text: Quit, quit: true}]
 	}
 }
 
+func TestValidateRejectsShapeFieldNamedSelf(t *testing.T) {
+	got := parseErr(t, `
+app: {name: a, id: b, icon: circle, interval: 1s}
+watch: {w: {run: [x], json: true, shape: {self: string}}}
+menu: [{text: Quit, quit: true}]
+`)
+	if !strings.Contains(got, "self") {
+		t.Errorf("error = %q, want it to name the field", got)
+	}
+}
+
 func TestValidateRejectsDuplicateShapeField(t *testing.T) {
 	got := parseErr(t, `
 app: {name: a, id: b, icon: circle, interval: 1s}

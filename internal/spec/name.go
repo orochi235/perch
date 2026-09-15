@@ -21,8 +21,8 @@ var celReserved = map[string]bool{
 	"while": true,
 }
 
-// swiftMemberReserved are the words Swift refuses after a dot. self is too,
-// and checkBound already refuses it.
+// swiftMemberReserved are the words Swift refuses after a dot. self is too:
+// checkBound refuses it as a name, and validateType as a shape field.
 var swiftMemberReserved = map[string]bool{"init": true, "Type": true, "Protocol": true}
 
 func checkName(kind, path, name string) error {
