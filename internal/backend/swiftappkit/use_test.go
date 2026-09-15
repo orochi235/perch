@@ -219,6 +219,8 @@ func TestItemsCrossBetweenATemplatesScopeAndTheFiles(t *testing.T) {
 	for _, want := range []string{
 		"var `case`: Bool { (!(self.default.installed)) }",
 		"var `repeat`: Bool { !self.case && (!(self.default.loaded)) }",
+		// The template's pid item, reached through its use, is still a submenu.
+		`.submenu("pid \(String(results.default.default.pid))"`,
 	} {
 		if !strings.Contains(render, want) {
 			t.Errorf("Render.swift is missing %q:\n%s", want, render)
@@ -235,21 +237,41 @@ func TestItemsCrossBetweenATemplatesScopeAndTheFiles(t *testing.T) {
 }
 
 // assertLoopVarUsed finds each `for <var> in <collection> {` loop matching
-// loopPattern and checks <var> is what gets interpolated inside that loop's
-// own .item(...), rather than asserting the counter's exact numbering.
+// loopPattern and checks <var> is what gets interpolated inside that specific
+// loop's own body (its text up to the matching closing brace), rather than
+// asserting the counter's exact numbering or matching anywhere in the file.
 func assertLoopVarUsed(t *testing.T, render, loopPattern, field string) {
 	t.Helper()
-	matches := regexp.MustCompile(loopPattern).FindAllStringSubmatch(render, -1)
-	if len(matches) == 0 {
+	locs := regexp.MustCompile(loopPattern).FindAllStringSubmatchIndex(render, -1)
+	if len(locs) == 0 {
 		t.Fatalf("Render.swift has no loop matching %q:\n%s", loopPattern, render)
 	}
-	for _, m := range matches {
-		v := m[1]
+	for _, loc := range locs {
+		v := render[loc[2]:loc[3]]
+		body := loopBody(render, loc[1]-1)
 		want := fmt.Sprintf(`.append(.item("\(%s.%s)"`, v, field)
-		if !strings.Contains(render, want) {
-			t.Errorf("Render.swift's loop over %s does not use %s.%s:\n%s", v, v, field, render)
+		if !strings.Contains(body, want) {
+			t.Errorf("Render.swift's loop over %s does not use %s.%s in its own body:\n%s", v, v, field, body)
 		}
 	}
+}
+
+// loopBody returns the text strictly between the brace at openBrace and its
+// matching close, so a match can't be satisfied by a sibling loop's line.
+func loopBody(render string, openBrace int) string {
+	depth := 0
+	for i := openBrace; i < len(render); i++ {
+		switch render[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return render[openBrace+1 : i]
+			}
+		}
+	}
+	return render[openBrace+1:]
 }
 
 func TestThePreviewDriverFillsAUsesWatches(t *testing.T) {
