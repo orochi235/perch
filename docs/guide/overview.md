@@ -16,6 +16,10 @@ is what perch emits.
 Four blocks: the app itself, the commands to watch, what the icon shows, and
 what the menu offers. Every state below is one poll of the same file.
 
+A fifth, [`use:`](../schema.md#use), pulls in a template — watches, status rules
+and menu items written once and used under any number of names. perch ships
+`service`, which watches a LaunchAgent and offers Start, Restart and Stop.
+
 ```yaml
 app:
   name: fleet
