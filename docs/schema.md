@@ -106,11 +106,10 @@ re-poll on the [`interval`](#app) the `app:` block sets. Their results are what
 every expression in the document reads.
 
 A name is letters, digits and underscores, starting with a letter or
-underscore. `it` and `self` are refused as watch, state and [use](#use) names,
-because perch binds them itself: `it` in an [`each:`](#each), `self` in a
-template. CEL's reserved words, and `init`, `Type`, `Protocol` and `self`, which
-Swift reserves after a dot, are refused as those names and as [shape](#shape)
-field names.
+underscore. It cannot be `it` or `self`, which perch binds itself (`it` in an
+[`each:`](#each), `self` in a [template](#use)); a CEL reserved word; or `init`,
+`Type` or `Protocol`, which Swift reserves after a dot. A [shape](#shape) field
+follows the same rule, except that it may be `it`.
 
 Each watch is exactly one of four kinds. The kind is the key it carries:
 
@@ -338,7 +337,8 @@ A template cannot have its own `use:`.
 the value stays one string even if it holds `: `. `$${` writes a literal `${`,
 and any other `$` is left alone, so shell text like `$HOME` passes through; a
 `${` that is not closed or does not name a parameter is a build error. Inside
-`[ ]` or `{ }`, quote it: `{http: "${url}"}`. `{{ }}` holes are left for the app
+`[ ]` or `{ }`, quote it: `{http: "${url}"}`. A quoted value stays a string, so
+write a number or boolean parameter in block style. `{{ }}` holes are left for the app
 to fill.
 
 Inside a template, expressions name only `self`, the use itself —
