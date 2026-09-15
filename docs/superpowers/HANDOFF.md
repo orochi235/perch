@@ -1,9 +1,9 @@
 # Handoff — 2026-09-15
 
-Branch `templates` in `~/src/perch`: built, reviewed and green, **not merged, not
-pushed, not tagged**. `main` is at `09ee104` plus the spec and plan commits.
+Branch `main` in `~/src/perch`: the templates work is merged locally (fast-forward
+from the `templates` branch, now deleted), green, **not pushed, not tagged**.
 
-## Landed on the branch
+## Landed
 
 - **Templates, outlets, `self`, verb defaults and the shipped `service`
   template** — [design](specs/2026-09-14-templates-design.md),
@@ -28,7 +28,7 @@ pushed, not tagged**. `main` is at `09ee104` plus the spec and plan commits.
 
 ## Next
 
-**Merge and release are waiting on a decision.** Tagging `v2.0.0` should carry
+**Push and release are waiting on a decision.** Tagging `v2.0.0` should carry
 notes on what existing files see differently:
 - an `agent:` item now hides when its verb can't work, and one with no `text:`
   gets Start, Stop or Restart;
