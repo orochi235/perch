@@ -55,8 +55,8 @@ type rawApp struct {
 func Parse(src []byte) (*Spec, error) { return ParseWith(src, TemplatesIn("")) }
 
 // ParseWith reads a menubar.yaml document into a Spec, finding the templates its
-// use: block names in templates.
-func ParseWith(src []byte, templates TemplateSource) (*Spec, error) {
+// use: block names in ts.
+func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(src, &doc); err != nil {
 		return nil, err

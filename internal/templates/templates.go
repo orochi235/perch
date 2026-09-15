@@ -21,7 +21,7 @@ func Source(name string) ([]byte, bool) {
 	return b, true
 }
 
-// Names lists every shipped template, in file order.
+// Names lists every shipped template, sorted by name.
 func Names() []string {
 	entries, _ := fs.ReadDir(files, ".")
 	var out []string

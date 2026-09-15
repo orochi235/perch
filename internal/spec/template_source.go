@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -30,13 +31,16 @@ func TemplatesIn(dir string) TemplateSource { return repoTemplates{dir: dir} }
 type repoTemplates struct{ dir string }
 
 func (r repoTemplates) Template(name string) ([]byte, string, bool, error) {
+	if err := checkName("template", "use", name); err != nil {
+		return nil, "", false, err
+	}
 	shipped, isShipped := templates.Source(name)
 	if r.dir != "" {
 		path := filepath.Join(r.dir, name+".yaml")
 		src, err := os.ReadFile(path)
 		switch {
 		case err == nil && isShipped:
-			return nil, path, false, fmt.Errorf("%s has the name of a template perch ships; a reader could not tell which one runs, so give it another name", path)
+			return nil, path, false, fmt.Errorf("%s has the name of a template perch ships (perch's %s.yaml); a reader could not tell which one runs, so give it another name", path, name)
 		case err == nil:
 			return src, path, true, nil
 		case !errors.Is(err, fs.ErrNotExist):
@@ -49,14 +53,24 @@ func (r repoTemplates) Template(name string) ([]byte, string, bool, error) {
 	return nil, "", false, nil
 }
 
+// Names lists every usable template: perch's shipped ones plus the repo's own,
+// sorted and deduplicated so a repo file shadowing a shipped name lists once.
+// A repo file that is not a valid template name, or a directory, is skipped
+// rather than offered as something use: could ask for.
 func (r repoTemplates) Names() []string {
 	names := templates.Names()
-	if r.dir != "" {
-		matches, _ := filepath.Glob(filepath.Join(r.dir, "*.yaml"))
-		for _, m := range matches {
-			names = append(names, strings.TrimSuffix(filepath.Base(m), ".yaml"))
+	if entries, err := os.ReadDir(r.dir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			name, ok := strings.CutSuffix(e.Name(), ".yaml")
+			if !ok || !identifier.MatchString(name) {
+				continue
+			}
+			names = append(names, name)
 		}
 	}
 	sort.Strings(names)
-	return names
+	return slices.Compact(names)
 }

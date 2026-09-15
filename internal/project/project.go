@@ -44,7 +44,6 @@ func (p *Project) SpecPath() string { return filepath.Join(p.Root, SpecFile) }
 func (p *Project) GeneratedDir() string { return filepath.Join(p.Root, "menubar", "Generated") }
 func (p *Project) SourcesDir() string   { return filepath.Join(p.Root, "menubar", "Sources") }
 
-// TemplatesDir holds a repo's own templates, which use: finds beside perch's.
 func (p *Project) TemplatesDir() string { return filepath.Join(p.Root, "menubar", "templates") }
 
 // IconsDir holds artwork an icon: {asset: name} refers to. Copied into the
