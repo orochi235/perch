@@ -21,6 +21,10 @@ var celReserved = map[string]bool{
 	"while": true,
 }
 
+// swiftMemberReserved are the words Swift refuses after a dot. self is too,
+// and checkBound already refuses it.
+var swiftMemberReserved = map[string]bool{"init": true, "Type": true, "Protocol": true}
+
 func checkName(kind, path, name string) error {
 	switch {
 	case name == "":
@@ -31,6 +35,8 @@ func checkName(kind, path, name string) error {
 		return fmt.Errorf("%s: %q is not a usable %s name; expressions select it by name, so it must be letters, digits and underscores, starting with a letter or underscore", path, name, kind)
 	case celReserved[name]:
 		return fmt.Errorf("%s: %q is reserved in CEL, so no expression could name it", path, name)
+	case swiftMemberReserved[name]:
+		return fmt.Errorf("%s: %q is a name Swift reserves even after a dot, so the emitted app could not reach it", path, name)
 	}
 	return nil
 }

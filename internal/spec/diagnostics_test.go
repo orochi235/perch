@@ -150,6 +150,9 @@ func TestParseRefusesEachKindOfUnusableName(t *testing.T) {
 		{"9fleet", "letters, digits and underscores"},
 		{"package", "reserved in CEL"},
 		{"it", "each: binds its element"},
+		{"init", "a name Swift reserves even after a dot"},
+		{"Type", "a name Swift reserves even after a dot"},
+		{"Protocol", "a name Swift reserves even after a dot"},
 	}
 	for _, c := range cases {
 		got := parseErr(t, `
@@ -164,7 +167,7 @@ menu: [{text: Quit, quit: true}]
 }
 
 func TestParseRefusesUnusableShapeFieldNames(t *testing.T) {
-	for _, name := range []string{"", "_", "a-b", "9a", "package"} {
+	for _, name := range []string{"", "_", "a-b", "9a", "package", "init"} {
 		got := parseErr(t, `
 app: {name: a, id: b, icon: c, interval: 1s}
 watch: {w: {run: [x], json: true, shape: {"`+name+`": int}}}

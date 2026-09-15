@@ -102,6 +102,9 @@ func (e *Env) lower(x celast.Expr, src string) (value, error) {
 			if name == "self" {
 				return value{}, fmt.Errorf("%q: self is bound only inside a template, where it is that use", src)
 			}
+			if e.inTemplate() {
+				return value{}, fmt.Errorf("%q: unknown name %q; a template sees only self", src, name)
+			}
 			if len(e.vars) == 0 {
 				return value{}, fmt.Errorf("%q: unknown name %q; no watches are declared", src, name)
 			}

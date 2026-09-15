@@ -34,8 +34,39 @@ func TestAUsesStateConditionSeesOnlyItsWatches(t *testing.T) {
 	if got, err := e.LowerCondition("!self.agent.loaded"); err != nil || got != "!(self.agent.loaded)" {
 		t.Errorf("= %q, %v", got, err)
 	}
-	if got, err := e.LowerCondition("self.stopped"); err == nil {
-		t.Errorf("self.stopped lowered to %q; want a refusal", got)
+	got, err := e.LowerCondition("self.stopped")
+	if err == nil || !strings.Contains(err.Error(), "a state's condition cannot name a state; the order of state: already rules out the earlier ones") {
+		t.Errorf("self.stopped = %q, %v; want a refusal saying why", got, err)
+	}
+}
+
+// Inside a template the use's own name is not bound: self is how it is reached.
+func TestATemplateCannotNameItsOwnUse(t *testing.T) {
+	_, err := ForUse(daemonUse(), "daemon").LowerExpr("daemon.agent.pid")
+	if err == nil || !strings.Contains(err.Error(), `"daemon.agent.pid": unknown name "daemon"; a template sees only self`) {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestSelfCarriesTheLaunchAgentHint(t *testing.T) {
+	_, err := ForUse(daemonUse(), "daemon").LowerExpr("self.agent.ok")
+	if err == nil || !strings.Contains(err.Error(), "A LaunchAgent has two answers") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestHasOnAUsesWatchIsConstant(t *testing.T) {
+	if got, err := ForUse(daemonUse(), "daemon").LowerCondition("has(self.agent.pid)"); err != nil || got != "true" {
+		t.Errorf("= %q, %v; want true", got, err)
+	}
+}
+
+// self in a state condition is the struct the state is declared on, so no
+// prefix reaches it.
+func TestForUseStatesIsNotPrefixed(t *testing.T) {
+	e := ForUseStates(daemonUse(), "self").Prefixed("results.")
+	if got, err := e.LowerCondition("!self.agent.loaded"); err != nil || got != "!(self.agent.loaded)" {
+		t.Errorf("= %q, %v", got, err)
 	}
 }
 

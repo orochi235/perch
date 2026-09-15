@@ -176,6 +176,10 @@ func TestUseRefusals(t *testing.T) {
 			"use: [d]\n",
 			"use: want a mapping of names to templates",
 		},
+		"a use named with a word Swift reserves after a dot": {
+			"use:\n  init:\n    svc: {label: dev.example.d}\n",
+			`use.init: "init" is a name Swift reserves even after a dot`,
+		},
 		"an unknown template": {
 			"use:\n  d:\n    nope: {}\n",
 			`no template named "nope"; the templates are badparam, badparams, badstate, badwatch, empty, multiline, nested, notname, spaced, svc, unclosed, unknown`,

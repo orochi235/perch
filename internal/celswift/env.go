@@ -6,7 +6,7 @@ package celswift
 import "github.com/orochi235/perch/internal/spec"
 
 // Env is the type environment an expression is lowered against: one binding per
-// watch, plus `it` while inside an each:.
+// name an expression can reach.
 type Env struct {
 	vars []binding
 }
@@ -152,12 +152,32 @@ func useType(u spec.Use, withStates bool) *spec.Type {
 	for _, w := range u.Watches {
 		t.Fields = append(t.Fields, spec.Field{Name: w.Name, Type: watchType(w)})
 	}
-	if withStates {
-		for _, st := range u.States {
+	for _, st := range u.States {
+		if withStates {
 			t.Fields = append(t.Fields, field(st.Name, spec.TypeBool))
+			continue
 		}
+		if t.Hints == nil {
+			t.Hints = map[string]string{}
+		}
+		t.Hints[st.Name] = "a state's condition cannot name a state; the order of state: already rules out the earlier ones"
 	}
 	return t
+}
+
+// inTemplate reports whether e is a template's: self, and at most an each:'s it.
+func (e *Env) inTemplate() bool {
+	self := false
+	for _, v := range e.vars {
+		switch v.name {
+		case "self":
+			self = true
+		case "it":
+		default:
+			return false
+		}
+	}
+	return self
 }
 
 // Prefixed returns a copy of e whose watch bindings are spelled with prefix in

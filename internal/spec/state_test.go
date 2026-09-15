@@ -54,6 +54,10 @@ func TestStatesRefused(t *testing.T) {
 			doc:  "state:\n  - it: \"agent.ok\"\n  - b:\n",
 			want: "bound by perch itself",
 		},
+		"a name Swift reserves after a dot": {
+			doc:  "state:\n  - Protocol: \"agent.ok\"\n  - b:\n",
+			want: "a name Swift reserves even after a dot",
+		},
 		"a name is not an identifier": {
 			doc:  "state:\n  - not-a-name: \"agent.ok\"\n  - b:\n",
 			want: "not a usable state name",
