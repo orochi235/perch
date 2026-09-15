@@ -203,15 +203,19 @@ All are build errors naming the use and the template file.
 | Case | The error |
 |---|---|
 | Unknown template | lists the shipped and repo templates |
-| A repo template named like a shipped one | names both files |
+| A repo template named like a shipped one, in any case | names both files |
 | A missing required parameter, an undeclared argument, an unknown or malformed `${…}` | names it |
 | `app:`, `window:` or `use:` in a template | templates do not nest |
 | A template naming a file's watch or state | a template sees only `self` |
 | `self` outside a template | it has nothing to refer to |
 | A use named like a watch, a state, `self` or `it` | an expression could not tell them apart |
-| A status rule with no `when:` in a template | it would land ahead of the file's rules and shadow them |
+| A watch, state, use or shape field named `init`, `Type` or `Protocol` | Swift reserves them after a dot |
+| A file state `x` beside a watch or use named `state_x` | both would be the same emitted property |
+| A status rule with no `when:` in a template | it would hide every rule after it |
 | `- outlet: <name>` that no use fills | catches `control` written for `controls` |
 | One outlet declared twice in a list | its fragments would have two homes |
+| An outlet under an `each:` | every use's items would repeat once per element |
+| A key written twice in one mapping, in a file or a template | names the key and both lines |
 
 No runtime failure is new: a failed `agent:` raises the alert it does today.
 
