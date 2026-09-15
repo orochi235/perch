@@ -69,11 +69,7 @@ func (s *Spec) validate() error {
 
 func validateItems(items []Item, watches []Watch, window *Window) error {
 	for _, it := range items {
-		p := it.path
-		if len(it.Menu) > 0 && it.Action.Kind != ActionNone {
-			return fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", p, it.Action.Kind)
-		}
-		if err := it.Action.validate(p, watches, window); err != nil {
+		if err := it.Action.validate(it.path, watches, window); err != nil {
 			return err
 		}
 		if err := validateItems(it.Menu, watches, window); err != nil {

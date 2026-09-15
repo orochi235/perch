@@ -946,6 +946,8 @@ git commit -m "expand a template's watches and states under use:"
 
 ### Task 3: Outlets place a template's status rules and menu items
 
+> **Landed differently:** items and status rules record where they were written in an unexported `path`, which validation reports; placement lives in internal/spec/outlets.go; `- outlet: default` means the default outlet. An item with both a submenu and an action is refused in `parseItem`, before placement can empty the submenu, so validation no longer checks it.
+
 **Files:**
 - Modify: `internal/spec/use.go`, `internal/spec/menu.go`, `internal/spec/status.go`, `internal/spec/spec.go`
 - Test: `internal/spec/outlet_test.go`
@@ -1635,19 +1637,12 @@ Update the `Agent` field comment on `Action`: `// ActionAgent: <watch>, <use>.<w
 In `internal/spec/validate.go`, delete `validateItems`, `Action.validate` and `checkAgentTarget`, and add:
 
 ```go
-func (s *Spec) validateItems(items []Item, path string) error {
-	for i, it := range items {
-		p := fmt.Sprintf("%s[%d]", path, i)
-		if it.Scope != "" {
-			p = fmt.Sprintf("%s (from use.%s)", p, it.Scope)
-		}
-		if len(it.Menu) > 0 && it.Action.Kind != ActionNone {
-			return fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", p, it.Action.Kind)
-		}
-		if err := s.validateAction(it.Action, p, it.Scope); err != nil {
+func (s *Spec) validateItems(items []Item) error {
+	for _, it := range items {
+		if err := s.validateAction(it.Action, it.path, it.Scope); err != nil {
 			return err
 		}
-		if err := s.validateItems(it.Menu, fmt.Sprintf("%s[%d].menu", path, i)); err != nil {
+		if err := s.validateItems(it.Menu); err != nil {
 			return err
 		}
 	}
@@ -1730,7 +1725,7 @@ func launchAgentIn(name string, watches []Watch, where string) (Watch, error) {
 }
 ```
 
-In `(s *Spec) validate()`, replace `return validateItems(s.Menu, "menu", s.Watches, s.Window)` with `return s.validateItems(s.Menu, "menu")`.
+In `(s *Spec) validate()`, replace `return validateItems(s.Menu, s.Watches, s.Window)` with `return s.validateItems(s.Menu)`.
 
 In `internal/spec/quit.go`, `validateQuit`: replace `b.Action.validate(bp, s.Watches, s.Window)` with `s.validateAction(b.Action, bp, "")`.
 

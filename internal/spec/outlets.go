@@ -170,11 +170,14 @@ func group[T any](marks []mark, uses []Use, fragments func(Use) []fragment[T], s
 	}
 	for _, m := range marks {
 		if m.name != "" && len(groups[m.name]) == 0 {
-			fills := "no outlets"
-			if len(offered) > 0 {
-				fills = strings.Join(offered, ", ")
+			fills := "the uses fill no outlets"
+			switch {
+			case len(uses) == 0:
+				fills = "this file has no use: block"
+			case len(offered) > 0:
+				fills = "the uses fill " + strings.Join(offered, ", ")
 			}
-			return nil, fmt.Errorf("%s: no use fills %s; the uses fill %s", m.path, outletLabel(m.name), fills)
+			return nil, fmt.Errorf("%s: no use fills %s; %s", m.path, outletLabel(m.name), fills)
 		}
 	}
 	return groups, nil

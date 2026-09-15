@@ -168,6 +168,10 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
+	// Refused here, not in validation: an outlet nothing fills empties the submenu.
+	if len(sub) > 0 && act.Kind != ActionNone {
+		return Item{}, fmt.Errorf("%s: has a submenu and a %s action; opening a submenu supersedes the action, so it would never run", path, act.Kind)
+	}
 	return Item{Text: f.Text, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 

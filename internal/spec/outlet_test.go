@@ -205,6 +205,14 @@ func TestOutletRefusals(t *testing.T) {
 			"use:\n  a:\n    frag:\nmenu:\n  - {text: Quit, quit: true}\n  - outlet: nope\n",
 			`menu[1]: no use fills the outlet "nope"; the uses fill default, controls`,
 		},
+		"an outlet in a file with no use: block": {
+			"menu:\n  - outlet: nope\n",
+			`menu[0]: no use fills the outlet "nope"; this file has no use: block`,
+		},
+		"an action whose submenu holds only an empty outlet": {
+			"menu:\n  - {text: More, run: [x], menu: [outlet]}\n",
+			"menu[0]: has a submenu and a run action",
+		},
 		"an outlet declared twice": {
 			"use:\n  a:\n    frag:\nmenu:\n  - outlet\n  - outlet\n",
 			"menu[1]: the default outlet is declared twice",
