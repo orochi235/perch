@@ -52,7 +52,7 @@ func TestStatesRefused(t *testing.T) {
 		},
 		"a name is it": {
 			doc:  "state:\n  - it: \"agent.ok\"\n  - b:\n",
-			want: "cannot take that name",
+			want: "bound by perch itself",
 		},
 		"a name is not an identifier": {
 			doc:  "state:\n  - not-a-name: \"agent.ok\"\n  - b:\n",

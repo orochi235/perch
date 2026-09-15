@@ -17,6 +17,7 @@ type Spec struct {
 	Status  []StatusRule
 	Menu    []Item
 	Window  *Window
+	Uses    []Use
 }
 
 // App is the identity and cadence of the generated status-bar app.
@@ -39,6 +40,7 @@ type rawSpec struct {
 	Status yaml.Node `yaml:"status"`
 	Menu   yaml.Node `yaml:"menu"`
 	Window yaml.Node `yaml:"window"`
+	Use    yaml.Node `yaml:"use"`
 }
 
 type rawApp struct {
@@ -71,6 +73,10 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 	var raw rawSpec
 	// No path: project.Load has already named the file.
 	if err := decodeStrict(root, &raw, ""); err != nil {
+		return nil, err
+	}
+	uses, err := parseUses(&raw.Use, ts)
+	if err != nil {
 		return nil, err
 	}
 	appIcon, err := parseIcon(&raw.App.Icon, "app.icon")
@@ -120,6 +126,7 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 		return nil, err
 	}
 	s.Menu = menu
+	s.Uses = uses
 	if err := s.validate(); err != nil {
 		return nil, err
 	}

@@ -97,7 +97,7 @@ menu: [{text: Q, quit: true}]
 	}
 
 	watchName := nameRule(t, "properties", "watch", "propertyNames")
-	for _, name := range []string{"fleet", "my_fleet", "my-fleet", "9x", "it", "package", "size"} {
+	for _, name := range []string{"fleet", "my_fleet", "my-fleet", "9x", "it", "self", "package", "size"} {
 		agree(t, name, watchName, `
 app: {name: a, id: dev.a, icon: circle, interval: 1s}
 watch: {`+strconv.Quote(name)+`: {run: [x]}}

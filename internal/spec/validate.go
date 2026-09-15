@@ -39,6 +39,20 @@ func (s *Spec) validate() error {
 			return err
 		}
 	}
+	for _, u := range s.Uses {
+		if seen[u.Name] {
+			return fmt.Errorf("use.%s: %q is already a watch; an expression names watches and uses the same way, so it could not tell them apart", u.Name, u.Name)
+		}
+		where := fmt.Sprintf("use.%s (%s): ", u.Name, u.File)
+		for _, w := range u.Watches {
+			if err := w.validate(); err != nil {
+				return fmt.Errorf("%s%w", where, err)
+			}
+		}
+		if err := checkStates(u.States, u.Watches, nil, where); err != nil {
+			return err
+		}
+	}
 	if err := s.validateStates(); err != nil {
 		return err
 	}
@@ -117,8 +131,8 @@ func (w Watch) validate() error {
 	if err := checkName("watch", path, w.Name); err != nil {
 		return err
 	}
-	if w.Name == "it" {
-		return fmt.Errorf("%s: each: binds its element to `it`, so a watch cannot take that name", path)
+	if err := checkBound(path, w.Name, "watch"); err != nil {
+		return err
 	}
 	if w.Kind == WatchRun && len(w.Run) == 0 {
 		return fmt.Errorf("%s.run: empty; run takes the argv of a command", path)

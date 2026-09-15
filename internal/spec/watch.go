@@ -41,6 +41,8 @@ type Watch struct {
 	Plist  string // WatchLaunchAgent: the LaunchAgents file, defaulted from Label
 	JSON   bool
 	Shape  *Type
+	// Scope is the use this watch belongs to, or "" for the file's own.
+	Scope string
 }
 
 type rawWatch struct {

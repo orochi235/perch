@@ -46,36 +46,43 @@ func parseStates(n *yaml.Node) ([]State, error) {
 // validateStates checks what can be checked without reading an expression. A
 // condition naming a state declared after it needs no check of its own: the
 // backend declares states in order, so the name is simply not bound yet.
-func (s *Spec) validateStates() error {
-	if len(s.States) == 0 {
+func (s *Spec) validateStates() error { return checkStates(s.States, s.Watches, s.Uses, "") }
+
+// checkStates holds one ordered list to its rules. where prefixes every error,
+// and is empty for the file's own list.
+func checkStates(states []State, watches []Watch, uses []Use, where string) error {
+	if len(states) == 0 {
 		return nil
 	}
-	watches := map[string]bool{}
-	for _, w := range s.Watches {
-		watches[w.Name] = true
+	taken := map[string]string{}
+	for _, w := range watches {
+		taken[w.Name] = "a watch"
+	}
+	for _, u := range uses {
+		taken[u.Name] = "a use"
 	}
 	seen := map[string]bool{}
-	for i, st := range s.States {
-		path := fmt.Sprintf("state[%d]", i)
+	for i, st := range states {
+		path := fmt.Sprintf("%sstate[%d]", where, i)
 		if err := checkName("state", path, st.Name); err != nil {
 			return err
 		}
-		if st.Name == "it" {
-			return fmt.Errorf("%s: each: binds its element to `it`, so a state cannot take that name", path)
+		if err := checkBound(path, st.Name, "state"); err != nil {
+			return err
 		}
 		if seen[st.Name] {
 			return fmt.Errorf("%s: %q declared twice", path, st.Name)
 		}
 		seen[st.Name] = true
-		if watches[st.Name] {
-			return fmt.Errorf("%s: %q is already a watch; an expression names states and watches the same way, so it could not tell the two apart", path, st.Name)
+		if kind, ok := taken[st.Name]; ok {
+			return fmt.Errorf("%s: %q is already %s; an expression names states, watches and uses the same way, so it could not tell them apart", path, st.Name, kind)
 		}
-		if last := i == len(s.States)-1; last {
+		if last := i == len(states)-1; last {
 			if st.Cond != "" {
 				return fmt.Errorf("%s: %q is last, so it is the fallback and takes no condition; without one state that always holds, a poll can match none of them", path, st.Name)
 			}
 		} else if st.Cond == "" {
-			return fmt.Errorf("%s: %q has no condition, so it always holds and must be last; %d state(s) after it can never be reached", path, st.Name, len(s.States)-1-i)
+			return fmt.Errorf("%s: %q has no condition, so it always holds and must be last; %d state(s) after it can never be reached", path, st.Name, len(states)-1-i)
 		}
 	}
 	return nil

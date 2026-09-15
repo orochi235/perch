@@ -60,7 +60,7 @@ const body = `{
     "watch": {
       "type": "object",
       "description": "Named sources, polled concurrently every interval.",
-      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
+      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
@@ -89,7 +89,18 @@ const body = `{
         "minProperties": 1,
         "maxProperties": 1,
         "additionalProperties": {"type": ["string", "null"], "description": "CEL condition reaching this state; omit on the last one."},
-        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it"]}}
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self"]}}
+      }
+    },
+    "use": {
+      "type": "object",
+      "description": "Named uses of templates. Each takes exactly one template, and its arguments.",
+      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": {"type": ["object", "null"], "additionalProperties": {"type": ["string", "number", "boolean"]}}
       }
     },
     "status": {
