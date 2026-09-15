@@ -42,14 +42,14 @@ worker: {agent: {installed: true}}
 worker: {agent: {installed: false}}
 ```
 
-The label is written once. [`service`](../schema.md#service) watches it, keeps
-its own four states, and puts a readout at the default outlet and Start Worker,
-Restart Worker and Stop Worker at `controls` — each shown only when it can
-work, so the menu never offers Start on a job launchd already holds.
+[`service`](../schema.md#service) watches the label and fills two
+[outlets](../schema.md#outlets): `- outlet` gets a warning icon while the job is
+not installed and a line saying what it is doing, and `- outlet: controls` gets
+Start Worker, Restart Worker and Stop Worker, each shown only when it can work.
 
-The states are fields of the use: `worker.running`, `worker.stopped`. The watch
-is `worker.agent`, and for a `launchctl` call perch does not write,
-`worker.agent.target` is `gui/<your uid>/dev.example.worker`:
+Its states are `worker.uninstalled`, `worker.stopped`, `worker.idle` and
+`worker.running`, and its watch is `worker.agent`, so a `launchctl` call perch
+does not write can name `worker.agent.target`:
 
 ```
   - text: Why is it running?
@@ -57,10 +57,8 @@ is `worker.agent`, and for a `launchctl` call perch does not write,
     run: [launchctl, blame, "{{worker.agent.target}}"]
 ```
 
-**Loaded and running are different questions.** `launchctl print` succeeds for
-any label launchd is holding, including a job that has already run and exited,
-so a widget reading its exit status says Running about a job with no process.
+`idle` is a job launchd holds with no process, such as one that ran and exited.
 [LaunchAgents](../schema.md#launchagents) has the rest.
 
-Every action re-polls as soon as it finishes, which is what makes Start feel
-like it did something: the menu that reopens says running.
+Every action re-polls as soon as it finishes, which is what makes Start Worker
+feel like it did something: the menu that reopens says Worker: running.
