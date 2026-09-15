@@ -21,6 +21,9 @@ type StatusRule struct {
 	path     string // where the author wrote it, for errors after placement
 }
 
+// Path is where the author wrote the rule, as Item.Path is for an item.
+func (r StatusRule) Path() string { return r.path }
+
 type rawStatusRule struct {
 	When  string    `yaml:"when"`
 	Icon  yaml.Node `yaml:"icon"`

@@ -88,7 +88,7 @@ state:
   - rest:
 menu: [{text: Quit, quit: true}]
 `)
-	want := "var state_loose: Bool { !state_first && (((agent.code == 1) || (agent.code == 2))) }"
+	want := "var state_loose: Bool { !state_first && (((self.agent.code == 1) || (self.agent.code == 2))) }"
 	if got := files["Render.swift"]; !strings.Contains(got, want) {
 		t.Errorf("Render.swift is missing %q", want)
 	}

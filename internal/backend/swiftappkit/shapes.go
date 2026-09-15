@@ -12,20 +12,24 @@ import (
 // FleetDataAB, and the second declaration is what the compiler complains about.
 type structNames struct {
 	shape  map[*spec.Type]string
-	result map[string]string // watch name -> its result struct
+	result map[string]string // Watch.Key() -> its result struct
+	use    map[string]string // use name -> its struct
 }
 
 func nameStructs(s *spec.Spec) structNames {
-	n := structNames{shape: map[*spec.Type]string{}, result: map[string]string{}}
+	n := structNames{shape: map[*spec.Type]string{}, result: map[string]string{}, use: map[string]string{}}
 	taken := map[string]bool{}
-	// Result names are claimed first, so a shape never takes one out from under
-	// the watch it belongs to. Watch names differ but exported() can flatten two
-	// of them together: a_b and aB both read as AB.
-	for _, w := range s.Watches {
-		n.result[w.Name] = unique(exported(w.Name)+"Result", taken)
+	for _, u := range s.Uses {
+		n.use[u.Name] = unique(exported(u.Name)+"Use", taken)
 	}
-	for _, w := range s.Watches {
-		n.assign(w.Shape, exported(w.Name)+"Data", taken)
+	// Result names are claimed before shapes, so a shape never takes one out
+	// from under the watch it belongs to. Watch names differ but exported() can
+	// flatten two of them together: a_b and aB both read as AB.
+	for _, w := range s.AllWatches() {
+		n.result[w.Key()] = unique(exported(w.Scope)+exported(w.Name)+"Result", taken)
+	}
+	for _, w := range s.AllWatches() {
+		n.assign(w.Shape, exported(w.Scope)+exported(w.Name)+"Data", taken)
 	}
 	return n
 }
@@ -98,7 +102,7 @@ func (n structNames) swiftZero(t *spec.Type) string {
 func emitShapes(s *spec.Spec, n structNames) string {
 	b := &buf{}
 	var any bool
-	for _, w := range s.Watches {
+	for _, w := range s.AllWatches() {
 		if w.Shape == nil {
 			continue
 		}
@@ -164,7 +168,19 @@ func emitObjects(b *buf, t *spec.Type, n structNames) {
 }
 
 // resultTypeName is the struct holding one watch's poll outcome.
-func (n structNames) resultTypeName(w spec.Watch) string { return n.result[w.Name] }
+func (n structNames) resultTypeName(w spec.Watch) string { return n.result[w.Key()] }
+
+// useTypeName is the struct holding one use's watches and states.
+func (n structNames) useTypeName(u spec.Use) string { return n.use[u.Name] }
+
+// resultPath is where a watch's result lives in Results: its own property, or
+// one inside its use's.
+func resultPath(w spec.Watch) string {
+	if w.Scope == "" {
+		return decl(w.Name)
+	}
+	return decl(w.Scope) + "." + decl(w.Name)
+}
 
 func (n structNames) dataTypeAndZero(w spec.Watch) (string, string, bool) {
 	if !w.JSON {

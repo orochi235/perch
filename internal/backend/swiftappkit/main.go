@@ -79,7 +79,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 func emitPoll(b *buf, s *spec.Spec, n structNames) {
 	b.line("fileprivate func poll() {")
 	b.in()
-	if len(s.Watches) == 0 {
+	if len(s.AllWatches()) == 0 {
 		b.line("refresh()")
 		b.out()
 		b.line("}")
@@ -91,14 +91,14 @@ func emitPoll(b *buf, s *spec.Spec, n structNames) {
 	b.line("let sync = DispatchQueue(label: %s)", celswift.SwiftString(s.App.ID+".results"))
 	b.line("var next = Results()")
 	b.line("")
-	for _, w := range s.Watches {
+	for _, w := range s.AllWatches() {
 		b.line("group.enter()")
 		b.line("DispatchQueue.global(qos: .utility).async {")
 		b.in()
 		b.line("let r = %s", watchCall(w, n))
 		b.line("sync.async {")
 		b.in()
-		b.line("next.%s = r", decl(w.Name))
+		b.line("next.%s = r", resultPath(w))
 		b.line("group.leave()")
 		b.out()
 		b.line("}")

@@ -32,9 +32,9 @@ extension WorkerResult {
 }
 
 extension Results {
-    var state_uninstalled: Bool { (!(worker.installed)) }
-    var state_stopped: Bool { !state_uninstalled && (!(worker.loaded)) }
-    var state_idle: Bool { !state_uninstalled && !state_stopped && (!(worker.running)) }
+    var state_uninstalled: Bool { (!(self.worker.installed)) }
+    var state_stopped: Bool { !state_uninstalled && (!(self.worker.loaded)) }
+    var state_idle: Bool { !state_uninstalled && !state_stopped && (!(self.worker.running)) }
     var state_running: Bool { !state_uninstalled && !state_stopped && !state_idle }
 }
 

@@ -36,8 +36,8 @@ extension PlistResult {
 }
 
 extension Results {
-    var state_uninstalled: Bool { (!(plist.ok)) }
-    var state_stopped: Bool { !state_uninstalled && (!(agent.ok)) }
+    var state_uninstalled: Bool { (!(self.plist.ok)) }
+    var state_stopped: Bool { !state_uninstalled && (!(self.agent.ok)) }
     var state_running: Bool { !state_uninstalled && !state_stopped }
 }
 

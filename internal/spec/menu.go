@@ -104,6 +104,10 @@ type Item struct {
 	path     string // where the author wrote it, for errors after placement
 }
 
+// Path is where the author wrote the item: menu[2], or a template's
+// use.<name> (<file>): menu.<outlet>[0].
+func (it Item) Path() string { return it.path }
+
 type itemFields struct {
 	Text   string    `yaml:"text"`
 	When   string    `yaml:"when"`

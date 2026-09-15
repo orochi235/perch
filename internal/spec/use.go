@@ -136,3 +136,21 @@ func refuseNesting(root *yaml.Node, where string) error {
 	}
 	return nil
 }
+
+// AllWatches is every watch polled: the file's, then each use's, in use: order.
+func (s *Spec) AllWatches() []Watch {
+	out := append([]Watch(nil), s.Watches...)
+	for _, u := range s.Uses {
+		out = append(out, u.Watches...)
+	}
+	return out
+}
+
+// Key names a watch across the file and its uses: its name, or use.name. It is
+// what a preview state writes a use's watch under.
+func (w Watch) Key() string {
+	if w.Scope == "" {
+		return w.Name
+	}
+	return w.Scope + "." + w.Name
+}

@@ -33,16 +33,16 @@ func emitDriver(s *spec.Spec, n structNames) string {
 	b.line("var frames: [Any] = []")
 	b.line("for state in readStates() {")
 	b.in()
-	if len(s.Watches) == 0 {
+	if len(s.AllWatches()) == 0 {
 		b.line("let results = Results()")
 	} else {
 		b.line("var results = Results()")
-		for _, w := range s.Watches {
+		for _, w := range s.AllWatches() {
 			// A watch a state leaves out is one that never answered, which is
 			// the zero result and not a poll that succeeded with nothing.
-			b.line("if let o = state.watches[%s] {", celswift.SwiftString(w.Name))
+			b.line("if let o = state.watches[%s] {", celswift.SwiftString(w.Key()))
 			b.in()
-			b.line("results.%s = %s", decl(w.Name), sampleCall(w, n))
+			b.line("results.%s = %s", resultPath(w), sampleCall(w, n))
 			b.out()
 			b.line("}")
 		}

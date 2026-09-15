@@ -146,6 +146,73 @@ menu:
   - {text: Quit, quit: true}
 `
 
+// brainhouseOnService is brainhouse's menubar.yaml rewritten on service, as
+// evidence the template covers a file that exists. brainhouse is not changed.
+const brainhouseOnService = `
+app: {name: brainhouse, id: com.brainhouse.menubar, icon: brain, interval: 5s}
+use:
+  server:
+    service: {label: com.brainhouse}
+watch:
+  summary:
+    http: http://localhost:8765/api/summary
+    json: true
+    shape: {live: int, awaiting_input: int}
+state:
+  - down: "!server.running"
+  - wedged: "!summary.ok"
+  - up:
+status:
+  - {when: wedged, icon: exclamationmark.triangle}
+  - {when: down, dim: true}
+  - badge: "summary.data.awaiting_input > 0 ? string(summary.data.awaiting_input) : ''"
+menu:
+  - text: "Server: running on :8765 — {{summary.data.awaiting_input}} awaiting input"
+    when: "up && summary.data.awaiting_input > 0"
+  - {text: "Server: not responding on :8765", when: wedged}
+  - outlet
+  - separator
+  - {text: Open Dashboard, open: "http://localhost:8765/"}
+  - separator
+  - outlet: controls
+  - {text: Open Logs, open: ~/Library/Logs/brainhouse}
+  - separator
+  - {text: Quit, quit: true}
+`
+
+// ontoOnService is the same for onto's local agent.
+const ontoOnService = `
+app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 10s}
+use:
+  local:
+    service: {label: dev.onto.agent, noun: This agent}
+watch:
+  fleet: {run: [onto, top, --json], json: true}
+menu:
+  - {when: "!fleet.ok", text: "onto did not answer"}
+  - separator
+  - outlet
+  - outlet: controls
+  - separator
+  - {text: Quit, quit: true}
+`
+
+// keywordUse names a use with a word Swift takes only after a dot, and reaches
+// it from a file state, which is lowered inside an extension of Results.
+const keywordUse = `
+app: {name: kw, id: dev.kw.menubar, icon: circle, interval: 5s}
+use:
+  default:
+    service: {label: dev.kw.agent}
+state:
+  - down: "!default.running"
+  - up:
+menu:
+  - {text: "pid {{default.agent.pid}}", when: up}
+  - outlet
+  - {text: Quit, quit: true}
+`
+
 // TestEmittedSwiftTypechecks is the check a golden test alone cannot make: a
 // golden stays green while emitting Swift that does not compile.
 func TestEmittedSwiftTypechecks(t *testing.T) {
@@ -154,14 +221,18 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		t.Skip("swiftc not on PATH")
 	}
 	for name, doc := range map[string]string{
-		"minimal":        minimal,
-		"designDoc":      designDocExample,
-		"everyFeature":   everyFeature,
-		"collidingNames": collidingNames,
-		"watchInAction":  watchInAction,
-		"swiftKeywords":  swiftKeywordShape,
-		"states":         states,
-		"launchAgent":    launchAgent,
+		"minimal":             minimal,
+		"designDoc":           designDocExample,
+		"everyFeature":        everyFeature,
+		"collidingNames":      collidingNames,
+		"watchInAction":       watchInAction,
+		"swiftKeywords":       swiftKeywordShape,
+		"states":              states,
+		"launchAgent":         launchAgent,
+		"templates":           templatesDoc,
+		"brainhouseOnService": brainhouseOnService,
+		"ontoOnService":       ontoOnService,
+		"keywordUse":          keywordUse,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

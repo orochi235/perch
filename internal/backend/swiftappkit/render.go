@@ -14,6 +14,7 @@ import (
 func emitRender(s *spec.Spec, n structNames) (string, error) {
 	b := &buf{}
 	e := renderEnv(s)
+	scopes := scopeEnvs(s)
 
 	b.line("%s", header)
 	b.line("import Foundation")
@@ -21,36 +22,50 @@ func emitRender(s *spec.Spec, n structNames) (string, error) {
 
 	emitResultTypes(b, s, n)
 	emitResultInits(b, s, n)
+	if err := emitUseStates(b, s, n); err != nil {
+		return "", err
+	}
 	if err := emitStates(b, s); err != nil {
 		return "", err
 	}
-	if err := emitFace(b, s, e); err != nil {
+	if err := emitFace(b, s, e, scopes); err != nil {
 		return "", err
 	}
-	return emitMenu(b, s, e)
+	return emitMenu(b, s, e, scopes)
 }
 
-// renderEnv is the lowering environment for Render.swift: watches and states
-// are reached through the results the two functions take.
+// renderEnv is the lowering environment for the file's own rules and items:
+// watches, uses and states, reached through the results the functions take.
 func renderEnv(s *spec.Spec) *celswift.Env {
-	e := celswift.NewEnv(s.Watches)
+	e := celswift.NewEnv(s.Watches).WithUses(s.Uses)
 	for _, st := range s.States {
 		e = e.WithState(st.Name, stateProp(st.Name))
 	}
 	return e.Prefixed("results.")
 }
 
+// scopeEnvs is what each use's rules and items lower against: self, reached
+// through the results, and nothing of the file's.
+func scopeEnvs(s *spec.Spec) map[string]*celswift.Env {
+	out := map[string]*celswift.Env{}
+	for _, u := range s.Uses {
+		out[u.Name] = celswift.ForUse(u, u.Name).Prefixed("results.")
+	}
+	return out
+}
+
 // emitStates writes each state as a property of Results. A condition is
-// lowered against the watches alone: the ordering already excludes every
-// earlier state, so naming one could only ever be a constant, and a guard that
-// contributes nothing is worse than one refused. They are properties rather
+// lowered against the watches and uses, never these states: the ordering
+// already excludes every earlier state, so naming one could only ever be a
+// constant, and a guard that contributes nothing is worse than one refused. They are properties rather
 // than locals because a state a given function never reads is then simply
 // unread, instead of an unused binding the compiler warns about.
 func emitStates(b *buf, s *spec.Spec) error {
 	if len(s.States) == 0 {
 		return nil
 	}
-	e := celswift.NewEnv(s.Watches)
+	// self., because a watch or use named default reads as a keyword bare.
+	e := celswift.NewEnv(s.Watches).WithUses(s.Uses).Prefixed("self.")
 	b.line("extension Results {")
 	b.in()
 	for i, st := range s.States {
@@ -79,12 +94,47 @@ func emitStates(b *buf, s *spec.Spec) error {
 	return nil
 }
 
+// emitUseStates writes each use's states as properties of its own struct, so
+// a use's list is ordered against itself and nothing else.
+func emitUseStates(b *buf, s *spec.Spec, n structNames) error {
+	for _, u := range s.Uses {
+		if len(u.States) == 0 {
+			continue
+		}
+		e := celswift.ForUseStates(u, "self")
+		b.line("extension %s {", n.useTypeName(u))
+		b.in()
+		for i, st := range u.States {
+			parts := make([]string, 0, i+1)
+			for _, earlier := range u.States[:i] {
+				parts = append(parts, "!self."+earlier.Name)
+			}
+			if st.Cond == "" {
+				if len(parts) == 0 {
+					parts = append(parts, "true")
+				}
+			} else {
+				cond, err := e.LowerCondition(st.Cond)
+				if err != nil {
+					return fmt.Errorf("use.%s: state[%d].%s: %w", u.Name, i, st.Name, err)
+				}
+				parts = append(parts, "("+cond+")")
+			}
+			b.line("var %s: Bool { %s }", decl(st.Name), strings.Join(parts, " && "))
+		}
+		b.out()
+		b.line("}")
+		b.line("")
+	}
+	return nil
+}
+
 // stateProp keeps a state's property out of the way of a watch's, and of the
 // names the emitter mints for itself.
 func stateProp(name string) string { return "state_" + name }
 
 func emitResultTypes(b *buf, s *spec.Spec, n structNames) {
-	for _, w := range s.Watches {
+	for _, w := range s.AllWatches() {
 		b.line("struct %s {", n.resultTypeName(w))
 		b.in()
 		switch w.Kind {
@@ -118,12 +168,26 @@ func emitResultTypes(b *buf, s *spec.Spec, n structNames) {
 		b.line("")
 	}
 
+	for _, u := range s.Uses {
+		b.line("struct %s {", n.useTypeName(u))
+		b.in()
+		for _, w := range u.Watches {
+			b.line("var %s = %s()", decl(w.Name), n.resultTypeName(w))
+		}
+		b.out()
+		b.line("}")
+		b.line("")
+	}
+
 	b.line("struct Results {")
 	b.in()
 	for _, w := range s.Watches {
 		b.line("var %s = %s()", decl(w.Name), n.resultTypeName(w))
 	}
-	if len(s.Watches) == 0 {
+	for _, u := range s.Uses {
+		b.line("var %s = %s()", decl(u.Name), n.useTypeName(u))
+	}
+	if len(s.Watches) == 0 && len(s.Uses) == 0 {
 		b.line("// no watches declared")
 	}
 	b.out()
@@ -136,7 +200,7 @@ func emitResultTypes(b *buf, s *spec.Spec, n structNames) {
 // with the sample outcomes that page states, which is what keeps the two
 // showing the same menu.
 func emitResultInits(b *buf, s *spec.Spec, n structNames) {
-	for _, w := range s.Watches {
+	for _, w := range s.AllWatches() {
 		b.line("extension %s {", n.resultTypeName(w))
 		b.in()
 		switch w.Kind {
@@ -197,7 +261,7 @@ func emitDecode(b *buf, w spec.Watch, n structNames, from string) {
 
 // emitFace writes the first-match-wins status chain. An unguarded rule ends the
 // chain, which is why the spec requires it to be last.
-func emitFace(b *buf, s *spec.Spec, e *celswift.Env) error {
+func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift.Env) error {
 	b.line("func renderFace(_ results: Results) -> Face {")
 	b.in()
 	mutated := anyRule(s, func(r spec.StatusRule) bool {
@@ -206,15 +270,19 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env) error {
 	b.line("%s face = Face(icon: %s)", bind(mutated), swiftIcon(s.App.Icon))
 
 	for i, rule := range s.Status {
+		re := e
+		if rule.Scope != "" {
+			re = scopes[rule.Scope]
+		}
 		switch {
 		case rule.When == "" && i == 0:
 			b.line("if true {")
 		case rule.When == "":
 			b.line("} else {")
 		default:
-			cond, err := e.LowerCondition(rule.When)
+			cond, err := re.LowerCondition(rule.When)
 			if err != nil {
-				return fmt.Errorf("status[%d].when: %w", i, err)
+				return fmt.Errorf("%s.when: %w", rule.Path(), err)
 			}
 			if i == 0 {
 				b.line("if %s {", cond)
@@ -230,9 +298,9 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env) error {
 			b.line("face.dim = true")
 		}
 		if rule.Badge != "" {
-			badge, err := e.LowerText(rule.Badge)
+			badge, err := re.LowerText(rule.Badge)
 			if err != nil {
-				return fmt.Errorf("status[%d].badge: %w", i, err)
+				return fmt.Errorf("%s.badge: %w", rule.Path(), err)
 			}
 			b.line("face.badge = %s", badge)
 		}
@@ -261,9 +329,18 @@ func swiftIcon(i spec.Icon) string {
 // menuGen hands out unique local names so nested submenus and each: loops do
 // not shadow one another.
 type menuGen struct {
-	b       *buf
-	n       int
-	watches []spec.Watch // for agent:, which acts on the watch it names
+	b      *buf
+	n      int
+	spec   *spec.Spec
+	file   *celswift.Env
+	scopes map[string]*celswift.Env
+}
+
+func (g *menuGen) envFor(scope string) *celswift.Env {
+	if scope == "" {
+		return g.file
+	}
+	return g.scopes[scope]
 }
 
 func (g *menuGen) name(prefix string) string {
@@ -271,7 +348,7 @@ func (g *menuGen) name(prefix string) string {
 	return fmt.Sprintf("%s%d", prefix, g.n)
 }
 
-func emitMenu(b *buf, s *spec.Spec, e *celswift.Env) (string, error) {
+func emitMenu(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift.Env) (string, error) {
 	b.line("func renderMenu(_ results: Results) -> [MenuNode] {")
 	b.in()
 	if len(s.Menu) == 0 {
@@ -281,8 +358,8 @@ func emitMenu(b *buf, s *spec.Spec, e *celswift.Env) (string, error) {
 		return b.String(), nil
 	}
 	b.line("var menu: [MenuNode] = []")
-	g := &menuGen{b: b, watches: s.Watches}
-	if err := g.items(s.Menu, "menu", e, "menu"); err != nil {
+	g := &menuGen{b: b, spec: s, file: e, scopes: scopes}
+	if err := g.items(s.Menu, "menu", e, ""); err != nil {
 		return "", err
 	}
 	// tidy, not the author: which items a poll leaves out decides which
@@ -328,7 +405,7 @@ func emitQuit(b *buf, s *spec.Spec, e *celswift.Env, g *menuGen) error {
 			for j, btn := range r.Buttons {
 				action := "nil"
 				if btn.Action.Kind != spec.ActionNone {
-					lowered, err := g.action(btn.Action, e, fmt.Sprintf("%s.buttons[%d]", path, j))
+					lowered, err := g.action(btn.Action, e, fmt.Sprintf("%s.buttons[%d]", path, j), "")
 					if err != nil {
 						return err
 					}
@@ -355,16 +432,23 @@ func emitQuit(b *buf, s *spec.Spec, e *celswift.Env, g *menuGen) error {
 	return nil
 }
 
-func (g *menuGen) items(items []spec.Item, into string, e *celswift.Env, path string) error {
-	for i, it := range items {
-		if err := g.item(it, into, e, fmt.Sprintf("%s[%d]", path, i)); err != nil {
+// items lowers each item against the environment of the scope it came from:
+// crossing into a template's items leaves the file's names, it included.
+func (g *menuGen) items(items []spec.Item, into string, e *celswift.Env, scope string) error {
+	for _, it := range items {
+		ie := e
+		if it.Scope != scope {
+			ie = g.envFor(it.Scope)
+		}
+		if err := g.item(it, into, ie); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (g *menuGen) item(it spec.Item, into string, e *celswift.Env, path string) error {
+func (g *menuGen) item(it spec.Item, into string, e *celswift.Env) error {
+	path := it.Path()
 	inner := e
 	closes := 0
 
@@ -426,7 +510,7 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 	if len(it.Menu) > 0 {
 		sub := g.name("sub")
 		g.b.line("var %s: [MenuNode] = []", sub)
-		if err := g.items(it.Menu, sub, e, path+".menu"); err != nil {
+		if err := g.items(it.Menu, sub, e, it.Scope); err != nil {
 			return err
 		}
 		g.b.line("%s.append(.submenu(%s, %s))", into, title, sub)
@@ -438,7 +522,7 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		return nil
 	}
 
-	action, err := g.action(it.Action, e, path)
+	action, err := g.action(it.Action, e, path, it.Scope)
 	if err != nil {
 		return err
 	}
@@ -448,7 +532,7 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 
 // action writes the verb as data. It is lowered where the menu is built rather
 // than in a closure fired later, so an item runs the arguments it showed.
-func (g *menuGen) action(a spec.Action, e *celswift.Env, path string) (string, error) {
+func (g *menuGen) action(a spec.Action, e *celswift.Env, path, scope string) (string, error) {
 	switch a.Kind {
 	case spec.ActionQuit:
 		return ".quit", nil
@@ -468,14 +552,12 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path string) (string, e
 		return ".open(" + target + ")", nil
 
 	case spec.ActionAgent:
-		// spec.validate has already refused an agent: naming anything else.
-		for _, w := range g.watches {
-			if w.Name == a.Agent && w.Kind == spec.WatchLaunchAgent {
-				return fmt.Sprintf(".agent(label: %s, plist: %s, verb: .%s)",
-					celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), a.Verb), nil
-			}
+		w, err := g.spec.AgentWatch(scope, a.Agent)
+		if err != nil {
+			return "", fmt.Errorf("%s.agent: %w", path, err)
 		}
-		return "", fmt.Errorf("%s.agent: no launchagent watch named %q", path, a.Agent)
+		return fmt.Sprintf(".agent(label: %s, plist: %s, verb: .%s)",
+			celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), a.Verb), nil
 
 	case spec.ActionSwift:
 		// Emitted verbatim as a method reference, which is a () -> Void. perch
