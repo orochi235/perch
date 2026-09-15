@@ -2,6 +2,7 @@ package preview
 
 import (
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 
@@ -201,5 +202,49 @@ func TestRenderCoversTheOtherWatchKindsAndActions(t *testing.T) {
 	}
 	if gone := frames[2].Face; gone.Icon.Symbol != "circle.dashed" {
 		t.Errorf("a missing plist shows %+v", gone)
+	}
+}
+
+const useDoc = `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+use:
+  daemon:
+    service: {label: dev.example.daemon}
+menu:
+  - outlet
+  - {text: Quit, quit: true}
+`
+
+func TestParseStateReadsAUsesWatches(t *testing.T) {
+	s := parse(t, useDoc)
+	st := state(t, s, "running", "daemon: {agent: {running: true, pid: 42}}")
+	got, ok := st.Watches["daemon.agent"]
+	if !ok || got.Running == nil || !*got.Running || got.Pid == nil || *got.Pid != 42 {
+		t.Errorf("watches = %+v, want daemon.agent running with pid 42", st.Watches)
+	}
+}
+
+func TestParseStateRefusesWhatAUseDoesNotHave(t *testing.T) {
+	s := parse(t, useDoc)
+	for src, want := range map[string]string{
+		"daemon: {nope: {running: true}}": `use daemon has no watch named "nope"; it has agent`,
+		"daemon: true":                    "want a mapping of its watches",
+	} {
+		_, err := ParseState("x", []byte(src), s)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: err = %v, want it to mention %q", src, err, want)
+		}
+	}
+}
+
+func TestRenderShowsAUsesReadout(t *testing.T) {
+	s := parse(t, useDoc)
+	frames := render(t, s, []State{state(t, s, "running", "daemon: {agent: {running: true, pid: 42}}")})
+	var titles []string
+	for _, n := range frames[0].Menu {
+		titles = append(titles, n.Title)
+	}
+	if !slices.Contains(titles, "Service: running · pid 42") {
+		t.Errorf("menu = %q", titles)
 	}
 }

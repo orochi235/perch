@@ -100,22 +100,40 @@ func ParseState(name string, src []byte, s *spec.Spec) (State, error) {
 		return st, fmt.Errorf("state %q: %w", name, err)
 	}
 	for _, entry := range doc.entries {
-		w, ok := watchNamed(s, entry.key)
+		if u, ok := useNamed(s, entry.key); ok {
+			fields, err := entry.value.fields()
+			if err != nil {
+				return st, fmt.Errorf("state %q: %s: want a mapping of its watches, %s", name, entry.key, strings.Join(namesOf(u.Watches), ", "))
+			}
+			for _, f := range fields {
+				w, ok := watchIn(u.Watches, f.key)
+				if !ok {
+					return st, fmt.Errorf("state %q: use %s has no watch named %q; it has %s", name, u.Name, f.key, strings.Join(namesOf(u.Watches), ", "))
+				}
+				sample, err := parseSample(w, f.value)
+				if err != nil {
+					return st, fmt.Errorf("state %q: %s.%s: %w", name, u.Name, f.key, err)
+				}
+				st.Watches[w.Key()] = sample
+			}
+			continue
+		}
+		w, ok := watchIn(s.Watches, entry.key)
 		if !ok {
-			return st, fmt.Errorf("state %q: no watch named %q; this file declares %s",
+			return st, fmt.Errorf("state %q: no watch or use named %q; this file declares %s",
 				name, entry.key, strings.Join(watchNames(s), ", "))
 		}
 		sample, err := parseSample(w, entry.value)
 		if err != nil {
 			return st, fmt.Errorf("state %q: %s: %w", name, entry.key, err)
 		}
-		st.Watches[entry.key] = sample
+		st.Watches[w.Key()] = sample
 	}
 	return st, nil
 }
 
-func watchNamed(s *spec.Spec, name string) (spec.Watch, bool) {
-	for _, w := range s.Watches {
+func watchIn(watches []spec.Watch, name string) (spec.Watch, bool) {
+	for _, w := range watches {
 		if w.Name == name {
 			return w, true
 		}
@@ -123,10 +141,27 @@ func watchNamed(s *spec.Spec, name string) (spec.Watch, bool) {
 	return spec.Watch{}, false
 }
 
-func watchNames(s *spec.Spec) []string {
-	out := make([]string, 0, len(s.Watches))
-	for _, w := range s.Watches {
+func useNamed(s *spec.Spec, name string) (spec.Use, bool) {
+	for _, u := range s.Uses {
+		if u.Name == name {
+			return u, true
+		}
+	}
+	return spec.Use{}, false
+}
+
+func namesOf(watches []spec.Watch) []string {
+	out := make([]string, 0, len(watches))
+	for _, w := range watches {
 		out = append(out, w.Name)
+	}
+	return out
+}
+
+func watchNames(s *spec.Spec) []string {
+	out := namesOf(s.Watches)
+	for _, u := range s.Uses {
+		out = append(out, u.Name)
 	}
 	if len(out) == 0 {
 		return []string{"no watches"}
