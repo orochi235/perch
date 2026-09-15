@@ -2,7 +2,10 @@
 // inline errors, via the yaml-language-server header in menubar.yaml.
 package schema
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // JSON is the schema for menubar.yaml. It mirrors what spec.Parse accepts;
 // where the two could drift, spec.Parse is the authority.
@@ -107,7 +110,7 @@ const body = `{
     },
     "status": {
       "type": "array",
-      "description": "First matching rule wins. - outlet places the uses' status rules.",
+      "description": "First matching rule wins. An outlet item places the uses' status rules.",
       "items": {
         "oneOf": [
           {
@@ -200,6 +203,11 @@ const body = `{
 }
 `
 
+// templateLaunchAgentPattern also allows a launchagent that is entirely a
+// ${param} hole, which menubar.yaml's own launchagent (a real launchd label)
+// never is.
+const templateLaunchAgentPattern = `^([A-Za-z0-9][A-Za-z0-9._-]*|.*\$\{[A-Za-z_][A-Za-z0-9_]*\}.*)$`
+
 // TemplateJSON is the schema for a template file. It is cut from JSON rather
 // than written again, so a watch, state, rule or item means the same in both.
 func TemplateJSON() string {
@@ -207,32 +215,71 @@ func TemplateJSON() string {
 	if err := json.Unmarshal([]byte(body), &doc); err != nil {
 		panic("schema: " + err.Error())
 	}
-	props := doc["properties"].(map[string]any)
+	props, _ := doc["properties"].(map[string]any)
+	defs, _ := doc["definitions"].(map[string]any)
+	if props == nil || defs == nil {
+		panic("schema: TemplateJSON: the schema has no properties or definitions")
+	}
+
+	watch := deepCopy(at(props, "watch"))
+	launchagent, ok := at(watch, "additionalProperties", "properties", "launchagent").(map[string]any)
+	if !ok {
+		panic("schema: TemplateJSON: watch.additionalProperties.properties.launchagent is not an object")
+	}
+	launchagent["pattern"] = templateLaunchAgentPattern
+
+	// A fragment's own status rules cannot themselves place another use's
+	// fragment, so the rule is just JSON()'s, with when: required.
+	statusRule, ok := deepCopy(at(props, "status", "items", "oneOf", 0)).(map[string]any)
+	if !ok {
+		panic("schema: TemplateJSON: status.items.oneOf.0 is not an object")
+	}
+	statusRule["required"] = []string{"when"}
+
+	// menuItem's own "menu" field still $refs #/definitions/menu, so a nested
+	// submenu may hold outlet marks even though a fragment's top level may not.
+	menuItem, ok := deepCopy(at(defs, "menu", "items", "oneOf", 1)).(map[string]any)
+	if !ok {
+		panic("schema: TemplateJSON: definitions.menu.items.oneOf.1 is not an object")
+	}
+	defs["templateMenu"] = map[string]any{
+		"type": "array",
+		"items": map[string]any{
+			"oneOf": []any{
+				map[string]any{"type": "string", "enum": []string{"separator"}},
+				menuItem,
+			},
+		},
+	}
+
+	outletNames := map[string]any{"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}
 	tmpl := map[string]any{
 		"$schema":              doc["$schema"],
 		"title":                "perch template",
 		"description":          "A template a menubar.yaml reaches under use:.",
 		"type":                 "object",
 		"additionalProperties": false,
-		"definitions":          doc["definitions"],
+		"definitions":          defs,
 		"properties": map[string]any{
 			"params": map[string]any{
 				"type":                 "object",
 				"description":          "Parameter names and their defaults; ~ makes one required.",
 				"propertyNames":        map[string]any{"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
-				"additionalProperties": map[string]any{"type": []string{"string", "null"}},
+				"additionalProperties": map[string]any{"type": []string{"string", "number", "boolean", "null"}},
 			},
-			"watch": props["watch"],
-			"state": props["state"],
+			"watch": watch,
+			"state": at(props, "state"),
 			"status": map[string]any{
 				"type":                 "object",
 				"description":          "Outlet names to status rules; default is the default outlet. Every rule needs when:.",
-				"additionalProperties": props["status"],
+				"propertyNames":        outletNames,
+				"additionalProperties": map[string]any{"type": "array", "items": statusRule},
 			},
 			"menu": map[string]any{
 				"type":                 "object",
 				"description":          "Outlet names to menu items; default is the default outlet.",
-				"additionalProperties": map[string]any{"$ref": "#/definitions/menu"},
+				"propertyNames":        outletNames,
+				"additionalProperties": map[string]any{"$ref": "#/definitions/templateMenu"},
 			},
 		},
 	}
@@ -241,4 +288,46 @@ func TemplateJSON() string {
 		panic("schema: " + err.Error())
 	}
 	return string(out) + "\n"
+}
+
+// at walks a decoded JSON document by key (string) or index (int) and panics,
+// naming the path, if a segment is missing — so a fragment TemplateJSON reads
+// fails loudly rather than emitting null.
+func at(v any, path ...any) any {
+	for i, seg := range path {
+		switch key := seg.(type) {
+		case string:
+			m, ok := v.(map[string]any)
+			if !ok {
+				panic(fmt.Sprintf("schema: TemplateJSON: %v: not an object", path[:i+1]))
+			}
+			if v, ok = m[key]; !ok {
+				panic(fmt.Sprintf("schema: TemplateJSON: %v: missing", path[:i+1]))
+			}
+		case int:
+			l, ok := v.([]any)
+			if !ok || key < 0 || key >= len(l) {
+				panic(fmt.Sprintf("schema: TemplateJSON: %v: missing", path[:i+1]))
+			}
+			v = l[key]
+		default:
+			panic(fmt.Sprintf("schema: TemplateJSON: bad path segment %v (%T)", seg, seg))
+		}
+	}
+	return v
+}
+
+// deepCopy round-trips a decoded fragment through JSON, so TemplateJSON can
+// edit its copy — the launchagent pattern, the status rule's required — without
+// changing JSON()'s.
+func deepCopy(v any) any {
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic("schema: " + err.Error())
+	}
+	var out any
+	if err := json.Unmarshal(b, &out); err != nil {
+		panic("schema: " + err.Error())
+	}
+	return out
 }

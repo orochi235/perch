@@ -90,11 +90,12 @@ func yamlTags(t *testing.T) map[string][]string {
 	return out
 }
 
-// keysAt walks a dotted path through the decoded schema, taking a numeric
-// segment as an index into a list, and returns the property names it finds.
-func keysAt(t *testing.T, doc map[string]any, path string) []string {
+// walk navigates a decoded JSON document along a dotted path, taking a
+// numeric segment as an index into a list. Both keysAt and nameRule read the
+// schema this way, so they share it rather than each walking it themselves.
+func walk(t *testing.T, doc any, path string) any {
 	t.Helper()
-	var node any = doc
+	node := doc
 	for _, seg := range strings.Split(path, ".") {
 		switch container := node.(type) {
 		case map[string]any:
@@ -105,7 +106,7 @@ func keysAt(t *testing.T, doc map[string]any, path string) []string {
 			node = next
 		case []any:
 			i, err := strconv.Atoi(seg)
-			if err != nil || i >= len(container) {
+			if err != nil || i < 0 || i >= len(container) {
 				t.Fatalf("%s: %q does not index a list of %d", path, seg, len(container))
 			}
 			node = container[i]
@@ -113,7 +114,13 @@ func keysAt(t *testing.T, doc map[string]any, path string) []string {
 			t.Fatalf("%s: %q has nothing under it", path, seg)
 		}
 	}
-	m, ok := node.(map[string]any)
+	return node
+}
+
+// keysAt walks to a properties object and returns the keys it declares.
+func keysAt(t *testing.T, doc map[string]any, path string) []string {
+	t.Helper()
+	m, ok := walk(t, doc, path).(map[string]any)
 	if !ok {
 		t.Fatalf("%s: not a properties object", path)
 	}
@@ -134,17 +141,7 @@ func TestSchemaClosesEveryMappingTheParserCloses(t *testing.T) {
 		if parent == path {
 			continue // the root, checked by TestSchemaRefusesUnknownTopLevelKeys
 		}
-		var node any = doc
-		for _, seg := range strings.Split(parent, ".") {
-			switch c := node.(type) {
-			case map[string]any:
-				node = c[seg]
-			case []any:
-				i, _ := strconv.Atoi(seg)
-				node = c[i]
-			}
-		}
-		m, ok := node.(map[string]any)
+		m, ok := walk(t, doc, parent).(map[string]any)
 		if !ok {
 			t.Fatalf("%s: %s is not a schema object", structName, parent)
 		}
@@ -207,15 +204,80 @@ menu: [{text: Q, quit: true}]
 }
 
 func TestTemplateSchemaDeclaresExactlyTheKeysATemplateTakes(t *testing.T) {
-	var doc map[string]any
-	if err := json.Unmarshal([]byte(TemplateJSON()), &doc); err != nil {
-		t.Fatalf("TemplateJSON is not JSON: %v", err)
-	}
+	doc := templateDecoded(t)
 	got := keysAt(t, doc, "properties")
 	if want := yamlTags(t)["rawTemplate"]; !reflect.DeepEqual(got, want) {
 		t.Errorf("template schema %v\n parser %v", got, want)
 	}
 	if doc["additionalProperties"] != false {
 		t.Error("the template schema accepts unknown keys")
+	}
+}
+
+// A fragment's own status rules cannot place another use's fragment, so the
+// item is just the rule object, with when: required rather than optional.
+func TestTemplateStatusItemsHaveNoOutletAndRequireWhen(t *testing.T) {
+	doc := templateDecoded(t)
+	items, ok := walk(t, doc, "properties.status.additionalProperties.items").(map[string]any)
+	if !ok {
+		t.Fatal("properties.status.additionalProperties.items is not an object")
+	}
+	if _, has := items["oneOf"]; has {
+		t.Error("template status items still offer an outlet mark")
+	}
+	if req, _ := items["required"].([]any); len(req) != 1 || req[0] != "when" {
+		t.Errorf("template status items required = %v, want [\"when\"]", items["required"])
+	}
+}
+
+// A fragment's own menu items cannot place another use's fragment either, so
+// templateMenu's oneOf is just separator and the item object — no outlet ref.
+func TestTemplateMenuHasNoTopLevelOutlet(t *testing.T) {
+	doc := templateDecoded(t)
+	oneOf, ok := walk(t, doc, "definitions.templateMenu.items.oneOf").([]any)
+	if !ok || len(oneOf) != 2 {
+		t.Fatalf("templateMenu.items.oneOf = %v, want [separator, item]", oneOf)
+	}
+	sep, ok := oneOf[0].(map[string]any)
+	if !ok || !reflect.DeepEqual(sep["enum"], []any{"separator"}) {
+		t.Errorf("templateMenu.items.oneOf[0] = %v, want the separator enum", oneOf[0])
+	}
+	item, ok := oneOf[1].(map[string]any)
+	if !ok || item["properties"] == nil {
+		t.Errorf("templateMenu.items.oneOf[1] = %v, want the menu item object", oneOf[1])
+	}
+	for _, v := range oneOf {
+		if m, ok := v.(map[string]any); ok && m["$ref"] != nil {
+			t.Errorf("templateMenu.items.oneOf offers %v; a fragment's top level takes no outlet mark", m["$ref"])
+		}
+	}
+}
+
+func TestTemplateParamsAllowScalarsAndNull(t *testing.T) {
+	doc := templateDecoded(t)
+	types, ok := walk(t, doc, "properties.params.additionalProperties.type").([]any)
+	if !ok {
+		t.Fatal("properties.params.additionalProperties.type is not a list")
+	}
+	got := make([]string, len(types))
+	for i, v := range types {
+		got[i] = v.(string)
+	}
+	sort.Strings(got)
+	if want := []string{"boolean", "null", "number", "string"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("template params value types = %v, want %v", got, want)
+	}
+}
+
+func TestTemplateOutletMapKeysArePlainNames(t *testing.T) {
+	doc := templateDecoded(t)
+	for _, path := range []string{"properties.status.propertyNames", "properties.menu.propertyNames"} {
+		rule, ok := walk(t, doc, path).(map[string]any)
+		if !ok {
+			t.Fatalf("%s is not an object", path)
+		}
+		if rule["pattern"] != "^[A-Za-z_][A-Za-z0-9_]*$" {
+			t.Errorf("%s pattern = %v", path, rule["pattern"])
+		}
 	}
 }

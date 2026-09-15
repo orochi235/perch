@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/orochi235/perch/internal/spec"
@@ -14,6 +15,15 @@ func decoded(t *testing.T) map[string]any {
 	var m map[string]any
 	if err := json.Unmarshal([]byte(JSON()), &m); err != nil {
 		t.Fatalf("emitted schema is not valid JSON: %v", err)
+	}
+	return m
+}
+
+func templateDecoded(t *testing.T) map[string]any {
+	t.Helper()
+	var m map[string]any
+	if err := json.Unmarshal([]byte(TemplateJSON()), &m); err != nil {
+		t.Fatalf("TemplateJSON is not valid JSON: %v", err)
 	}
 	return m
 }
@@ -42,26 +52,8 @@ func TestSchemaRefusesUnknownTopLevelKeys(t *testing.T) {
 // the enum of words a "not" excludes.
 func nameRule(t *testing.T, path ...string) func(string) bool {
 	t.Helper()
-	var node any = decoded(t)
-	for _, key := range path {
-		switch container := node.(type) {
-		case map[string]any:
-			next, ok := container[key]
-			if !ok {
-				t.Fatalf("%v: no %q", path, key)
-			}
-			node = next
-		case []any:
-			i, err := strconv.Atoi(key)
-			if err != nil || i >= len(container) {
-				t.Fatalf("%v: %q does not index a list of %d", path, key, len(container))
-			}
-			node = container[i]
-		default:
-			t.Fatalf("%v: not a schema object", path)
-		}
-	}
-	sub, ok := node.(map[string]any)
+	dotted := strings.Join(path, ".")
+	sub, ok := walk(t, decoded(t), dotted).(map[string]any)
 	if !ok {
 		t.Fatalf("%v: not a schema object", path)
 	}
@@ -143,20 +135,50 @@ menu: [{text: Q, quit: true}]
 }
 
 func TestAgentPatternTakesPaths(t *testing.T) {
-	var doc map[string]any
-	if err := json.Unmarshal([]byte(JSON()), &doc); err != nil {
-		t.Fatal(err)
-	}
-	item := doc["definitions"].(map[string]any)["menu"].(map[string]any)["items"].(map[string]any)["oneOf"].([]any)[1]
-	pattern := item.(map[string]any)["properties"].(map[string]any)["agent"].(map[string]any)["pattern"].(string)
-	re := regexp.MustCompile(pattern)
-	for v, want := range map[string]bool{
+	doc := decoded(t)
+	cases := map[string]bool{
 		"worker.start": true, "daemon.agent.stop": true, "self.agent.restart": true,
 		"worker": false, "a.b.c.start": false, "worker.reload": false,
+	}
+	for _, path := range []string{
+		"definitions.menu.items.oneOf.1.properties.agent",
+		"properties.app.properties.quit.items.properties.buttons.items.properties.agent",
+	} {
+		field, ok := walk(t, doc, path).(map[string]any)
+		if !ok {
+			t.Fatalf("%s: not a schema object", path)
+		}
+		re := regexp.MustCompile(field["pattern"].(string))
+		for v, want := range cases {
+			if re.MatchString(v) != want {
+				t.Errorf("%s: %q: matches = %v, want %v", path, v, !want, want)
+			}
+		}
+	}
+}
+
+// The template schema's launchagent additionally allows a bare ${param}
+// hole, which the shipped service.yaml relies on; JSON()'s stays unchanged.
+func TestTemplateLaunchAgentPatternAllowsAParam(t *testing.T) {
+	field, ok := walk(t, templateDecoded(t), "properties.watch.additionalProperties.properties.launchagent").(map[string]any)
+	if !ok {
+		t.Fatal("template schema: watch launchagent is not an object")
+	}
+	re := regexp.MustCompile(field["pattern"].(string))
+	for v, want := range map[string]bool{
+		"${label}": true, "dev.x.${name}": true, "dev.example.worker": true, "dev example": false,
 	} {
 		if re.MatchString(v) != want {
 			t.Errorf("%q: matches = %v, want %v", v, !want, want)
 		}
+	}
+
+	main, ok := walk(t, decoded(t), "properties.watch.additionalProperties.properties.launchagent").(map[string]any)
+	if !ok {
+		t.Fatal("schema: watch launchagent is not an object")
+	}
+	if main["pattern"] != "^[A-Za-z0-9][A-Za-z0-9._-]*$" {
+		t.Errorf("JSON()'s launchagent pattern changed to %v", main["pattern"])
 	}
 }
 

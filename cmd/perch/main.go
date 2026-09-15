@@ -27,7 +27,7 @@ const usage = `perch generates a macOS menu bar app from a menubar.yaml.
   perch install       build, compile, bundle, write the plist, bootstrap
   perch uninstall     bootout and remove
   perch shape         run a command once and write its shape declaration
-  perch schema        write the JSON Schema for menubar.yaml
+  perch schema        write the JSON Schema for menubar.yaml, or with -template for a template file
 
 Flags come after the command; -C sets the project directory.
 `
