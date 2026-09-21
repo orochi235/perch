@@ -1,9 +1,16 @@
-# Handoff — 2026-09-15
+# Handoff — 2026-09-21
 
-Branch `main` in `~/src/perch`: the templates work is merged, pushed and
-released as [`v2.0.0`](https://github.com/orochi235/perch/releases/tag/v2.0.0).
+Branch `main` in `~/src/perch`, released as
+[`v2.1.0`](https://github.com/orochi235/perch/releases/tag/v2.1.0), with the
+Homebrew tap bumped to match.
 
 ## Landed
+
+- **Menu item icons** (v2.1.0): `icon:` on an item, fixed or with `{{ }}`
+  holes. Holes are refused on the status item, where an unresolved name would
+  blank it.
+- **Window tests skip on a desk.** They run under `CI` or
+  `PERCH_WINDOW_TESTS=1`; `onto test` runs the full suite on another Mac.
 
 - **Templates, outlets, `self`, verb defaults and the shipped `service`
   template** — [design](specs/2026-09-14-templates-design.md),
