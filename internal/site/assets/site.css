@@ -273,7 +273,7 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 .statusitem.is-dim { opacity: .45; }
 
 .icon { width: 13px; height: 13px; flex: none; display: inline-block; }
-.icon.symbol { border: 1.5px solid currentColor; border-radius: 3px; }
+.icon.symbol > svg { display: block; width: 100%; height: 100%; }
 .icon.art { width: auto; height: 13px; border-radius: 2px; }
 .badge { font-variant-numeric: tabular-nums; line-height: 1; }
 

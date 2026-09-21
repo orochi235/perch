@@ -25,16 +25,20 @@ status:
 
 menu:
   - text: Clean
+    icon: checkmark.circle
     when: 'tree.ok && tree.out == ""'
   - text: Uncommitted changes
+    icon: pencil.circle
     when: 'tree.out != ""'
   - text: Not a repository
+    icon: questionmark.circle
     when: "!tree.ok"
   - text: Something is stashed
+    icon: tray.full
     when: "stash.ok"
   - separator
-  - {text: Open in Finder, open: /Users/you/src/project}
-  - {text: Quit, quit: true}
+  - {text: Open in Finder, icon: folder, open: /Users/you/src/project}
+  - {text: Quit, icon: power, quit: true}
 ```
 
 ```state clean

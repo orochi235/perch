@@ -65,15 +65,16 @@ func dimmed(dim bool) string {
 	return ""
 }
 
-// iconHTML draws artwork as itself. An SF Symbol is Apple's to draw and is
-// licensed for apps on Apple's platforms, so a web page names it instead.
+// iconHTML draws artwork as itself, and an SF Symbol as its look-alike with
+// the real name on hover.
 func iconHTML(root string, icon preview.Icon) string {
 	if icon.Asset != "" {
 		return fmt.Sprintf(`<img class="icon art" src="%sicons/%s.png" alt="">`,
 			root, html.EscapeString(icon.Asset))
 	}
-	return fmt.Sprintf(`<span class="icon symbol" title="SF Symbol: %s"></span>`,
-		html.EscapeString(icon.Symbol))
+	svg, _ := symbolSVG(icon.Symbol)
+	return fmt.Sprintf(`<span class="icon symbol" title="SF Symbol: %s">%s</span>`,
+		html.EscapeString(icon.Symbol), svg)
 }
 
 func menuHTML(root string, nodes []preview.Node) string {
@@ -94,7 +95,7 @@ func nodeHTML(root string, n preview.Node) string {
 		return `<div class="sep"></div>`
 	}
 	title := html.EscapeString(n.Title)
-	if n.Icon != nil {
+	if n.Icon != nil && (n.Icon.Symbol != "" || n.Icon.Asset != "") {
 		title = iconHTML(root, *n.Icon) + title
 	}
 	if len(n.Items) > 0 {

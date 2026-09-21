@@ -123,6 +123,10 @@ func (j previewJob) run(r preview.Renderer) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", where, err)
 	}
+	if missing := missingSymbols(frames); len(missing) > 0 {
+		return fmt.Errorf("%s: no look-alike for SF Symbol %s; add internal/site/symbols/<name>.svg",
+			where, strings.Join(missing, ", "))
+	}
 	j.block.html = previewHTML(j.page.root(), j.block.yaml, frames)
 	return nil
 }

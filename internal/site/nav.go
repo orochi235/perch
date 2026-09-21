@@ -55,7 +55,7 @@ func nav() []*Section {
 			{Title: "`menu`", URL: "menubar/menu/", Source: "docs/schema.md", Schema: "menu"},
 			{Title: "Expressions", URL: "menubar/expressions/", Source: "docs/schema.md", Schema: "expressions"},
 			{Title: "Files in a repo", URL: "menubar/files/", Source: "docs/schema.md", Schema: "files-in-a-consuming-repo"},
-			{Title: "Icon assets", URL: "menubar/icons/", Source: "docs/schema.md", Schema: "icon-assets"},
+			{Title: "Icons", URL: "menubar/icons/", Source: "docs/schema.md", Schema: "icons", Sub: []Sub{{Title: "SF Symbols", Anchor: "sf-symbols"}, {Title: "Icon assets", Anchor: "icon-assets"}}},
 		}},
 		{Title: "Recipes", Pages: []*Page{
 			{Title: "Start and stop a LaunchAgent", URL: "recipes/launchagent/", Source: "docs/recipes/launchagent.md"},

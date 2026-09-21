@@ -32,10 +32,10 @@ menu:
   - each: fleet.data.jobs
     text: "{{it.node}} — {{it.cmd}}"
     menu:
-      - {text: Logs, run: [onto, logs, "{{it.id}}"]}
-      - {text: Kill, run: [onto, kill, "{{it.id}}"]}
+      - {text: Logs, icon: doc.text, run: [onto, logs, "{{it.id}}"]}
+      - {text: Kill, icon: xmark.octagon, run: [onto, kill, "{{it.id}}"]}
   - separator
-  - {text: Quit, quit: true}
+  - {text: Quit, icon: power, quit: true}
 ```
 
 ```state busy

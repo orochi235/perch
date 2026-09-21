@@ -201,6 +201,16 @@ func TestDocumentedSymbolsResolve(t *testing.T) {
 			}
 		}
 	}
+	// A templated icon is named only once a preview runs, and a preview cannot
+	// draw one without its look-alike, so the look-alikes stand in for those.
+	drawn, err := filepath.Glob(filepath.Join("..", "site", "symbols", "*.svg"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range drawn {
+		name := strings.TrimSuffix(filepath.Base(f), ".svg")
+		where[name] = append(where[name], "internal/site/symbols/"+name+".svg")
+	}
 	names := make([]string, 0, len(where))
 	for name := range where {
 		names = append(names, name)

@@ -45,7 +45,7 @@ The first four keys are required.
 |---|---|
 | `name` | A string, one path component: no `/`, no leading dot, not `.` or `..`. It names the `.app` under `~/Applications` and the executable inside it. |
 | `id` | A string of letters, digits, dots, dashes and underscores, starting with a letter or digit — `dev.example.menubar`. launchd takes it as a label and `install` as a plist filename. |
-| `icon` | An [SF Symbol](https://developer.apple.com/sf-symbols/) name, or `{asset: <name>}` where `<name>` is letters, digits, dashes and underscores. Shown when no `status:` rule overrides it. See [Icon assets](#icon-assets). |
+| `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}` where `<name>` is letters, digits, dashes and underscores. Shown when no `status:` rule overrides it. See [Icons](#icons). |
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 | `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
 
@@ -428,7 +428,7 @@ last; anything after it is refused rather than left unreachable.
 | Key | Takes |
 |---|---|
 | `when` | A string: the condition. Omit it to match always. |
-| `icon` | An SF Symbol name, or `{asset: <name>}`. Replaces `app.icon`. |
+| `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`. Replaces `app.icon`. |
 | `dim` | `true` or `false`. Draws the status item dimmed. |
 | `badge` | A string: an expression, rendered as text beside the icon. |
 
@@ -492,7 +492,7 @@ Everything else is a mapping:
 | Key | Takes |
 |---|---|
 | `text` | A string: the label. `{{ }}` holes interpolate expressions. |
-| `icon` | An SF Symbol name, or `{asset: <name>}`, drawn beside the label. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icon assets](#icon-assets). |
+| `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`, drawn beside the label. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
 | `menu` | A list of items, written the same way. |
@@ -636,12 +636,96 @@ opens.
 
 A menu item reaches hand-written code through [`swift:`](#actions).
 
-## Icon assets
+## Icons
 
-An SF Symbol is drawn as a template: macOS tints it for the menu bar's
-appearance and for whether the bar is selected. Your own artwork is not
-tinted, so it keeps the colors you drew — which is the point when the icon
-says something a symbol cannot, such as how full something is.
+Three keys take an icon: [`app.icon`](#app), a [`status:`](#status) rule's
+`icon`, and a [menu item's](#menu) `icon`. Each is an SF Symbol name or
+`{asset: <name>}`, a picture you drew.
+
+### SF Symbols
+
+A bare name is an [SF Symbol](https://developer.apple.com/sf-symbols/), one of
+the thousands of icons built into macOS. Apple's free SF Symbols app lists
+them all by name. macOS draws a symbol as a template, tinted for the menu bar
+or the menu it sits in and highlighted along with it, so a symbol has no color
+of its own.
+
+```yaml
+app: {name: backup, id: dev.example.backup.menubar, icon: externaldrive, interval: 1m}
+
+watch:
+  disk:
+    exists: /Volumes/Backup
+
+status:
+  - when: "!disk.ok"
+    icon: externaldrive.badge.xmark
+
+menu:
+  - text: Backup disk mounted
+    icon: checkmark.circle
+    when: "disk.ok"
+  - text: Backup disk missing
+    icon: xmark.circle
+    when: "!disk.ok"
+  - separator
+  - {text: Open the disk, icon: folder, open: /Volumes/Backup, when: "disk.ok"}
+  - {text: Quit, icon: power, quit: true}
+```
+
+```state mounted
+disk: true
+```
+
+```state missing
+disk: false
+```
+
+perch does not check a symbol's name. The app asks macOS for it when it draws,
+and a name macOS does not know draws nothing: an empty status item, or a menu
+item with no icon. Each macOS release adds symbols, so a name from a newer
+release draws nothing on an older one.
+
+SF Symbols may only be used in apps for Apple's platforms, so the previews on
+this site draw a look-alike from [Lucide](https://lucide.dev), an open-source
+set, in place of each one. The app draws Apple's.
+
+A menu item's icon may hold `{{ }}` holes, so an item repeated with `each:` can
+pick its icon from `it`:
+
+```yaml
+app: {name: sites, id: dev.example.sites.menubar, icon: network, interval: 1m}
+
+watch:
+  sites:
+    run: [sitecheck, --json]
+    json: true
+    shape:
+      sites: [{name: string, up: bool}]
+
+menu:
+  - each: sites.data.sites
+    text: "{{it.name}}"
+    icon: "{{it.up ? 'checkmark.circle' : 'xmark.circle'}}"
+```
+
+```state one down
+sites:
+  out:
+    sites:
+      - {name: example.com, up: true}
+      - {name: docs.example.com, up: false}
+```
+
+The holes are compiled like every other expression; what they produce is a
+name, looked up when the menu is drawn. The status item takes no holes, because
+a name that resolved to nothing would leave it blank.
+
+### Icon assets
+
+An asset is artwork you drew. macOS does not tint it, so it keeps its colors —
+which is the point when the icon says something a symbol cannot, such as how
+full something is.
 
 Put `.png` files in `menubar/Icons` beside your spec and name one without its
 extension. An asset name is letters, digits, dashes and underscores:

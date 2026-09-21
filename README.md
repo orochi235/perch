@@ -70,8 +70,11 @@ directory.
 
 ## How it decides things
 
+perch runs when you build, not when the widget does: the `.app` is compiled
+Swift that needs neither perch nor the YAML to run.
+
 Conditions and `{{ }}` holes are [CEL](https://github.com/google/cel-spec),
-lowered to Swift when you build. Nothing evaluates them at runtime, so a
+compiled to Swift when you build. No interpreter ships in the app, so a
 misspelled field is a build error rather than a widget that shows nothing.
 
 Emitted files live in `menubar/Generated/` and are replaced on every build.

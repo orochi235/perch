@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/orochi235/perch/v2/internal/preview"
 )
 
 // root is the repo, since the site is built out of its docs/ rather than out of
@@ -162,5 +164,21 @@ func TestBuildWritesEveryPageWithItsPreviews(t *testing.T) {
 		if !strings.Contains(string(home), want) {
 			t.Errorf("the overview's preview is missing %q", want)
 		}
+	}
+}
+
+// A symbol with no look-alike would draw as a blank, so it fails the build.
+func TestMissingSymbolsNamesOnlyTheUndrawn(t *testing.T) {
+	frames := []preview.Frame{{
+		Face: preview.Face{Icon: preview.Icon{Symbol: "gearshape"}},
+		Menu: []preview.Node{
+			{Title: "a", Icon: &preview.Icon{Symbol: "no.such.symbol"}},
+			{Title: "b", Icon: &preview.Icon{Symbol: ""}},
+			{Title: "c", Items: []preview.Node{{Title: "d", Icon: &preview.Icon{Symbol: "also.missing"}}}},
+		},
+	}}
+	got := missingSymbols(frames)
+	if len(got) != 2 || got[0] != "no.such.symbol" || got[1] != "also.missing" {
+		t.Errorf("missingSymbols = %v, want [no.such.symbol also.missing]", got)
 	}
 }

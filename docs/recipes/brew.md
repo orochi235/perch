@@ -31,15 +31,17 @@ menu:
   - separator
   - each: outdated.data.formulae
     text: "{{it.name}} → {{it.current_version}}"
+    icon: terminal
     menu:
-      - {text: Upgrade, run: [brew, upgrade, "{{it.name}}"]}
+      - {text: Upgrade, icon: arrow.up.circle, run: [brew, upgrade, "{{it.name}}"]}
   - each: outdated.data.casks
     text: "{{it.name}} → {{it.current_version}}"
+    icon: macwindow
     menu:
-      - {text: Upgrade, run: [brew, upgrade, --cask, "{{it.name}}"]}
+      - {text: Upgrade, icon: arrow.up.circle, run: [brew, upgrade, --cask, "{{it.name}}"]}
   - separator
-  - {text: Upgrade everything, run: [brew, upgrade]}
-  - {text: Quit, quit: true}
+  - {text: Upgrade everything, icon: arrow.up.circle, run: [brew, upgrade]}
+  - {text: Quit, icon: power, quit: true}
 ```
 
 ```state outdated
@@ -62,6 +64,9 @@ outdated:
   code: 127
   err: "env: brew: No such file or directory"
 ```
+
+A formula and a cask get different [icons](../schema.md#sf-symbols), so the two
+lists read apart without a heading between them.
 
 Thirty minutes is the interval because `brew outdated` is not free and nothing
 here changes minute to minute. Every watch in a file shares one interval, which

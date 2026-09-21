@@ -4,6 +4,10 @@ You write one file. perch turns it into a macOS menu bar app: what to poll, what
 the icon shows, what the menu offers. It emits Swift, builds the `.app`, and
 loads it as a LaunchAgent, so it is there again after a restart.
 
+perch runs when you build, not when the widget does. The `.app` is compiled
+Swift that needs neither perch nor your YAML to run, so a Mac with the widget
+installed never needs the generator.
+
 ```
 go install github.com/orochi235/perch/v2/cmd/perch@latest
 ```
@@ -67,10 +71,10 @@ fleet:
   err: "onto: no such host"
 ```
 
-## Nothing is evaluated at runtime
+## Checked when you build
 
 Conditions and `{{ }}` holes are [CEL](https://github.com/google/cel-spec),
-lowered to Swift when you build. No interpreter ships in the app, so a
+compiled to Swift when you build. No interpreter ships in the app, so a
 misspelled field is a build error rather than a widget that quietly shows
 nothing.
 
