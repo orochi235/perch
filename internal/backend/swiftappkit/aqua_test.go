@@ -30,6 +30,17 @@ func requireAqua(t *testing.T) {
 	}
 }
 
+// requireScreen skips a test that raises a window and takes focus, unless CI
+// or PERCH_WINDOW_TESTS asks for it: on a desk, it lands on whatever the
+// person running the suite was doing.
+func requireScreen(t *testing.T) {
+	t.Helper()
+	requireAqua(t)
+	if os.Getenv("CI") == "" && os.Getenv("PERCH_WINDOW_TESTS") == "" {
+		t.Skip("raises a window; set PERCH_WINDOW_TESTS=1 to run it")
+	}
+}
+
 // buildWindowProbe compiles a probe with Window.swift beside Runtime.swift, so
 // it can drive WebWindow. buildProbe alone omits it: Window.swift is emitted
 // only for a spec that declares a window.
@@ -142,7 +153,7 @@ print("reopen=\(policy())")
 `
 
 func TestDockTileFollowsTheWindow(t *testing.T) {
-	requireAqua(t)
+	requireScreen(t)
 	bin := buildWindowProbe(t, dockProbe)
 	out, err := exec.Command(bin).CombinedOutput()
 	if err != nil {
@@ -204,7 +215,7 @@ print("done")
 // fetched again, so a widget held open across a server restart does not show
 // WebKit's error page forever.
 func TestReopenReloadsOnlyAfterAFailedLoad(t *testing.T) {
-	requireAqua(t)
+	requireScreen(t)
 	bin := buildWindowProbe(t, reloadProbe)
 
 	t.Run("a page that loaded is not fetched again", func(t *testing.T) {

@@ -1,0 +1,7 @@
+# The suite compiles and runs the Swift perch emits, so a node needs swiftc
+# (the Xcode command line tools). That is not a Homebrew formula, so nothing
+# here can gate on it. go.mod pins the Go version; the go command fetches it.
+run: go test ./... -timeout 10m
+# Two tests raise a window and take focus, which is why they are off by
+# default on a desk. On the fleet nobody is at the screen.
+prelude: export PERCH_WINDOW_TESTS=1

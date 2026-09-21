@@ -98,8 +98,10 @@ is Go while the output is Swift.
 
 `go test ./...` needs the Swift toolchain: the tests that matter most compile
 what perch emits, and one installs a LaunchAgent and watches the app stay up.
-The fuzz targets only replay their seed corpus under `go test`; `bin/fuzz` runs
-each of them for real.
+Two tests raise a window and take focus, so they skip unless `CI` or
+`PERCH_WINDOW_TESTS=1` is set. `onto test` runs the whole suite, those two
+included, on another Mac; `.onto/tests` says how. The fuzz targets only replay their seed corpus
+under `go test`; `bin/fuzz` runs each of them for real.
 
 ## License
 
