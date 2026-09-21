@@ -44,7 +44,8 @@ menu:
 `
 
 // everyFeature exercises the parts the design doc example does not: an http and
-// an exists watch, an untyped .data, open and post, and a when: guard.
+// an exists watch, an untyped .data, open and post, a when: guard, and menu
+// item icons.
 const everyFeature = `
 app: {name: brainhouse, id: dev.brainhouse.menubar, icon: brain, interval: 10s}
 watch:
@@ -66,11 +67,15 @@ menu:
   - text: "{{server.data.sessions.size()}} sessions"
     when: "server.ok"
   - text: "not running"
+    icon: exclamationmark.triangle
     when: "!server.ok"
   - separator
-  - {text: Open, open: "http://127.0.0.1:8765"}
+  - {text: Open, icon: safari, open: "http://127.0.0.1:8765"}
   - {text: Restart, run: [launchctl, kickstart, -k, gui/501/dev.brainhouse], when: "agent.ok"}
-  - {text: Ping, post: {url: "http://127.0.0.1:8765/api/ping", body: {source: menubar}}}
+  - text: Server
+    icon: {asset: alarm}
+    menu:
+      - {text: Ping, post: {url: "http://127.0.0.1:8765/api/ping", body: {source: menubar}}}
   - separator
   - {text: Quit, quit: true}
 `

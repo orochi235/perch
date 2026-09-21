@@ -3,6 +3,7 @@ package project
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/orochi235/perch/v2/internal/backend"
@@ -94,5 +95,20 @@ func TestSwiftSourcesCoversBothDirectories(t *testing.T) {
 func TestLoadReportsAMissingSpec(t *testing.T) {
 	if _, err := Load(t.TempDir()); err == nil {
 		t.Fatal("want an error when menubar.yaml is absent, got nil")
+	}
+}
+
+// A menu item's artwork is checked like the status item's: missing, it draws
+// nothing, which reads as the item having no icon rather than a missing file.
+func TestLoadRefusesAMenuItemIconThatIsNotThere(t *testing.T) {
+	root := t.TempDir()
+	yaml := "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 1s}\n" +
+		"menu: [{text: Open, icon: {asset: gone}, open: \"https://example.com\"}]\n"
+	if err := os.WriteFile(filepath.Join(root, "menubar.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load(root)
+	if err == nil || !strings.Contains(err.Error(), "menu[0].icon: no such file") {
+		t.Errorf("Load = %v, want menu[0].icon refused", err)
 	}
 }

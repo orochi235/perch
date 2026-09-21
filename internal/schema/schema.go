@@ -171,6 +171,7 @@ const body = `{
             "additionalProperties": false,
             "properties": {
               "text": {"type": "string", "description": "Label; {{ }} holes are CEL."},
+              "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons, drawn beside the label. {{ }} holes are CEL; a name that resolves to nothing draws no icon.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^([A-Za-z0-9_-]|\\{\\{[^}]*\\}\\})+$"}}}]},
               "when": {"type": "string", "description": "CEL condition deciding whether the item appears."},
               "each": {"type": "string", "description": "CEL list expression; the element binds to it."},
               "menu": {"$ref": "#/definitions/menu"},

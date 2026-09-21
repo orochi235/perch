@@ -427,6 +427,10 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 	if err != nil {
 		return fmt.Errorf("%s.text: %w", path, err)
 	}
+	icon, err := itemIcon(it.Icon, e)
+	if err != nil {
+		return fmt.Errorf("%s.icon: %w", path, err)
+	}
 
 	if len(it.Menu) > 0 {
 		sub := g.name("sub")
@@ -434,12 +438,12 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		if err := g.items(it.Menu, sub, e, it.Scope); err != nil {
 			return err
 		}
-		g.b.line("%s.append(.submenu(%s, %s))", into, title, sub)
+		g.b.line("%s.append(.submenu(%s, %s%s))", into, title, sub, icon)
 		return nil
 	}
 
 	if it.Action.Kind == spec.ActionNone {
-		g.b.line("%s.append(.item(%s, nil))", into, title)
+		g.b.line("%s.append(.item(%s, nil%s))", into, title, icon)
 		return nil
 	}
 
@@ -447,8 +451,26 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 	if err != nil {
 		return err
 	}
-	g.b.line("%s.append(.item(%s, %s))", into, title, action)
+	g.b.line("%s.append(.item(%s, %s%s))", into, title, action, icon)
 	return nil
+}
+
+// itemIcon is the trailing icon: argument, omitted where the item sets none so
+// an item without one emits what it always did. The name is lowered where the
+// item is built, so an each: item can take its icon from its element.
+func itemIcon(i spec.Icon, e *celswift.Env) (string, error) {
+	if i.IsZero() {
+		return "", nil
+	}
+	kind, name := "symbol", i.Symbol
+	if i.Asset != "" {
+		kind, name = "asset", i.Asset
+	}
+	lowered, err := e.LowerTemplate(name)
+	if err != nil {
+		return "", err
+	}
+	return ", icon: MenuIcon." + kind + "(" + lowered + ")", nil
 }
 
 // action writes the verb as data. It is lowered where the menu is built rather

@@ -90,6 +90,7 @@ type Action struct {
 type Item struct {
 	Separator bool
 	Text      string
+	Icon      Icon
 	When      string
 	Each      string
 	Menu      []Item
@@ -110,6 +111,7 @@ func (it Item) Path() string { return it.path }
 
 type itemFields struct {
 	Text   string    `yaml:"text"`
+	Icon   yaml.Node `yaml:"icon"`
 	When   string    `yaml:"when"`
 	Each   string    `yaml:"each"`
 	Menu   yaml.Node `yaml:"menu"`
@@ -174,11 +176,15 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
+	icon, err := parseIcon(&f.Icon, path+".icon", holesAllowed)
+	if err != nil {
+		return Item{}, err
+	}
 	// Refused here, not in validation: an outlet nothing fills empties the submenu.
 	if len(sub) > 0 && act.Kind != ActionNone {
 		return Item{}, fmt.Errorf("%s: has a submenu and %s action; opening a submenu supersedes the action, so it would never run", path, withArticle(act.Kind.String()))
 	}
-	return Item{Text: f.Text, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	return Item{Text: f.Text, Icon: icon, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 
 func actionFrom(f itemFields, path string) (Action, error) {

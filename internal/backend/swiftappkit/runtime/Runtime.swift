@@ -18,6 +18,19 @@ enum MenuIcon {
     case asset(String)
 
     func image() -> NSImage? {
+        // Measured off the bar rather than fixed at the 18pt a menu bar used
+        // to be: the bar has been taller than that for several releases, and
+        // artwork sized to the old number sits in the middle of its frame
+        // looking like a mistake. The inset is what keeps it off the edges.
+        image(assetHeight: max(NSStatusBar.system.thickness - 5, 12))
+    }
+
+    /// The same icon beside a menu item, where AppKit's own images are 16pt.
+    func menuImage() -> NSImage? {
+        image(assetHeight: 16)
+    }
+
+    private func image(assetHeight height: CGFloat) -> NSImage? {
         switch self {
         case .symbol(let name):
             let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)
@@ -25,11 +38,6 @@ enum MenuIcon {
             return image
         case .asset(let name):
             guard let image = MenuIcon.load(name), image.size.height > 0 else { return nil }
-            // Measured off the bar rather than fixed at the 18pt a menu bar used
-            // to be: the bar has been taller than that for several releases, and
-            // artwork sized to the old number sits in the middle of its frame
-            // looking like a mistake. The inset is what keeps it off the edges.
-            let height = max(NSStatusBar.system.thickness - 5, 12)
             image.size = NSSize(width: height * (image.size.width / image.size.height), height: height)
             return image
         }
@@ -52,6 +60,10 @@ enum MenuIcon {
     /// appearances from macOS; artwork that keeps its own color does not, so an
     /// asset whose outline must read against both menu bars ships both.
     private static func load(_ name: String) -> NSImage? {
+        // A templated name is only known now, so the check perch makes at
+        // build is made again here: one file in the bundle's Resources.
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+        guard !name.isEmpty, name.unicodeScalars.allSatisfy(allowed.contains) else { return nil }
         let dark = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         if dark, let path = Bundle.main.path(forResource: name + "~dark", ofType: "png"),
            let image = NSImage(contentsOfFile: path) {
@@ -597,8 +609,8 @@ enum MenuAction {
 /// which macOS shows disabled.
 enum MenuNode {
     case separator
-    case item(String, MenuAction?)
-    case submenu(String, [MenuNode])
+    case item(String, MenuAction?, icon: MenuIcon? = nil)
+    case submenu(String, [MenuNode], icon: MenuIcon? = nil)
 }
 
 /// Drops separators with nothing beside them: leading, trailing, and every one
@@ -615,8 +627,8 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
             out.append(node)
             continue
         }
-        if case .submenu(let title, let items) = node {
-            out.append(.submenu(title, tidy(items)))
+        if case .submenu(let title, let items, let icon) = node {
+            out.append(.submenu(title, tidy(items), icon: icon))
             continue
         }
         out.append(node)
@@ -641,12 +653,17 @@ enum Draw {
             switch node {
             case .separator:
                 menu.addItem(NSMenuItem.separator())
-            case .item(let title, nil):
-                menu.addItem(NSMenuItem(title: title, action: nil, keyEquivalent: ""))
-            case .item(let title, let action?):
-                menu.addItem(ActionItem(title: title) { Act.perform(action, then: repoll) })
-            case .submenu(let title, let items):
+            case .item(let title, nil, let icon):
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+                item.image = icon?.menuImage()
+                menu.addItem(item)
+            case .item(let title, let action?, let icon):
+                let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
+                item.image = icon?.menuImage()
+                menu.addItem(item)
+            case .submenu(let title, let items, let icon):
+                let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+                item.image = icon?.menuImage()
                 let sub = NSMenu()
                 Draw.menu(items, into: sub, repoll: repoll)
                 item.submenu = sub

@@ -79,7 +79,7 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	appIcon, err := parseIcon(&raw.App.Icon, "app.icon")
+	appIcon, err := parseIcon(&raw.App.Icon, "app.icon", holesRefused)
 	if err != nil {
 		return nil, err
 	}

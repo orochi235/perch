@@ -95,16 +95,21 @@ private func encoded(_ action: MenuAction) -> [String: Any] {
 }
 
 private func encoded(_ node: MenuNode) -> [String: Any] {
+    var out: [String: Any]
+    let icon: MenuIcon?
     switch node {
     case .separator:
         return ["separator": true]
-    case .item(let title, nil):
-        return ["title": title]
-    case .item(let title, let action?):
-        return ["title": title, "action": encoded(action)]
-    case .submenu(let title, let items):
-        return ["title": title, "items": items.map { encoded($0) }]
+    case .item(let title, let action, let i):
+        out = ["title": title]
+        if let action { out["action"] = encoded(action) }
+        icon = i
+    case .submenu(let title, let items, let i):
+        out = ["title": title, "items": items.map { encoded($0) }]
+        icon = i
     }
+    if let icon { out["icon"] = encoded(icon) }
+    return out
 }
 
 func emit(_ frames: [Any]) {

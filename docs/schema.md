@@ -492,6 +492,7 @@ Everything else is a mapping:
 | Key | Takes |
 |---|---|
 | `text` | A string: the label. `{{ }}` holes interpolate expressions. |
+| `icon` | An SF Symbol name, or `{asset: <name>}`, drawn beside the label. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icon assets](#icon-assets). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
 | `menu` | A list of items, written the same way. |
@@ -662,16 +663,20 @@ menu:
 
 Every `.png` in that directory is copied into the bundle, and `perch build`
 refuses a spec naming one that is not there — otherwise the app installs and
-runs with no image at all, which reads as the poller failing.
+runs with no image at all, which reads as the poller failing. A menu item's
+icon with `{{ }}` holes is the exception: its name is known only once the app
+has polled, so nothing checks it, and one that names no file draws no icon.
+Holes are refused in `app.icon` and `status:`, where that would leave the
+status item blank.
 
 Ship artwork at twice the size you want it drawn: it is scaled to the menu
-bar's 18pt height with its aspect kept. Where an icon has to read against both
+bar's 18pt height with its aspect kept, or to 16pt beside a menu item. Where an icon has to read against both
 a light and a dark menu bar, add `<name>~dark.png` beside `<name>.png` and the
 app picks per appearance.
 
 ### The Dock tile
 
-`menubar/Icons` is the status item's artwork. A [`window:`](#window) app also
+`menubar/Icons` is the artwork for the status item and menu items. A [`window:`](#window) app also
 takes a Dock tile while its window is open, and that wants a different file:
 `menubar/AppIcon.png`, one square PNG at 1024×1024. `perch install` renders it
 into the ten sizes macOS asks for and names it in the bundle. There is no key

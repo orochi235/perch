@@ -2,6 +2,8 @@ package spec
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,13 +18,37 @@ type Icon struct {
 
 func (i Icon) IsZero() bool { return i.Symbol == "" && i.Asset == "" }
 
+// Templated is an icon whose name holds {{ }} holes, so it is known only once
+// the app has polled. Nothing can check it at build: a name that resolves to no
+// symbol or file draws no icon.
+func (i Icon) Templated() bool { return strings.Contains(i.Symbol+i.Asset, "{{") }
+
+// Icon names that vary are for menu items, where a missing one costs a picture
+// beside a label. On the status item it would cost the whole status item.
+type iconHoles bool
+
+const (
+	holesRefused iconHoles = false
+	holesAllowed iconHoles = true
+)
+
+var hole = regexp.MustCompile(`\{\{.*?\}\}`)
+
 type rawIconAsset struct {
 	Asset string `yaml:"asset"`
 }
 
-// parseIcon takes either form: a bare name is a symbol, because that is what
-// every spec written before assets existed says.
-func parseIcon(n *yaml.Node, path string) (Icon, error) {
+func parseIcon(n *yaml.Node, path string, holes iconHoles) (Icon, error) {
+	icon, err := parseIconName(n, path)
+	if err != nil || !icon.Templated() || holes == holesAllowed {
+		return icon, err
+	}
+	return Icon{}, fmt.Errorf("%s: {{ }} holes are for a menu item's icon; the status item's has to be known at build", path)
+}
+
+// parseIconName takes either form: a bare name is a symbol, because that is
+// what every spec written before assets existed says.
+func parseIconName(n *yaml.Node, path string) (Icon, error) {
 	switch {
 	case n == nil || n.Kind == 0:
 		return Icon{}, nil
@@ -40,7 +66,9 @@ func parseIcon(n *yaml.Node, path string) (Icon, error) {
 		if raw.Asset == "" {
 			return Icon{}, fmt.Errorf("%s: want an SF Symbol name or {asset: <file in menubar/Icons, without its extension>}", path)
 		}
-		if err := checkAssetName(raw.Asset); err != nil {
+		// Only the literal text is checkable here; the runtime refuses a
+		// resolved name that is not a bare file name.
+		if err := checkAssetName(hole.ReplaceAllString(raw.Asset, "x")); err != nil {
 			return Icon{}, fmt.Errorf("%s.asset: %w", path, err)
 		}
 		return Icon{Asset: raw.Asset}, nil

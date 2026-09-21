@@ -38,7 +38,7 @@ menu:
 `
 
 // net covers the kinds jobs does not: an http watch, an exists watch, artwork
-// for an icon, and the open and post actions.
+// for an icon, the open and post actions, and menu item icons.
 const net = `
 app: {name: net, id: dev.net.menubar, icon: circle, interval: 10s}
 watch:
@@ -55,8 +55,8 @@ status:
     dim: true
   - badge: "string(server.data.sessions.size())"
 menu:
-  - {text: Open, open: "http://127.0.0.1:8765"}
-  - {text: Ping, post: {url: "http://127.0.0.1:8765/ping", body: {source: menubar}}}
+  - {text: Open, icon: safari, open: "http://127.0.0.1:8765"}
+  - {text: Ping, icon: {asset: alarm}, post: {url: "http://127.0.0.1:8765/ping", body: {source: menubar}}}
   - {text: Quit, quit: true}
 `
 
@@ -195,6 +195,15 @@ func TestRenderCoversTheOtherWatchKindsAndActions(t *testing.T) {
 	ping := up.Menu[1].Action
 	if ping == nil || ping.Post == nil || ping.Post.Body != `{"source":"menubar"}` {
 		t.Errorf("Ping posts %+v", ping)
+	}
+	if got := up.Menu[0].Icon; got == nil || got.Symbol != "safari" {
+		t.Errorf("Open's icon is %+v", got)
+	}
+	if got := up.Menu[1].Icon; got == nil || got.Asset != "alarm" {
+		t.Errorf("Ping's icon is %+v", got)
+	}
+	if got := up.Menu[2].Icon; got != nil {
+		t.Errorf("Quit sets no icon but shows %+v", got)
 	}
 
 	if down := frames[1].Face; down.Icon.Asset != "alarm" || !down.Dim {
@@ -381,5 +390,41 @@ func TestRenderShowsAUsesReadout(t *testing.T) {
 	}
 	if !slices.Contains(titles, "Service: running · pid 42") {
 		t.Errorf("menu = %q", titles)
+	}
+}
+
+// perProject names each item's icon from its element, which is the only way a
+// repeated item can show a different one per row.
+const perProject = `
+app: {name: wall, id: dev.wall.menubar, icon: rectangle.stack, interval: 5s}
+watch:
+  zones:
+    run: [wall, zones]
+    json: true
+    shape:
+      zones: [{zone: string, icon: string}]
+menu:
+  - each: zones.data.zones
+    text: "{{it.zone}}"
+    icon: "{{it.icon}}"
+  - each: zones.data.zones
+    text: "{{it.zone}} logo"
+    icon: {asset: "logo-{{it.zone}}"}
+`
+
+func TestRenderResolvesATemplatedIconPerElement(t *testing.T) {
+	s := parse(t, perProject)
+	out := `{"zones": [{"zone": "perch", "icon": "bird"}, {"zone": "slop", "icon": ""}]}`
+	frames := render(t, s, []State{state(t, s, "two", "zones:\n  out: '"+out+"'\n")})
+
+	want := []Icon{{Symbol: "bird"}, {Symbol: ""}, {Asset: "logo-perch"}, {Asset: "logo-slop"}}
+	menu := frames[0].Menu
+	if len(menu) != len(want) {
+		t.Fatalf("got %d items, want %d: %+v", len(menu), len(want), menu)
+	}
+	for i, w := range want {
+		if menu[i].Icon == nil || *menu[i].Icon != w {
+			t.Errorf("%s's icon is %+v, want %+v", menu[i].Title, menu[i].Icon, w)
+		}
 	}
 }

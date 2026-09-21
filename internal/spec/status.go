@@ -51,7 +51,7 @@ func parseStatus(n *yaml.Node, path string) ([]StatusRule, error) {
 		if err := decodeStrict(c, &raw, at); err != nil {
 			return nil, err
 		}
-		icon, err := parseIcon(&raw.Icon, at+".icon")
+		icon, err := parseIcon(&raw.Icon, at+".icon", holesRefused)
 		if err != nil {
 			return nil, err
 		}

@@ -22,7 +22,7 @@ import (
 	"github.com/orochi235/perch/v2/internal/spec"
 )
 
-// Icon is what the status item draws: one of the two is set.
+// Icon is what the status item or a menu item draws: one of the two is set.
 type Icon struct {
 	Symbol string `json:"symbol,omitempty"`
 	Asset  string `json:"asset,omitempty"`
@@ -61,6 +61,7 @@ type Agent struct {
 type Node struct {
 	Separator bool    `json:"separator,omitempty"`
 	Title     string  `json:"title,omitempty"`
+	Icon      *Icon   `json:"icon,omitempty"`
 	Action    *Action `json:"action,omitempty"`
 	Items     []Node  `json:"items,omitempty"`
 }

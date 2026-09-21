@@ -2,7 +2,9 @@ package swiftappkit
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -125,8 +127,10 @@ func show(_ nodes: [MenuNode]) -> String {
     nodes.map { node in
         switch node {
         case .separator: return "-"
-        case .item(let t, _): return t
-        case .submenu(let t, let items): return t + "(" + show(items) + ")"
+        case .item(let t, _, _): return t
+        case .submenu(let t, let items, let icon):
+            let mark = if case .symbol(let name)? = icon { "[" + name + "]" } else { "" }
+            return t + mark + "(" + show(items) + ")"
         }
     }.joined(separator: ",")
 }
@@ -138,6 +142,7 @@ print("trailing=\(show(tidy([.item("a", nil), .separator])))")
 print("run=\(show(tidy([.item("a", nil), .separator, .separator, .separator, .item("b", nil)])))")
 print("kept=\(show(tidy([.item("a", nil), .separator, .item("b", nil)])))")
 print("nested=\(show(tidy([.submenu("s", [.separator, .item("x", nil), .separator]), .separator])))")
+print("icon=\(show(tidy([.submenu("s", [.item("x", nil)], icon: .symbol("gear"))])))")
 `
 
 func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
@@ -154,6 +159,7 @@ func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
 		"run=a,-,b",
 		"kept=a,-,b",
 		"nested=s(x)",
+		"icon=s[gear](x)",
 	}
 	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 	if len(got) != len(want) {
@@ -223,5 +229,72 @@ func TestQuitReasonSeparatesLogoutFromAQuit(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("line %d:\n got %q\nwant %q", i+1, got[i], want[i])
 		}
+	}
+}
+
+// drawProbe hands Draw.menu one of each node that can carry an icon, and says
+// what AppKit was left holding.
+const drawProbe = `
+import AppKit
+
+func describe(_ item: NSMenuItem) -> String {
+    guard let image = item.image else { return item.title + "=none" }
+    return item.title + "=" + (image.isTemplate ? "template" : "art")
+}
+
+let menu = NSMenu()
+Draw.menu([
+    .item("plain", nil),
+    .item("label", nil, icon: .symbol("gearshape")),
+    .item("action", .quit, icon: .symbol("power")),
+    .submenu("sub", [.item("inner", nil, icon: .symbol("star"))], icon: .symbol("folder")),
+], into: menu, repoll: {})
+for item in menu.items { print(describe(item)) }
+if let inner = menu.items.last?.submenu?.items.first { print(describe(inner)) }
+`
+
+func TestDrawGivesAMenuItemItsIcon(t *testing.T) {
+	bin := buildProbe(t, drawProbe)
+	out, err := exec.Command(bin).CombinedOutput()
+	if err != nil {
+		t.Fatalf("the probe died: %v\n%s", err, out)
+	}
+	want := "plain=none\nlabel=template\naction=template\nsub=template\ninner=template\n"
+	if string(out) != want {
+		t.Errorf("got\n%s\nwant\n%s", out, want)
+	}
+}
+
+// assetProbe loads artwork by a name only known at run time. A CLI's main
+// bundle is the directory it runs from, so ok.png is found and ../evil.png is
+// one step outside it.
+const assetProbe = `
+import AppKit
+
+_ = NSApplication.shared
+for name in ["ok", "../evil", "ok/..", ""] {
+    print(name + "=" + (MenuIcon.asset(name).menuImage() == nil ? "none" : "image"))
+}
+`
+
+func TestAssetNameResolvedAtRunTimeStaysInTheBundle(t *testing.T) {
+	bin := buildProbe(t, assetProbe)
+	dir := filepath.Dir(bin)
+	png, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "recipes", "icons", "ci-pass.png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{filepath.Join(dir, "ok.png"), filepath.Join(dir, "..", "evil.png")} {
+		if err := os.WriteFile(p, png, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out, err := exec.Command(bin).CombinedOutput()
+	if err != nil {
+		t.Fatalf("the probe died: %v\n%s", err, out)
+	}
+	want := "ok=image\n../evil=none\nok/..=none\n=none\n"
+	if string(out) != want {
+		t.Errorf("got\n%s\nwant\n%s", out, want)
 	}
 }

@@ -28,7 +28,7 @@ func previewHTML(root string, yaml string, frames []preview.Frame) string {
 	for i, f := range frames {
 		b.WriteString(fmt.Sprintf(`<div class="frame%s" data-frame="%d">`, on(i == 0), i))
 		b.WriteString(barHTML(root, f))
-		b.WriteString(menuHTML(f.Menu))
+		b.WriteString(menuHTML(root, f.Menu))
 		b.WriteString(`</div>`)
 	}
 
@@ -76,11 +76,11 @@ func iconHTML(root string, icon preview.Icon) string {
 		html.EscapeString(icon.Symbol))
 }
 
-func menuHTML(nodes []preview.Node) string {
+func menuHTML(root string, nodes []preview.Node) string {
 	var b strings.Builder
 	b.WriteString(`<div class="menu">`)
 	for _, n := range nodes {
-		b.WriteString(nodeHTML(n))
+		b.WriteString(nodeHTML(root, n))
 	}
 	if len(nodes) == 0 {
 		b.WriteString(`<div class="row label">no items</div>`)
@@ -89,15 +89,18 @@ func menuHTML(nodes []preview.Node) string {
 	return b.String()
 }
 
-func nodeHTML(n preview.Node) string {
+func nodeHTML(root string, n preview.Node) string {
 	if n.Separator {
 		return `<div class="sep"></div>`
 	}
 	title := html.EscapeString(n.Title)
+	if n.Icon != nil {
+		title = iconHTML(root, *n.Icon) + title
+	}
 	if len(n.Items) > 0 {
 		var sub strings.Builder
 		for _, item := range n.Items {
-			sub.WriteString(nodeHTML(item))
+			sub.WriteString(nodeHTML(root, item))
 		}
 		return `<div class="row sub" tabindex="0">` + title +
 			`<span class="chev">›</span><div class="menu submenu">` + sub.String() + `</div></div>`

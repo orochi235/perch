@@ -291,6 +291,7 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 .row.action:hover, .row.sub:hover, .row.sub:focus { background: var(--accent); color: #fff; outline: none; }
 .sep { height: 1px; margin: 5px 10px; background: var(--menu-line); }
 .chev { position: absolute; right: 10px; }
+.row > .icon { margin-right: 6px; vertical-align: -2px; }
 
 .submenu {
   display: none;

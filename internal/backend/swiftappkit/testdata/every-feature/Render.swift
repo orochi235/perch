@@ -72,14 +72,16 @@ func renderMenu(_ results: Results) -> [MenuNode] {
         menu.append(.item("\(String(results.server.data["sessions"].size)) sessions", nil))
     }
     if !(results.server.ok) {
-        menu.append(.item("not running", nil))
+        menu.append(.item("not running", nil, icon: MenuIcon.symbol("exclamationmark.triangle")))
     }
     menu.append(.separator)
-    menu.append(.item("Open", .open("http://127.0.0.1:8765")))
+    menu.append(.item("Open", .open("http://127.0.0.1:8765"), icon: MenuIcon.symbol("safari")))
     if results.agent.ok {
         menu.append(.item("Restart", .run(["launchctl", "kickstart", "-k", "gui/501/dev.brainhouse"])))
     }
-    menu.append(.item("Ping", .post(url: "http://127.0.0.1:8765/api/ping", body: "{\"source\":\"menubar\"}")))
+    var sub1: [MenuNode] = []
+    sub1.append(.item("Ping", .post(url: "http://127.0.0.1:8765/api/ping", body: "{\"source\":\"menubar\"}")))
+    menu.append(.submenu("Server", sub1, icon: MenuIcon.asset("alarm")))
     menu.append(.separator)
     menu.append(.item("Quit", .quit))
     return tidy(menu)
