@@ -492,7 +492,7 @@ Everything else is a mapping:
 | Key | Takes |
 |---|---|
 | `text` | A string: the label. `{{ }}` holes interpolate expressions. |
-| `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`, drawn beside the label. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
+| `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
 | `menu` | A list of items, written the same way. |

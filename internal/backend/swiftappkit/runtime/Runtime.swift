@@ -638,6 +638,16 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
 }
 
 enum Draw {
+    /// macOS 27 hides menu item images unless an item asks otherwise. Set by
+    /// selector so the app still compiles against an SDK older than 27.
+    static func icon(_ icon: MenuIcon?, on item: NSMenuItem) {
+        item.image = icon?.menuImage()
+        let visible = Selector(("setPreferredImageVisibility:"))
+        if item.image != nil, item.responds(to: visible) {
+            item.setValue(1, forKey: "preferredImageVisibility")
+        }
+    }
+
     static func face(_ face: Face, on button: NSStatusBarButton) {
         button.image = face.icon.image()
         button.alphaValue = face.icon.alpha(on: button)
@@ -655,15 +665,15 @@ enum Draw {
                 menu.addItem(NSMenuItem.separator())
             case .item(let title, nil, let icon):
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                item.image = icon?.menuImage()
+                Draw.icon(icon, on: item)
                 menu.addItem(item)
             case .item(let title, let action?, let icon):
                 let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
-                item.image = icon?.menuImage()
+                Draw.icon(icon, on: item)
                 menu.addItem(item)
             case .submenu(let title, let items, let icon):
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                item.image = icon?.menuImage()
+                Draw.icon(icon, on: item)
                 let sub = NSMenu()
                 Draw.menu(items, into: sub, repoll: repoll)
                 item.submenu = sub
