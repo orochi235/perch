@@ -1,3 +1,4 @@
+enlist: 2
 # The suite compiles and runs the Swift perch emits, so a node needs swiftc
 # (the Xcode command line tools). That is not a Homebrew formula, so nothing
 # here can gate on it. go.mod pins the Go version; the go command fetches it.
