@@ -61,6 +61,10 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Small follow-ups
 
+- **The macOS 27 menu icon fix (`d5e8a04`) is not in a release.** It landed
+  after `v2.1.0`, so the Homebrew `perch` still emits a runtime whose menu
+  items lose their icons on macOS 27. Seen on 2026-09-27: `perch build` from
+  Homebrew rewrote transom's committed `Runtime.swift` without the fix.
 - The schema's state and shape field name rules don't list CEL's reserved
   words, which the parser refuses.
 - The template schema accepts `${…}` only in `launchagent`, so an editor flags
