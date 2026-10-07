@@ -789,21 +789,50 @@ A mapping picks the style:
 | `accent` | The symbol's secondary part in the color, the rest as usual. A symbol drawn in one part shows no color at all. | No |
 | `chip` | The icon on a rounded patch of the color, at 35% unless `#rrggbbaa` gives its own opacity. | Yes |
 
+Here the color says which environment a deploy tool points at, and each
+environment gets a different style:
+
 ```yaml
 app:
-  name: onto
-  id: dev.onto.menubar
-  icon: rectangle.3.group
-  interval: 5s
-  tint: {color: "#eeb48d", style: dot, size: medium, corner: top-right}
+  name: deploy
+  id: dev.example.deploy.menubar
+  icon: shippingbox
+  interval: 30s
+  tint: {color: green, style: glyph}
 watch:
-  fleet:
-    run: [onto, top, --once, --json]
+  target:
+    run: [deploy, target]
 status:
-  - when: "!fleet.ok"
+  - when: "!target.ok"
+    tint: {color: "#eeb48d", size: medium, corner: top-right}
+  - when: 'target.out == "staging"'
+    tint: {color: orange, style: accent}
+  - when: 'target.out == "prod"'
     tint: {color: red, style: chip}
 menu:
+  - text: "Deploying to {{target.out}}"
+    when: target.ok
   - {text: Quit, quit: true}
+```
+
+```state dev
+target:
+  out: dev
+```
+
+```state staging
+target:
+  out: staging
+```
+
+```state prod
+target:
+  out: prod
+```
+
+```state unset
+target:
+  code: 1
 ```
 
 A tinted icon is drawn in color rather than as a template, so macOS no longer
