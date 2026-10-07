@@ -29,6 +29,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 	// fileprivate: the mirrored menu's closure reads both.
 	b.line("fileprivate var results = Results()")
 	b.line("private var timer: Timer?")
+	b.line("private var menuOpen = false")
 	b.line("")
 	emitWindowMembers(b, s)
 	b.line("override init() {")
@@ -37,6 +38,18 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("let menu = NSMenu()")
 	b.line("menu.delegate = self")
 	b.line("statusItem.menu = menu")
+	// macOS draws its own pill behind an open item, and a chip's patch on it
+	// reads as a smudge; the chip steps aside while the menu is open.
+	b.line("for (name, open) in [(NSMenu.didBeginTrackingNotification, true), (NSMenu.didEndTrackingNotification, false)] {")
+	b.in()
+	b.line("NotificationCenter.default.addObserver(forName: name, object: menu, queue: nil) { [weak self] _ in")
+	b.in()
+	b.line("self?.menuOpen = open")
+	b.line("self?.refresh()")
+	b.out()
+	b.line("}")
+	b.out()
+	b.line("}")
 	// Artwork's fade is worked out at draw time, so it has to be redrawn when
 	// the thing it is worked out from moves. The poll interval would get there
 	// eventually and look like a lag.
@@ -141,7 +154,7 @@ func emitDraw(b *buf) {
 	b.line("func refresh() {")
 	b.in()
 	b.line("guard let button = statusItem.button else { return }")
-	b.line("Draw.face(renderFace(results), on: button)")
+	b.line("Draw.face(renderFace(results), on: button, menuOpen: menuOpen)")
 	b.out()
 	b.line("}")
 	b.line("")
