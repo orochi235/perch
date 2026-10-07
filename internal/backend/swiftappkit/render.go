@@ -192,7 +192,7 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift
 	if s.App.Tint.IsZero() {
 		b.line("%s face = Face(icon: %s)", bind(mutated), swiftIcon(s.App.Icon))
 	} else {
-		tint, err := swiftTint(s.App.Tint, e)
+		tint, err := swiftTint(s.App.Tint, "Prefs.tint(or: "+celswift.SwiftString(s.App.Tint.Color)+")", e)
 		if err != nil {
 			return fmt.Errorf("app.tint.opacity: %w", err)
 		}
@@ -225,7 +225,7 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift
 			b.line("face.icon = %s", swiftIcon(rule.Icon))
 		}
 		if !rule.Tint.IsZero() {
-			tint, err := swiftTint(rule.Tint, re)
+			tint, err := swiftTint(rule.Tint, celswift.SwiftString(rule.Tint.Color), re)
 			if err != nil {
 				return fmt.Errorf("%s.tint.opacity: %w", rule.Path(), err)
 			}
@@ -263,7 +263,9 @@ func swiftIcon(i spec.Icon) string {
 	return "MenuIcon.symbol(" + celswift.SwiftString(i.Symbol) + ")"
 }
 
-func swiftTint(t spec.Tint, e *celswift.Env) (string, error) {
+// swiftTint takes the color as a Swift expression, so the app's tint can read
+// it from the user's preferences.
+func swiftTint(t spec.Tint, color string, e *celswift.Env) (string, error) {
 	corner, side, _ := strings.Cut(string(t.Corner), "-")
 	alpha := strconv.FormatFloat(t.Alpha, 'f', -1, 64)
 	if t.Opacity != "" {
@@ -274,7 +276,7 @@ func swiftTint(t spec.Tint, e *celswift.Env) (string, error) {
 		alpha = "CGFloat(" + n + ")"
 	}
 	return fmt.Sprintf("Tint(color: %s, alpha: %s, style: .%s, size: .%s, corner: .%s%s, wrap: .%s, menu: %t)",
-		celswift.SwiftString(t.Color), alpha,
+		color, alpha,
 		t.Style, t.Size, corner, strings.ToUpper(side[:1])+side[1:], t.Wrap, t.Menu), nil
 }
 

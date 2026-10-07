@@ -54,7 +54,7 @@ extension PlistResult {
 }
 
 func renderFace(_ results: Results) -> Face {
-    var face = Face(icon: MenuIcon.symbol("brain"), tint: Tint(color: "#eeb48d", alpha: 1, style: .dot, size: .small, corner: .topRight, wrap: .icon, menu: false))
+    var face = Face(icon: MenuIcon.symbol("brain"), tint: Tint(color: Prefs.tint(or: "#eeb48d"), alpha: 1, style: .dot, size: .small, corner: .topRight, wrap: .icon, menu: false))
     if !(results.plist.ok) {
         face.icon = MenuIcon.symbol("circle.dashed")
     } else if !(results.server.ok) {

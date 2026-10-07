@@ -151,7 +151,7 @@ menu:
 // color, with nothing at build to say so.
 func TestIconSwiftDrawsEverySystemColor(t *testing.T) {
 	for _, name := range spec.SystemColors {
-		if !strings.Contains(string(iconSwift), `case "`+name+`": base = .system`) {
+		if !strings.Contains(string(iconSwift), `case "`+name+`": return .system`) {
 			t.Errorf("Icon.swift has no case for %q", name)
 		}
 	}

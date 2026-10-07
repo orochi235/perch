@@ -862,6 +862,20 @@ unread:
   out: "4"
 ```
 
+Whoever runs the app can change the color of `app.tint` without touching
+menubar.yaml, by setting `tint` in the app's own preferences — the plist named
+after `app.id` in `~/Library/Preferences`:
+
+```sh
+defaults write dev.example.wall.menubar tint '#5e2ca5'   # or a system color: indigo
+defaults delete dev.example.wall.menubar tint             # back to menubar.yaml's
+```
+
+The running app picks it up at its next poll. It replaces the color only — the
+style, opacity and the rest stay as written — and only the app's tint: a status
+rule's color says something, so it still wins while its rule holds. A value
+that is neither `#rrggbb` nor a system color is ignored.
+
 A tinted icon is drawn in color rather than as a template, so macOS no longer
 adapts it to the menu bar. The parts of a symbol that are not tinted are drawn
 in the menu bar's text color, so they still read on a light or a dark bar.
