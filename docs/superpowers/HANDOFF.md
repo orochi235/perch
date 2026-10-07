@@ -1,11 +1,17 @@
-# Handoff — 2026-09-21
+# Handoff — 2026-10-07
 
 Branch `main` in `~/src/perch`, released as
-[`v2.1.0`](https://github.com/orochi235/perch/releases/tag/v2.1.0), with the
+[`v2.2.0`](https://github.com/orochi235/perch/releases/tag/v2.2.0), with the
 Homebrew tap bumped to match.
 
 ## Landed
 
+- **Tint** (v2.2.0): `app.tint` or a status rule's `tint` colors the status
+  item as a dot, glyph, accent, or chip; `menu: true` tints the dropdown's
+  glass; a `tint` user default overrides `app.tint`'s color. Also in v2.2.0:
+  the macOS 27 menu icon fix, and an editor schema that refuses CEL reserved
+  words as state and shape field names and takes `${param}` in any template
+  scalar.
 - **Menu item icons** (v2.1.0): `icon:` on an item, fixed or with `{{ }}`
   holes. Holes are refused on the status item, where an unresolved name would
   blank it.
@@ -13,9 +19,7 @@ Homebrew tap bumped to match.
   `PERCH_WINDOW_TESTS=1`; `onto test` runs the full suite on another Mac.
 
 - **Templates, outlets, `self`, verb defaults and the shipped `service`
-  template** — [design](specs/2026-09-14-templates-design.md),
-  [plan](plans/2026-09-14-templates.md). Each plan task that landed differently
-  from its text says so under its heading.
+  template** — [design](specs/2026-09-14-templates-design.md).
 - **Module path is `github.com/orochi235/perch/v2`**, and the install lines say
   so. `v1.0.0` is tagged on `aa7cf95`.
 - **Homebrew tap `orochi235/homebrew-tap`** (`~/src/homebrew-tap`):
@@ -59,18 +63,6 @@ recipe can be green while `brew outdated --json=v2` prints something else.
 Checked by hand on 2026-09-15: brew, `onto top --once --json` and the `gh run
 list` fields all match. The `http:` recipes name example URLs nothing serves.
 
-## Small follow-ups
-
-- **The macOS 27 menu icon fix (`d5e8a04`) is not in a release.** It landed
-  after `v2.1.0`, so the Homebrew `perch` still emits a runtime whose menu
-  items lose their icons on macOS 27. Seen on 2026-09-27: `perch build` from
-  Homebrew rewrote transom's committed `Runtime.swift` without the fix.
-- The schema's state and shape field name rules don't list CEL's reserved
-  words, which the parser refuses.
-- The template schema accepts `${…}` only in `launchagent`, so an editor flags
-  `json: ${decode}`; and it allows outlet marks in a template's nested
-  submenus, which the parser refuses.
-
 ## Older, still open
 
 - **reviewplex** (`~/src/pw/reviewplex`, Point Wild) is the last widget not on
@@ -82,8 +74,8 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Traps
 
-- **Three perch binaries are installed.** `/opt/homebrew/bin/perch` (brew,
-  `v2.0.0`) is first on PATH, then `~/.local/bin/perch`; `~/go/bin` is not on
+- **Three perch binaries are installed.** `/opt/homebrew/bin/perch` (brew)
+  is first on PATH, then `~/.local/bin/perch`; `~/go/bin` is not on
   PATH. Testing a local build means running it by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
