@@ -276,6 +276,12 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 .icon.symbol > svg { display: block; width: 100%; height: 100%; }
 .icon.art { width: auto; height: 13px; border-radius: 2px; }
 .statusitem .icon { position: relative; }
+/* A tint on the accent pill fights it, so a tinted item sits on gray. */
+.statusitem.is-tinted {
+  --tinted-bg: color-mix(in srgb, var(--ink) 9%, var(--menu-bg));
+  background: var(--tinted-bg);
+  color: var(--ink);
+}
 .tint-glyph .icon, .tint-accent .icon { color: var(--tint); }
 .tint-chip .icon { box-sizing: content-box; padding: 1px 3px; border-radius: 3px; background: var(--tint); }
 .tint-dot .icon::after {
@@ -283,7 +289,7 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
   position: absolute;
   border-radius: 50%;
   background: var(--tint);
-  box-shadow: 0 0 0 1.5px var(--accent);
+  box-shadow: 0 0 0 1.5px var(--tinted-bg);
 }
 .dot-small .icon::after { width: 4px; height: 4px; }
 .dot-medium .icon::after { width: 5px; height: 5px; }

@@ -29,7 +29,7 @@ func tintAttrs(t *preview.Tint) (classes, style string) {
 	}
 	v, _ := strconv.ParseUint(hex[1:], 16, 32)
 	rgba := fmt.Sprintf("rgba(%d, %d, %d, %s)", v>>16, v>>8&0xff, v&0xff, strconv.FormatFloat(t.Alpha, 'f', 3, 64))
-	classes = " tint-" + t.Style
+	classes = " is-tinted tint-" + t.Style
 	if t.Style == "dot" {
 		classes += " dot-" + t.Size + " at-" + t.Corner
 	}
