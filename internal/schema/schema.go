@@ -95,7 +95,7 @@ const body = `{
         "minProperties": 1,
         "maxProperties": 1,
         "additionalProperties": {"type": ["string", "null"], "description": "CEL condition reaching this state; omit on the last one."},
-        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "init", "Type", "Protocol"]}}
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}}
       }
     },
     "use": {
@@ -187,7 +187,7 @@ const body = `{
       "oneOf": [
         {"type": "string", "enum": ["string", "int", "double", "bool", "any"]},
         {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/definitions/shape"}},
-        {"type": "object", "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["self", "init", "Type", "Protocol"]}}, "additionalProperties": {"$ref": "#/definitions/shape"}}
+        {"type": "object", "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["self", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}}, "additionalProperties": {"$ref": "#/definitions/shape"}}
       ]
     },
     "menu": {
@@ -233,9 +233,9 @@ const body = `{
 }
 `
 
-// templateLaunchAgentPattern also allows a value containing a ${param} hole,
-// which a menubar.yaml's launchagent, a real launchd label, never holds.
-const templateLaunchAgentPattern = `^([A-Za-z0-9][A-Za-z0-9._-]*|.*\$\{[A-Za-z_][A-Za-z0-9_]*\}.*)$`
+// paramHole is a string holding a ${param}. A template's every scalar value is
+// filled before it is parsed, so any of them may be one.
+var paramHole = map[string]any{"type": "string", "pattern": `\$\{[A-Za-z_][A-Za-z0-9_]*\}`, "description": "A ${param} hole, filled before the template is parsed."}
 
 // TemplateJSON is the schema for a template file. It is cut from JSON rather
 // than written again, so a watch, state, rule or item means the same in both.
@@ -250,25 +250,17 @@ func TemplateJSON() string {
 		panic("schema: TemplateJSON: the schema has no properties or definitions")
 	}
 
-	watch := deepCopy(at(props, "watch"))
-	launchagent, ok := at(watch, "additionalProperties", "properties", "launchagent").(map[string]any)
-	if !ok {
-		panic("schema: TemplateJSON: watch.additionalProperties.properties.launchagent is not an object")
-	}
-	launchagent["pattern"] = templateLaunchAgentPattern
-
 	statusRule, ok := deepCopy(at(props, "status", "items", "oneOf", 0)).(map[string]any)
 	if !ok {
 		panic("schema: TemplateJSON: status.items.oneOf.0 is not an object")
 	}
 	statusRule["required"] = []string{"when"}
 
-	// menuItem's own "menu" field still $refs #/definitions/menu, so a nested
-	// submenu may hold outlet marks even though a fragment's top level may not.
 	menuItem, ok := deepCopy(at(defs, "menu", "items", "oneOf", 1)).(map[string]any)
 	if !ok {
 		panic("schema: TemplateJSON: definitions.menu.items.oneOf.1 is not an object")
 	}
+	at(menuItem, "properties").(map[string]any)["menu"] = map[string]any{"$ref": "#/definitions/templateMenu"}
 	defs["templateMenu"] = map[string]any{
 		"type": "array",
 		"items": map[string]any{
@@ -294,7 +286,7 @@ func TemplateJSON() string {
 				"propertyNames":        map[string]any{"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
 				"additionalProperties": map[string]any{"type": []string{"string", "number", "boolean", "null"}},
 			},
-			"watch": watch,
+			"watch": at(props, "watch"),
 			"state": at(props, "state"),
 			"status": map[string]any{
 				"type":                 "object",
@@ -310,11 +302,88 @@ func TemplateJSON() string {
 			},
 		},
 	}
+	for _, name := range []string{"watch", "state", "status", "menu"} {
+		acceptParamsWithin(at(tmpl, "properties", name).(map[string]any))
+	}
+	acceptParamsWithin(map[string]any{"definitions": defs})
+	defs["param"] = paramHole
 	out, err := json.MarshalIndent(tmpl, "", "  ")
 	if err != nil {
 		panic("schema: " + err.Error())
 	}
 	return string(out) + "\n"
+}
+
+// acceptParams returns schema s, widened to take a paramHole wherever it would
+// refuse one. Keys are never filled, so propertyNames stay as they are.
+func acceptParams(s any) any {
+	m, ok := s.(map[string]any)
+	if !ok {
+		return s
+	}
+	acceptParamsWithin(m)
+	if !refusesHole(m) {
+		return m
+	}
+	return map[string]any{"description": m["description"], "anyOf": []any{m, map[string]any{"$ref": "#/definitions/param"}}}
+}
+
+// acceptParamsWithin widens what s holds but not s itself. A oneOf's branches
+// are widened only within, since two widened branches would both match a hole.
+func acceptParamsWithin(s map[string]any) {
+	for _, key := range []string{"properties", "definitions"} {
+		if m, ok := s[key].(map[string]any); ok {
+			for name, sub := range m {
+				m[name] = acceptParams(sub)
+			}
+		}
+	}
+	for _, key := range []string{"items", "additionalProperties"} {
+		if _, ok := s[key].(map[string]any); ok {
+			s[key] = acceptParams(s[key])
+		}
+	}
+	for _, key := range []string{"oneOf", "anyOf"} {
+		branches, _ := s[key].([]any)
+		for _, b := range branches {
+			if m, ok := b.(map[string]any); ok {
+				acceptParamsWithin(m)
+			}
+		}
+	}
+}
+
+// refusesHole reports whether a scalar schema refuses a string like "${x}".
+func refusesHole(s map[string]any) bool {
+	if _, ok := s["enum"]; ok {
+		return true
+	}
+	if _, ok := s["pattern"]; ok {
+		return true
+	}
+	if branches, ok := s["oneOf"].([]any); ok {
+		for _, b := range branches {
+			if m, ok := b.(map[string]any); ok && refusesHole(m) {
+				return true
+			}
+		}
+	}
+	var types []any
+	switch t := s["type"].(type) {
+	case string:
+		types = []any{t}
+	case []any:
+		types = t
+	}
+	if len(types) == 0 {
+		return false
+	}
+	for _, t := range types {
+		if t == "string" || t == "object" || t == "array" {
+			return false
+		}
+	}
+	return true
 }
 
 // at walks a decoded JSON document by key (string) or index (int) and panics,

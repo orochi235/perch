@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -118,7 +119,7 @@ menu: [{text: Q, quit: true}]
 	}
 
 	stateName := nameRule(t, "properties", "state", "items", "propertyNames")
-	for _, name := range []string{"init", "Type", "Protocol", "self", "widget"} {
+	for _, name := range []string{"init", "Type", "Protocol", "self", "package", "in", "widget"} {
 		agree(t, name, stateName, `
 app: {name: a, id: dev.a, icon: circle, interval: 1s}
 state: [{`+strconv.Quote(name)+`: null}]
@@ -127,7 +128,7 @@ menu: [{text: Q, quit: true}]
 	}
 
 	fieldName := nameRule(t, "definitions", "shape", "oneOf", "2", "propertyNames")
-	for _, name := range []string{"init", "Type", "Protocol", "self", "count"} {
+	for _, name := range []string{"init", "Type", "Protocol", "self", "package", "in", "it", "count"} {
 		agree(t, name, fieldName, `
 app: {name: a, id: dev.a, icon: circle, interval: 1s}
 watch: {w: {run: [x], json: true, shape: {`+strconv.Quote(name)+`: string}}}
@@ -159,28 +160,28 @@ func TestAgentPatternTakesPaths(t *testing.T) {
 	}
 }
 
-// The template schema's launchagent additionally allows a bare ${param}
-// hole, which the shipped service.yaml relies on; JSON()'s stays unchanged.
-func TestTemplateLaunchAgentPatternAllowsAParam(t *testing.T) {
-	field, ok := walk(t, templateDecoded(t), "properties.watch.additionalProperties.properties.launchagent").(map[string]any)
-	if !ok {
-		t.Fatal("template schema: watch launchagent is not an object")
-	}
-	re := regexp.MustCompile(field["pattern"].(string))
-	for v, want := range map[string]bool{
-		"${label}": true, "dev.x.${name}": true, "dev.example.worker": true, "dev example": false,
+// A template fills ${param} into every scalar before parsing, so its schema
+// takes a hole wherever the menubar.yaml schema takes a scalar.
+func TestTemplateScalarsAllowAParam(t *testing.T) {
+	doc := templateDecoded(t)
+	for path, values := range map[string]map[string]bool{
+		"properties.watch.additionalProperties.properties.launchagent": {
+			"${label}": true, "dev.x.${name}": true, "dev.example.worker": true, "dev example": false,
+		},
+		"properties.watch.additionalProperties.properties.json": {"${decode}": true, "yes": false},
+		"definitions.tint": {"${color}": true, "teal": true, "plaid": false},
+		"definitions.templateMenu.items.anyOf.0.oneOf.1.properties.window": {"${verb}": true, "open": true, "shut": false},
 	} {
-		if re.MatchString(v) != want {
-			t.Errorf("%q: matches = %v, want %v", v, !want, want)
+		for v, want := range values {
+			if got := matchesString(t, doc, walk(t, doc, path), v); got != want {
+				t.Errorf("%s: %q: matches = %v, want %v", path, v, got, want)
+			}
 		}
 	}
 
-	main, ok := walk(t, decoded(t), "properties.watch.additionalProperties.properties.launchagent").(map[string]any)
-	if !ok {
-		t.Fatal("schema: watch launchagent is not an object")
-	}
-	if main["pattern"] != "^[A-Za-z0-9][A-Za-z0-9._-]*$" {
-		t.Errorf("JSON()'s launchagent pattern changed to %v", main["pattern"])
+	main := decoded(t)
+	if matchesString(t, main, walk(t, main, "properties.watch.additionalProperties.properties.launchagent"), "${label}") {
+		t.Error("JSON()'s launchagent takes a ${param}, which no launchd label holds")
 	}
 }
 
@@ -203,13 +204,56 @@ func TestTemplateLaunchAgentPatternTakesService(t *testing.T) {
 	if label == "" {
 		t.Fatal("service.yaml: watch.agent.launchagent is empty")
 	}
-	field, ok := walk(t, templateDecoded(t), "properties.watch.additionalProperties.properties.launchagent").(map[string]any)
-	if !ok {
-		t.Fatal("template schema: watch launchagent is not an object")
-	}
-	if !regexp.MustCompile(field["pattern"].(string)).MatchString(label) {
+	tmpl := templateDecoded(t)
+	if !matchesString(t, tmpl, walk(t, tmpl, "properties.watch.additionalProperties.properties.launchagent"), label) {
 		t.Errorf("the template schema refuses service.yaml's launchagent %q", label)
 	}
+}
+
+// matchesString reports whether schema s takes the string v, for the keywords
+// a string can meet in perch's schemas.
+func matchesString(t *testing.T, doc map[string]any, s any, v string) bool {
+	t.Helper()
+	m, ok := s.(map[string]any)
+	if !ok {
+		t.Fatalf("schema %v is not an object", s)
+	}
+	if ref, ok := m["$ref"].(string); ok {
+		return matchesString(t, doc, walk(t, doc, strings.ReplaceAll(strings.TrimPrefix(ref, "#/"), "/", ".")), v)
+	}
+	if branches, ok := m["anyOf"].([]any); ok {
+		return slices.ContainsFunc(branches, func(b any) bool { return matchesString(t, doc, b, v) })
+	}
+	if branches, ok := m["oneOf"].([]any); ok {
+		n := 0
+		for _, b := range branches {
+			if matchesString(t, doc, b, v) {
+				n++
+			}
+		}
+		return n == 1
+	}
+	switch ty := m["type"].(type) {
+	case string:
+		if ty != "string" {
+			return false
+		}
+	case []any:
+		if !slices.Contains(ty, any("string")) {
+			return false
+		}
+	case nil:
+		if m["enum"] == nil && m["pattern"] == nil {
+			return false
+		}
+	}
+	if enum, ok := m["enum"].([]any); ok && !slices.Contains(enum, any(v)) {
+		return false
+	}
+	if p, ok := m["pattern"].(string); ok && !regexp.MustCompile(p).MatchString(v) {
+		return false
+	}
+	return true
 }
 
 func agree(t *testing.T, value string, allowed func(string) bool, doc string) {

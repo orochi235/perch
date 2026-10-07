@@ -231,26 +231,30 @@ func TestTemplateStatusItemsHaveNoOutletAndRequireWhen(t *testing.T) {
 	}
 }
 
-// A fragment's own menu items cannot place another use's fragment either, so
-// templateMenu's oneOf is just separator and the item object — no outlet ref.
-func TestTemplateMenuHasNoTopLevelOutlet(t *testing.T) {
+// A fragment's own menu items cannot place another use's fragment either, at
+// its top level or in a submenu, so templateMenu offers separator and the item
+// object, and the item's submenu is templateMenu again.
+func TestTemplateMenuHasNoOutlet(t *testing.T) {
 	doc := templateDecoded(t)
-	oneOf, ok := walk(t, doc, "definitions.templateMenu.items.oneOf").([]any)
+	oneOf, ok := walk(t, doc, "definitions.templateMenu.items.anyOf.0.oneOf").([]any)
 	if !ok || len(oneOf) != 2 {
-		t.Fatalf("templateMenu.items.oneOf = %v, want [separator, item]", oneOf)
+		t.Fatalf("templateMenu's items = %v, want [separator, item]", oneOf)
 	}
 	sep, ok := oneOf[0].(map[string]any)
 	if !ok || !reflect.DeepEqual(sep["enum"], []any{"separator"}) {
-		t.Errorf("templateMenu.items.oneOf[0] = %v, want the separator enum", oneOf[0])
+		t.Errorf("templateMenu's items[0] = %v, want the separator enum", oneOf[0])
 	}
 	item, ok := oneOf[1].(map[string]any)
 	if !ok || item["properties"] == nil {
-		t.Errorf("templateMenu.items.oneOf[1] = %v, want the menu item object", oneOf[1])
+		t.Fatalf("templateMenu's items[1] = %v, want the menu item object", oneOf[1])
 	}
 	for _, v := range oneOf {
 		if m, ok := v.(map[string]any); ok && m["$ref"] != nil {
-			t.Errorf("templateMenu.items.oneOf offers %v; a fragment's top level takes no outlet mark", m["$ref"])
+			t.Errorf("templateMenu's items offer %v; a fragment takes no outlet mark", m["$ref"])
 		}
+	}
+	if ref := walk(t, item, "properties.menu.$ref"); ref != "#/definitions/templateMenu" {
+		t.Errorf("a template item's submenu is %v, want #/definitions/templateMenu", ref)
 	}
 }
 
