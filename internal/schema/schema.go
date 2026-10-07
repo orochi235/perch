@@ -176,6 +176,7 @@ const body = `{
             "size": {"enum": ["small", "medium", "large"], "description": "The dot's size. Default small."},
             "corner": {"enum": ["bottom-right", "bottom-left", "top-right", "top-left"], "description": "Where the dot sits. Default bottom-right."},
             "wrap": {"enum": ["icon", "all"], "description": "What a chip covers: the icon, or the icon and the badge. Default icon."},
+            "menu": {"type": "boolean", "description": "Tint the dropdown's glass too, in the same color and opacity. Default false."},
             "opacity": {"type": ["number", "string"], "description": "The color's opacity from 0 to 1, or a CEL expression giving one. Replaces a #rrggbbaa alpha and the chip's default 0.35."}
           }
         }

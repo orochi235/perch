@@ -25,6 +25,8 @@ type Tint struct {
 	Size    TintSize
 	Corner  TintCorner
 	Wrap    TintWrap
+	// Menu tints the dropdown's glass as well as the status item.
+	Menu bool
 }
 
 func (t Tint) IsZero() bool { return t.Color == "" }
@@ -81,6 +83,7 @@ type rawTint struct {
 	Size   string `yaml:"size"`
 	Corner string `yaml:"corner"`
 	Wrap   string `yaml:"wrap"`
+	Menu   bool   `yaml:"menu"`
 	// Opacity is a number or a CEL expression, so it is read as either.
 	Opacity yaml.Node `yaml:"opacity"`
 }
@@ -104,7 +107,7 @@ func parseTint(n *yaml.Node, path string) (Tint, error) {
 		return Tint{}, fmt.Errorf("%s: want a color, or {color: <color>, style: <style>}", path)
 	}
 
-	t := Tint{Color: raw.Color, Alpha: 1, Style: TintDot, Size: "small", Corner: "bottom-right", Wrap: "icon"}
+	t := Tint{Color: raw.Color, Alpha: 1, Style: TintDot, Size: "small", Corner: "bottom-right", Wrap: "icon", Menu: raw.Menu}
 	if raw.Style != "" {
 		t.Style = TintStyle(raw.Style)
 	}
@@ -175,4 +178,18 @@ func checkTint(icon Icon, t Tint, path string) error {
 		return fmt.Errorf("%s: tint style %s recolors an SF Symbol's layers, and {asset: %s} is artwork; use dot or chip", path, t.Style, icon.Asset)
 	}
 	return nil
+}
+
+// TintsMenu reports whether any tint, the app's or a status rule's, asks for
+// the dropdown to be tinted.
+func (s *Spec) TintsMenu() bool {
+	if s.App.Tint.Menu {
+		return true
+	}
+	for _, r := range s.Status {
+		if r.Tint.Menu {
+			return true
+		}
+	}
+	return false
 }

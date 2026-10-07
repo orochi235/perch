@@ -273,9 +273,9 @@ func swiftTint(t spec.Tint, e *celswift.Env) (string, error) {
 		}
 		alpha = "CGFloat(" + n + ")"
 	}
-	return fmt.Sprintf("Tint(color: %s, alpha: %s, style: .%s, size: .%s, corner: .%s%s, wrap: .%s)",
+	return fmt.Sprintf("Tint(color: %s, alpha: %s, style: .%s, size: .%s, corner: .%s%s, wrap: .%s, menu: %t)",
 		celswift.SwiftString(t.Color), alpha,
-		t.Style, t.Size, corner, strings.ToUpper(side[:1])+side[1:], t.Wrap), nil
+		t.Style, t.Size, corner, strings.ToUpper(side[:1])+side[1:], t.Wrap, t.Menu), nil
 }
 
 // menuGen hands out unique local names so nested submenus and each: loops do

@@ -312,6 +312,8 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
   font-size: 13px;
 }
 
+.menu-tinted .menu { background: linear-gradient(var(--tint), var(--tint)), var(--menu-bg); }
+
 .row { position: relative; padding: 4px 12px; color: var(--ink); }
 .row.label { color: var(--ink-faint); }
 .row.action:hover, .row.sub:hover, .row.sub:focus { background: var(--accent); color: #fff; outline: none; }

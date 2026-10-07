@@ -25,6 +25,7 @@ func TestTintTakesAStyleAndPlacesADot(t *testing.T) {
 		`{color: blue, style: chip}`:                     {Color: "blue", Alpha: chipAlpha, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon"},
 		`{color: "#eeb48d80", style: chip}`:              {Color: "#eeb48d", Alpha: 128.0 / 255, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon"},
 		`{color: purple, style: chip, wrap: all}`:        {Color: "purple", Alpha: chipAlpha, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "all"},
+		`{color: purple, style: chip, menu: true}`:       {Color: "purple", Alpha: chipAlpha, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon", Menu: true},
 		`{color: purple, style: chip, opacity: 0.6}`:     {Color: "purple", Alpha: 0.6, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon"},
 		`{color: teal, opacity: "up.ok ? 1.0 : 0.3"}`:    {Color: "teal", Alpha: 1, Opacity: "up.ok ? 1.0 : 0.3", Style: TintDot, Size: "small", Corner: "bottom-right", Wrap: "icon"},
 	} {

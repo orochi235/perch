@@ -26,7 +26,12 @@ func previewHTML(root string, yaml string, frames []preview.Frame) string {
 	}
 
 	for i, f := range frames {
-		b.WriteString(fmt.Sprintf(`<div class="frame%s" data-frame="%d">`, on(i == 0), i))
+		menuTint, menuStyle := "", ""
+		if f.Face.Tint != nil && f.Face.Tint.Menu {
+			_, menuStyle = tintAttrs(f.Face.Tint)
+			menuTint = " menu-tinted"
+		}
+		b.WriteString(fmt.Sprintf(`<div class="frame%s%s" data-frame="%d"%s>`, on(i == 0), menuTint, i, menuStyle))
 		b.WriteString(barHTML(root, f))
 		b.WriteString(menuHTML(root, f.Menu))
 		b.WriteString(`</div>`)

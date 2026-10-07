@@ -45,6 +45,9 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main")
 	b.line(") { [weak self] _ in self?.refresh() }")
 	b.out()
+	if s.TintsMenu() {
+		b.line("MenuGlass.follow { [weak self] in self.flatMap { renderFace($0.results).tint } }")
+	}
 	b.line("refresh()")
 	b.line("poll()")
 	b.line("timer = Timer.scheduledTimer(withTimeInterval: %s, repeats: true) { [weak self] _ in", swiftDouble(s.App.Interval.Seconds()))
