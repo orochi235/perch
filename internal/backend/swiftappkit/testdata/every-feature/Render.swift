@@ -54,12 +54,12 @@ extension PlistResult {
 }
 
 func renderFace(_ results: Results) -> Face {
-    var face = Face(icon: MenuIcon.symbol("brain"), tint: Tint(color: "#eeb48d", alpha: 1, style: .dot, size: .small, corner: .topRight))
+    var face = Face(icon: MenuIcon.symbol("brain"), tint: Tint(color: "#eeb48d", alpha: 1, style: .dot, size: .small, corner: .topRight, wrap: .icon))
     if !(results.plist.ok) {
         face.icon = MenuIcon.symbol("circle.dashed")
     } else if !(results.server.ok) {
         face.icon = MenuIcon.asset("alarm")
-        face.tint = Tint(color: "red", alpha: 0.35, style: .chip, size: .small, corner: .bottomRight)
+        face.tint = Tint(color: "red", alpha: CGFloat((results.plist.ok ? 0.5 : 0.25)), style: .chip, size: .small, corner: .bottomRight, wrap: .all)
         face.dim = true
     } else {
         face.badge = String(results.server.data["sessions"].size)

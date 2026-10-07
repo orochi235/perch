@@ -61,7 +61,7 @@ status:
     icon: circle.dashed
   - when: "!server.ok"
     icon: {asset: alarm}
-    tint: {color: red, style: chip}
+    tint: {color: red, style: chip, wrap: all, opacity: "plist.ok ? 0.5 : 0.25"}
     dim: true
   - badge: "string(server.data.sessions.size())"
 menu:

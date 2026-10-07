@@ -43,6 +43,7 @@ type Tint struct {
 	Style  string  `json:"style"`
 	Size   string  `json:"size"`
 	Corner string  `json:"corner"`
+	Wrap   string  `json:"wrap"`
 }
 
 type Post struct {

@@ -11,7 +11,7 @@ func tinted(tint string) string {
 
 func TestTintAloneIsADot(t *testing.T) {
 	got := parse(t, tinted("teal")).App.Tint
-	want := Tint{Color: "teal", Alpha: 1, Style: TintDot, Size: "small", Corner: "bottom-right"}
+	want := Tint{Color: "teal", Alpha: 1, Style: TintDot, Size: "small", Corner: "bottom-right", Wrap: "icon"}
 	if got != want {
 		t.Errorf("tint = %+v, want %+v", got, want)
 	}
@@ -19,11 +19,14 @@ func TestTintAloneIsADot(t *testing.T) {
 
 func TestTintTakesAStyleAndPlacesADot(t *testing.T) {
 	for doc, want := range map[string]Tint{
-		`{color: "#eeb48d", style: glyph}`:               {Color: "#eeb48d", Alpha: 1, Style: TintGlyph, Size: "small", Corner: "bottom-right"},
-		`{color: pink, style: accent}`:                   {Color: "pink", Alpha: 1, Style: TintAccent, Size: "small", Corner: "bottom-right"},
-		`{color: orange, size: large, corner: top-left}`: {Color: "orange", Alpha: 1, Style: TintDot, Size: "large", Corner: "top-left"},
-		`{color: blue, style: chip}`:                     {Color: "blue", Alpha: chipAlpha, Style: TintChip, Size: "small", Corner: "bottom-right"},
-		`{color: "#eeb48d80", style: chip}`:              {Color: "#eeb48d", Alpha: 128.0 / 255, Style: TintChip, Size: "small", Corner: "bottom-right"},
+		`{color: "#eeb48d", style: glyph}`:               {Color: "#eeb48d", Alpha: 1, Style: TintGlyph, Size: "small", Corner: "bottom-right", Wrap: "icon"},
+		`{color: pink, style: accent}`:                   {Color: "pink", Alpha: 1, Style: TintAccent, Size: "small", Corner: "bottom-right", Wrap: "icon"},
+		`{color: orange, size: large, corner: top-left}`: {Color: "orange", Alpha: 1, Style: TintDot, Size: "large", Corner: "top-left", Wrap: "icon"},
+		`{color: blue, style: chip}`:                     {Color: "blue", Alpha: chipAlpha, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon"},
+		`{color: "#eeb48d80", style: chip}`:              {Color: "#eeb48d", Alpha: 128.0 / 255, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon"},
+		`{color: purple, style: chip, wrap: all}`:        {Color: "purple", Alpha: chipAlpha, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "all"},
+		`{color: purple, style: chip, opacity: 0.6}`:     {Color: "purple", Alpha: 0.6, Style: TintChip, Size: "small", Corner: "bottom-right", Wrap: "icon"},
+		`{color: teal, opacity: "up.ok ? 1.0 : 0.3"}`:    {Color: "teal", Alpha: 1, Opacity: "up.ok ? 1.0 : 0.3", Style: TintDot, Size: "small", Corner: "bottom-right", Wrap: "icon"},
 	} {
 		if got := parse(t, tinted(doc)).App.Tint; got != want {
 			t.Errorf("%s: tint = %+v, want %+v", doc, got, want)
@@ -41,6 +44,11 @@ func TestTintRefusesWhatItCannotDraw(t *testing.T) {
 		`{color: red, corner: middle}`:           "not one of",
 		`{color: red, style: chip, size: large}`: "place a dot",
 		`{color: red, shade: dark}`:              "shade",
+		`{color: red, wrap: all}`:                "what a chip covers",
+		`{color: red, style: chip, wrap: badge}`: "not one of",
+		`{color: red, opacity: 1.5}`:             "outside 0 to 1",
+		`{color: "#ff000080", opacity: 0.5}`:     "give one",
+		`{color: red, opacity: [1]}`:             "want a number",
 	} {
 		_, err := Parse([]byte(tinted(doc)))
 		if err == nil || !strings.Contains(err.Error(), msg) {

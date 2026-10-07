@@ -80,7 +80,7 @@ private func encoded(_ face: Face) -> [String: Any] {
     var out: [String: Any] = ["icon": encoded(face.icon), "dim": face.dim, "badge": face.badge]
     if let tint = face.tint {
         out["tint"] = ["color": tint.name, "alpha": tint.alpha, "style": tint.style.rawValue,
-                       "size": tint.size.rawValue, "corner": tint.corner.rawValue]
+                       "size": tint.size.rawValue, "corner": tint.corner.rawValue, "wrap": tint.wrap.rawValue]
     }
     return out
 }

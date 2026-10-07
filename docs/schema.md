@@ -781,13 +781,15 @@ A mapping picks the style:
 | `style` | `dot` (the default), `glyph`, `accent`, or `chip`. |
 | `size` | A dot's size: `small` (the default), `medium`, or `large`. |
 | `corner` | Where a dot sits: `bottom-right` (the default), `bottom-left`, `top-right`, or `top-left`. |
+| `wrap` | What a chip covers: `icon` (the default), or `all` to put the badge on the patch too. |
+| `opacity` | The color's opacity, from 0 to 1, or a CEL expression giving one — so how strong the color is can say something, as a chip that fades while nothing is waiting does. Replaces the chip's 35%; a `#rrggbbaa` color and `opacity` cannot both be given. |
 
 | Style | Draws | On artwork |
 |---|---|---|
 | `dot` | The icon as usual, with a dot of the color on one corner. | Yes |
 | `glyph` | The whole symbol in the color, its secondary parts fainter. | No |
 | `accent` | The symbol's secondary part in the color, the rest as usual. A symbol drawn in one part shows no color at all. | No |
-| `chip` | The icon on a rounded patch of the color, at 35% unless `#rrggbbaa` gives its own opacity. | Yes |
+| `chip` | The icon on a rounded patch of the color, at 35% unless `opacity` or `#rrggbbaa` says otherwise. | Yes |
 
 Here the color says which environment a deploy tool points at, and each
 environment gets a different style:
@@ -833,6 +835,30 @@ target:
 ```state unset
 target:
   code: 1
+```
+
+Here the chip carries the count, and its opacity says whether there is one:
+
+```yaml
+app: {name: inbox, id: dev.example.inbox.menubar, icon: tray, interval: 30s}
+watch:
+  unread:
+    run: [inbox, count]
+status:
+  - tint: {color: purple, style: chip, wrap: all, opacity: 'unread.out == "0" ? 0.15 : 0.5'}
+    badge: 'unread.out == "0" ? "" : unread.out'
+menu:
+  - {text: Quit, quit: true}
+```
+
+```state empty
+unread:
+  out: "0"
+```
+
+```state waiting
+unread:
+  out: "4"
 ```
 
 A tinted icon is drawn in color rather than as a template, so macOS no longer

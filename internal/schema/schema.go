@@ -174,7 +174,9 @@ const body = `{
             "color": {"$ref": "#/definitions/tintColor"},
             "style": {"enum": ["dot", "glyph", "accent", "chip"], "description": "dot: a dot on one corner. glyph: the whole symbol. accent: the symbol's secondary layer. chip: a patch behind the icon. Default dot."},
             "size": {"enum": ["small", "medium", "large"], "description": "The dot's size. Default small."},
-            "corner": {"enum": ["bottom-right", "bottom-left", "top-right", "top-left"], "description": "Where the dot sits. Default bottom-right."}
+            "corner": {"enum": ["bottom-right", "bottom-left", "top-right", "top-left"], "description": "Where the dot sits. Default bottom-right."},
+            "wrap": {"enum": ["icon", "all"], "description": "What a chip covers: the icon, or the icon and the badge. Default icon."},
+            "opacity": {"type": ["number", "string"], "description": "The color's opacity from 0 to 1, or a CEL expression giving one. Replaces a #rrggbbaa alpha and the chip's default 0.35."}
           }
         }
       ]

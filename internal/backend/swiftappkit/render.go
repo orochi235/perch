@@ -192,7 +192,11 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift
 	if s.App.Tint.IsZero() {
 		b.line("%s face = Face(icon: %s)", bind(mutated), swiftIcon(s.App.Icon))
 	} else {
-		b.line("%s face = Face(icon: %s, tint: %s)", bind(mutated), swiftIcon(s.App.Icon), swiftTint(s.App.Tint))
+		tint, err := swiftTint(s.App.Tint, e)
+		if err != nil {
+			return fmt.Errorf("app.tint.opacity: %w", err)
+		}
+		b.line("%s face = Face(icon: %s, tint: %s)", bind(mutated), swiftIcon(s.App.Icon), tint)
 	}
 
 	for i, rule := range s.Status {
@@ -221,7 +225,11 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift
 			b.line("face.icon = %s", swiftIcon(rule.Icon))
 		}
 		if !rule.Tint.IsZero() {
-			b.line("face.tint = %s", swiftTint(rule.Tint))
+			tint, err := swiftTint(rule.Tint, re)
+			if err != nil {
+				return fmt.Errorf("%s.tint.opacity: %w", rule.Path(), err)
+			}
+			b.line("face.tint = %s", tint)
 		}
 		if rule.Dim {
 			b.line("face.dim = true")
@@ -255,11 +263,19 @@ func swiftIcon(i spec.Icon) string {
 	return "MenuIcon.symbol(" + celswift.SwiftString(i.Symbol) + ")"
 }
 
-func swiftTint(t spec.Tint) string {
+func swiftTint(t spec.Tint, e *celswift.Env) (string, error) {
 	corner, side, _ := strings.Cut(string(t.Corner), "-")
-	return fmt.Sprintf("Tint(color: %s, alpha: %s, style: .%s, size: .%s, corner: .%s%s)",
-		celswift.SwiftString(t.Color), strconv.FormatFloat(t.Alpha, 'f', -1, 64),
-		t.Style, t.Size, corner, strings.ToUpper(side[:1])+side[1:])
+	alpha := strconv.FormatFloat(t.Alpha, 'f', -1, 64)
+	if t.Opacity != "" {
+		n, err := e.LowerNumber(t.Opacity)
+		if err != nil {
+			return "", err
+		}
+		alpha = "CGFloat(" + n + ")"
+	}
+	return fmt.Sprintf("Tint(color: %s, alpha: %s, style: .%s, size: .%s, corner: .%s%s, wrap: .%s)",
+		celswift.SwiftString(t.Color), alpha,
+		t.Style, t.Size, corner, strings.ToUpper(side[:1])+side[1:], t.Wrap), nil
 }
 
 // menuGen hands out unique local names so nested submenus and each: loops do

@@ -17,10 +17,14 @@ type Tint struct {
 	// Color is a SystemColors name or #rrggbb, as written.
 	Color string
 	// Alpha is the color's opacity: from #rrggbbaa, otherwise the style's own.
-	Alpha  float64
-	Style  TintStyle
-	Size   TintSize
-	Corner TintCorner
+	Alpha float64
+	// Opacity, when set, replaces Alpha: a CEL expression giving a number,
+	// so the strength of the color can carry a status.
+	Opacity string
+	Style   TintStyle
+	Size    TintSize
+	Corner  TintCorner
+	Wrap    TintWrap
 }
 
 func (t Tint) IsZero() bool { return t.Color == "" }
@@ -53,6 +57,11 @@ type TintCorner string
 
 var tintCorners = []TintCorner{"bottom-right", "bottom-left", "top-right", "top-left"}
 
+// TintWrap is what a chip's patch covers: the icon alone, or the badge too.
+type TintWrap string
+
+var tintWraps = []TintWrap{"icon", "all"}
+
 // SystemColors are the names a tint takes besides a hex code. Each is one of
 // macOS's system colors, which shift between the light and dark menu bar.
 var SystemColors = []string{
@@ -71,6 +80,9 @@ type rawTint struct {
 	Style  string `yaml:"style"`
 	Size   string `yaml:"size"`
 	Corner string `yaml:"corner"`
+	Wrap   string `yaml:"wrap"`
+	// Opacity is a number or a CEL expression, so it is read as either.
+	Opacity yaml.Node `yaml:"opacity"`
 }
 
 // parseTint takes a color alone, which draws a dot, or a mapping that picks
@@ -92,7 +104,7 @@ func parseTint(n *yaml.Node, path string) (Tint, error) {
 		return Tint{}, fmt.Errorf("%s: want a color, or {color: <color>, style: <style>}", path)
 	}
 
-	t := Tint{Color: raw.Color, Alpha: 1, Style: TintDot, Size: "small", Corner: "bottom-right"}
+	t := Tint{Color: raw.Color, Alpha: 1, Style: TintDot, Size: "small", Corner: "bottom-right", Wrap: "icon"}
 	if raw.Style != "" {
 		t.Style = TintStyle(raw.Style)
 	}
@@ -128,6 +140,30 @@ func parseTint(n *yaml.Node, path string) (Tint, error) {
 		t.Corner = TintCorner(raw.Corner)
 		if !slices.Contains(tintCorners, t.Corner) {
 			return Tint{}, fmt.Errorf("%s.corner: %q is not one of %v", path, raw.Corner, tintCorners)
+		}
+	}
+	if raw.Opacity.Kind != 0 {
+		if len(raw.Color) == 9 {
+			return Tint{}, fmt.Errorf("%s: opacity: and a #rrggbbaa color both set the opacity; give one", path)
+		}
+		if raw.Opacity.Kind != yaml.ScalarNode || raw.Opacity.Value == "" {
+			return Tint{}, fmt.Errorf("%s.opacity: want a number from 0 to 1, or a CEL expression giving one", path)
+		}
+		t.Opacity = raw.Opacity.Value
+		if f, err := strconv.ParseFloat(t.Opacity, 64); err == nil {
+			if f < 0 || f > 1 {
+				return Tint{}, fmt.Errorf("%s.opacity: %v is outside 0 to 1", path, f)
+			}
+			t.Alpha, t.Opacity = f, ""
+		}
+	}
+	if raw.Wrap != "" {
+		if t.Style != TintChip {
+			return Tint{}, fmt.Errorf("%s: wrap: says what a chip covers; style %s has none", path, t.Style)
+		}
+		t.Wrap = TintWrap(raw.Wrap)
+		if !slices.Contains(tintWraps, t.Wrap) {
+			return Tint{}, fmt.Errorf("%s.wrap: %q is not one of %v", path, raw.Wrap, tintWraps)
 		}
 	}
 	return t, nil

@@ -284,6 +284,8 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 }
 .tint-glyph .icon, .tint-accent .icon { color: var(--tint); }
 .tint-chip .icon { box-sizing: content-box; padding: 1px 3px; border-radius: 3px; background: var(--tint); }
+.tint-chip .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px; border-radius: 3px; background: var(--tint); }
+.tint-chip .chip .icon { padding: 0; background: none; }
 .tint-dot .icon::after {
   content: "";
   position: absolute;

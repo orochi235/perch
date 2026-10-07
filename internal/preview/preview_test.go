@@ -444,7 +444,7 @@ menu:
 		state(t, s, "up", "up:\n  code: 0\n"),
 		state(t, s, "down", "up:\n  code: 1\n"),
 	})
-	if got, want := *frames[0].Face.Tint, (Tint{Color: "teal", Alpha: 1, Style: "dot", Size: "small", Corner: "top-left"}); got != want {
+	if got, want := *frames[0].Face.Tint, (Tint{Color: "teal", Alpha: 1, Style: "dot", Size: "small", Corner: "top-left", Wrap: "icon"}); got != want {
 		t.Errorf("up's tint = %+v, want %+v", got, want)
 	}
 	if got := frames[1].Face.Tint; got == nil || got.Style != "chip" || got.Color != "#ff0000" || got.Alpha < 0.5 || got.Alpha > 0.51 {

@@ -69,6 +69,23 @@ func (e *Env) LowerText(src string) (string, error) {
 	return asString(v, src)
 }
 
+// LowerNumber lowers src to a Swift Double expression.
+func (e *Env) LowerNumber(src string) (string, error) {
+	v, err := e.lowerString(src)
+	if err != nil {
+		return "", err
+	}
+	switch v.typ.Kind {
+	case spec.TypeDouble:
+		return v.swift, nil
+	case spec.TypeInt:
+		return "Double(" + v.swift + ")", nil
+	case spec.TypeAny:
+		return v.swift + ".asDouble", nil
+	}
+	return "", fmt.Errorf("%q: want a number, got %v", src, v.typ.Kind)
+}
+
 // LowerList lowers src to a Swift sequence expression and reports its element
 // type, for each: items.
 func (e *Env) LowerList(src string) (string, *spec.Type, error) {

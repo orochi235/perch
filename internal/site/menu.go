@@ -51,9 +51,16 @@ func barHTML(root string, f preview.Frame) string {
 	var b strings.Builder
 	tint, style := tintAttrs(f.Face.Tint)
 	b.WriteString(`<div class="bar"><span class="statusitem` + dimmed(f.Face.Dim) + tint + `"` + style + `>`)
+	wrapped := f.Face.Tint != nil && f.Face.Tint.Style == "chip" && f.Face.Tint.Wrap == "all"
+	if wrapped {
+		b.WriteString(`<span class="chip">`)
+	}
 	b.WriteString(iconHTML(root, f.Face.Icon))
 	if f.Face.Badge != "" {
 		b.WriteString(`<span class="badge">` + html.EscapeString(f.Face.Badge) + `</span>`)
+	}
+	if wrapped {
+		b.WriteString(`</span>`)
 	}
 	b.WriteString(`</span></div>`)
 	return b.String()
