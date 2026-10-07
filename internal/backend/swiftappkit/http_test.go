@@ -11,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/orochi235/perch/v2/internal/backend"
 )
 
 // buildProbe compiles source against the runtime and returns the binary.
@@ -20,20 +22,26 @@ func buildProbe(t *testing.T, source string) string {
 	if err != nil {
 		t.Skip("swiftc not on PATH")
 	}
+	return compileProbe(t, swiftc, append(runtimeFiles(), backend.File{Name: "main.swift", Body: []byte(source)}))
+}
+
+// compileProbe writes files to a scratch directory and compiles them together.
+func compileProbe(t *testing.T, swiftc string, files []backend.File) string {
+	t.Helper()
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Runtime.swift"), runtimeSwift, 0o644); err != nil {
-		t.Fatal(err)
+	args := []string{"-o", filepath.Join(dir, "probe")}
+	for _, f := range files {
+		path := filepath.Join(dir, f.Name)
+		if err := os.WriteFile(path, f.Body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		args = append(args, path)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "main.swift"), []byte(source), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	bin := filepath.Join(dir, "probe")
-	out, err := exec.Command(swiftc, "-o", bin,
-		filepath.Join(dir, "Runtime.swift"), filepath.Join(dir, "main.swift")).CombinedOutput()
+	out, err := exec.Command(swiftc, args...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("compiling the probe: %v\n%s", err, out)
 	}
-	return bin
+	return args[1]
 }
 
 // httpProbe drives the http watch and the post action against a server the Go

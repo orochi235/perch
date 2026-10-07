@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // The schema is written by hand beside the parser, in a different notation, and
@@ -28,6 +30,7 @@ var sections = map[string]string{
 	"rawZoom":       "properties.window.properties.zoom.properties",
 	"itemFields":    "definitions.menu.items.oneOf.1.properties",
 	"rawPost":       "definitions.menu.items.oneOf.1.properties.post.properties",
+	"rawTint":       "definitions.tint.oneOf.1.properties",
 }
 
 func TestSchemaDeclaresExactlyTheKeysTheParserAccepts(t *testing.T) {
@@ -277,5 +280,16 @@ func TestTemplateOutletMapKeysArePlainNames(t *testing.T) {
 		if rule["pattern"] != "^[A-Za-z_][A-Za-z0-9_]*$" {
 			t.Errorf("%s pattern = %v", path, rule["pattern"])
 		}
+	}
+}
+
+func TestSchemaOffersTheSystemColorsTheParserAccepts(t *testing.T) {
+	enum, _ := walk(t, decoded(t), "definitions.tintColor.oneOf.1.enum").([]any)
+	var got []string
+	for _, v := range enum {
+		got = append(got, v.(string))
+	}
+	if !reflect.DeepEqual(got, spec.SystemColors) {
+		t.Errorf("tint colors\n schema %v\n parser %v", got, spec.SystemColors)
 	}
 }

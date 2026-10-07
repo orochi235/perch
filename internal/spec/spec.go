@@ -25,6 +25,7 @@ type App struct {
 	Name     string
 	ID       string
 	Icon     Icon
+	Tint     Tint
 	Interval time.Duration
 	// Sign is a keychain code signing identity. Empty signs the bundle ad-hoc,
 	// which seals it but gives it a new identity on every build.
@@ -47,6 +48,7 @@ type rawApp struct {
 	Name     string    `yaml:"name"`
 	ID       string    `yaml:"id"`
 	Icon     yaml.Node `yaml:"icon"`
+	Tint     yaml.Node `yaml:"tint"`
 	Interval string    `yaml:"interval"`
 	Sign     string    `yaml:"sign"`
 	Quit     yaml.Node `yaml:"quit"`
@@ -83,10 +85,15 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
+	appTint, err := parseTint(&raw.App.Tint, "app.tint")
+	if err != nil {
+		return nil, err
+	}
 	s := &Spec{App: App{
 		Name: raw.App.Name,
 		ID:   raw.App.ID,
 		Icon: appIcon,
+		Tint: appTint,
 		Sign: raw.App.Sign,
 	}}
 	if raw.App.Interval != "" {

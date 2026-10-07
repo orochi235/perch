@@ -27,6 +27,7 @@ const body = `{
         "name": {"type": "string", "pattern": "^[^./\\\\][^/\\\\]*$", "description": "Bundle and executable name; one path component under ~/Applications."},
         "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "Bundle identifier, e.g. dev.example.menubar."},
         "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
+        "tint": {"$ref": "#/definitions/tint"},
         "interval": {"type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$", "description": "Poll interval, e.g. 5s or 1m30s."},
         "sign": {"type": "string", "description": "Keychain code signing identity for the .app. Omit to sign ad-hoc."},
         "quit": {
@@ -119,6 +120,7 @@ const body = `{
             "properties": {
               "when": {"type": "string", "description": "CEL condition; omit to always match."},
               "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"}}}]},
+              "tint": {"$ref": "#/definitions/tint", "description": "Replaces app.tint while this rule holds."},
               "dim": {"type": "boolean"},
               "badge": {"type": "string", "description": "CEL expression shown beside the icon."}
             }
@@ -153,6 +155,30 @@ const body = `{
     "menu": {"$ref": "#/definitions/menu"}
   },
   "definitions": {
+    "tintColor": {
+      "description": "#rrggbb, #rrggbbaa, or a macOS system color, which shifts between a light and a dark menu bar.",
+      "oneOf": [
+        {"type": "string", "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"},
+        {"type": "string", "enum": ["red", "orange", "yellow", "green", "mint", "teal", "cyan", "blue", "indigo", "purple", "pink", "brown", "gray"]}
+      ]
+    },
+    "tint": {
+      "description": "A color on the status item, to tell this app from others. A color alone draws a dot.",
+      "oneOf": [
+        {"$ref": "#/definitions/tintColor"},
+        {
+          "type": "object",
+          "required": ["color"],
+          "additionalProperties": false,
+          "properties": {
+            "color": {"$ref": "#/definitions/tintColor"},
+            "style": {"enum": ["dot", "glyph", "accent", "chip"], "description": "dot: a dot on one corner. glyph: the whole symbol. accent: the symbol's secondary layer. chip: a patch behind the icon. Default dot."},
+            "size": {"enum": ["small", "medium", "large"], "description": "The dot's size. Default small."},
+            "corner": {"enum": ["bottom-right", "bottom-left", "top-right", "top-left"], "description": "Where the dot sits. Default bottom-right."}
+          }
+        }
+      ]
+    },
     "shape": {
       "description": "What a command prints: string, int, double, bool, any, objects, and [T].",
       "oneOf": [

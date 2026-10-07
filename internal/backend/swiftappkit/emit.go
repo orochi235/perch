@@ -13,6 +13,14 @@ import (
 //go:embed runtime/Runtime.swift
 var runtimeSwift []byte
 
+//go:embed runtime/Icon.swift
+var iconSwift []byte
+
+// runtimeFiles is the Swift every app is built on, whatever its spec says.
+func runtimeFiles() []backend.File {
+	return []backend.File{{Name: "Runtime.swift", Body: runtimeSwift}, {Name: "Icon.swift", Body: iconSwift}}
+}
+
 //go:embed runtime/Window.swift
 var windowSwift []byte
 
@@ -27,7 +35,7 @@ func (*Backend) Name() string { return "swift-appkit" }
 
 // Emit renders the whole generated directory. Nothing outside it is written.
 func (*Backend) Emit(s *spec.Spec) ([]backend.File, error) {
-	fixed := []backend.File{{Name: "Runtime.swift", Body: runtimeSwift}}
+	fixed := runtimeFiles()
 	// Only when there is a window, so an app without one links no WebKit.
 	if s.Window != nil {
 		fixed = append(fixed, backend.File{Name: "Window.swift", Body: windowSwift})

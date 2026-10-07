@@ -2,6 +2,7 @@ package swiftappkit
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/orochi235/perch/v2/internal/celswift"
@@ -186,9 +187,13 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift
 	b.line("func renderFace(_ results: Results) -> Face {")
 	b.in()
 	mutated := anyRule(s, func(r spec.StatusRule) bool {
-		return !r.Icon.IsZero() || r.Dim || r.Badge != ""
+		return !r.Icon.IsZero() || !r.Tint.IsZero() || r.Dim || r.Badge != ""
 	})
-	b.line("%s face = Face(icon: %s)", bind(mutated), swiftIcon(s.App.Icon))
+	if s.App.Tint.IsZero() {
+		b.line("%s face = Face(icon: %s)", bind(mutated), swiftIcon(s.App.Icon))
+	} else {
+		b.line("%s face = Face(icon: %s, tint: %s)", bind(mutated), swiftIcon(s.App.Icon), swiftTint(s.App.Tint))
+	}
 
 	for i, rule := range s.Status {
 		re := e
@@ -214,6 +219,9 @@ func emitFace(b *buf, s *spec.Spec, e *celswift.Env, scopes map[string]*celswift
 		b.in()
 		if !rule.Icon.IsZero() {
 			b.line("face.icon = %s", swiftIcon(rule.Icon))
+		}
+		if !rule.Tint.IsZero() {
+			b.line("face.tint = %s", swiftTint(rule.Tint))
 		}
 		if rule.Dim {
 			b.line("face.dim = true")
@@ -245,6 +253,13 @@ func swiftIcon(i spec.Icon) string {
 		return "MenuIcon.asset(" + celswift.SwiftString(i.Asset) + ")"
 	}
 	return "MenuIcon.symbol(" + celswift.SwiftString(i.Symbol) + ")"
+}
+
+func swiftTint(t spec.Tint) string {
+	corner, side, _ := strings.Cut(string(t.Corner), "-")
+	return fmt.Sprintf("Tint(color: %s, alpha: %s, style: .%s, size: .%s, corner: .%s%s)",
+		celswift.SwiftString(t.Color), strconv.FormatFloat(t.Alpha, 'f', -1, 64),
+		t.Style, t.Size, corner, strings.ToUpper(side[:1])+side[1:])
 }
 
 // menuGen hands out unique local names so nested submenus and each: loops do

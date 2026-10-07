@@ -9,8 +9,10 @@ import (
 // StatusRule decides the status item's appearance. The first rule whose when:
 // holds wins; a rule with no when: always matches.
 type StatusRule struct {
-	When  string
-	Icon  Icon
+	When string
+	Icon Icon
+	// Tint replaces app.tint while the rule holds.
+	Tint  Tint
 	Dim   bool
 	Badge string
 	// Scope is the use this rule came from, or "" for the file's own.
@@ -27,6 +29,7 @@ func (r StatusRule) Path() string { return r.path }
 type rawStatusRule struct {
 	When  string    `yaml:"when"`
 	Icon  yaml.Node `yaml:"icon"`
+	Tint  yaml.Node `yaml:"tint"`
 	Dim   bool      `yaml:"dim"`
 	Badge string    `yaml:"badge"`
 }
@@ -55,7 +58,11 @@ func parseStatus(n *yaml.Node, path string) ([]StatusRule, error) {
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, StatusRule{When: raw.When, Icon: icon, Dim: raw.Dim, Badge: raw.Badge, path: at})
+		tint, err := parseTint(&raw.Tint, at+".tint")
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, StatusRule{When: raw.When, Icon: icon, Tint: tint, Dim: raw.Dim, Badge: raw.Badge, path: at})
 	}
 	return out, nil
 }

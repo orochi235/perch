@@ -46,6 +46,7 @@ The first four keys are required.
 | `name` | A string, one path component: no `/`, no leading dot, not `.` or `..`. It names the `.app` under `~/Applications` and the executable inside it. |
 | `id` | A string of letters, digits, dots, dashes and underscores, starting with a letter or digit — `dev.example.menubar`. launchd takes it as a label and `install` as a plist filename. |
 | `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}` where `<name>` is letters, digits, dashes and underscores. Shown when no `status:` rule overrides it. See [Icons](#icons). |
+| `tint` | Optional. A color, or a mapping that picks how it is drawn, to tell this app's status item from others. See [Tint](#tint). |
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 | `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
 
@@ -429,6 +430,7 @@ last; anything after it is refused rather than left unreachable.
 |---|---|
 | `when` | A string: the condition. Omit it to match always. |
 | `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`. Replaces `app.icon`. |
+| `tint` | A [tint](#tint). Replaces `app.tint`. |
 | `dim` | `true` or `false`. Draws the status item dimmed. |
 | `badge` | A string: an expression, rendered as text beside the icon. |
 
@@ -757,6 +759,59 @@ Ship artwork at twice the size you want it drawn: it is scaled to the menu
 bar's 18pt height with its aspect kept, or to 16pt beside a menu item. Where an icon has to read against both
 a light and a dark menu bar, add `<name>~dark.png` beside `<name>.png` and the
 app picks per appearance.
+
+### Tint
+
+`tint` puts a color on the status item, so that one app can be told apart from
+the others in a crowded menu bar. `app.tint` sets it, and a [`status:`](#status)
+rule's `tint` replaces it while the rule holds — a red dot while something is
+down, say. A color by itself draws a small dot on the icon's corner:
+
+```yaml
+app: {name: wall, id: dev.example.wall.menubar, icon: rectangle.stack, interval: 5s, tint: teal}
+menu:
+  - {text: Quit, quit: true}
+```
+
+A mapping picks the style:
+
+| Key | Takes |
+|---|---|
+| `color` | Required. `#rrggbb`, `#rrggbbaa`, or one of macOS's system colors: `red`, `orange`, `yellow`, `green`, `mint`, `teal`, `cyan`, `blue`, `indigo`, `purple`, `pink`, `brown`, `gray`. A system color shifts to suit a light or a dark menu bar; a hex color is the same on both. |
+| `style` | `dot` (the default), `glyph`, `accent`, or `chip`. |
+| `size` | A dot's size: `small` (the default), `medium`, or `large`. |
+| `corner` | Where a dot sits: `bottom-right` (the default), `bottom-left`, `top-right`, or `top-left`. |
+
+| Style | Draws | On artwork |
+|---|---|---|
+| `dot` | The icon as usual, with a dot of the color on one corner. | Yes |
+| `glyph` | The whole symbol in the color, its secondary parts fainter. | No |
+| `accent` | The symbol's secondary part in the color, the rest as usual. A symbol drawn in one part shows no color at all. | No |
+| `chip` | The icon on a rounded patch of the color, at 35% unless `#rrggbbaa` gives its own opacity. | Yes |
+
+```yaml
+app:
+  name: onto
+  id: dev.onto.menubar
+  icon: rectangle.3.group
+  interval: 5s
+  tint: {color: "#eeb48d", style: dot, size: medium, corner: top-right}
+watch:
+  fleet:
+    run: [onto, top, --once, --json]
+status:
+  - when: "!fleet.ok"
+    tint: {color: red, style: chip}
+menu:
+  - {text: Quit, quit: true}
+```
+
+A tinted icon is drawn in color rather than as a template, so macOS no longer
+adapts it to the menu bar. The parts of a symbol that are not tinted are drawn
+in the menu bar's text color, so they still read on a light or a dark bar.
+`glyph` keeps nothing in that color, so a pale color in that style can all but
+vanish on a light bar. `glyph` and `accent` recolor a symbol's parts, which
+artwork does not have, so perch refuses either one on an `{asset:}` icon.
 
 ### The Dock tile
 

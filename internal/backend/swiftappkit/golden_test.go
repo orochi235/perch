@@ -35,7 +35,7 @@ func TestGolden(t *testing.T) {
 				t.Fatalf("Emit: %v", err)
 			}
 			for _, f := range files {
-				if f.Name == "Runtime.swift" || f.Name == "Window.swift" {
+				if f.Name == "Runtime.swift" || f.Name == "Icon.swift" || f.Name == "Window.swift" {
 					continue // fixed, not generated from the spec
 				}
 				path := filepath.Join("testdata", name, f.Name)

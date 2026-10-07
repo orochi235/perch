@@ -428,3 +428,26 @@ func TestRenderResolvesATemplatedIconPerElement(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderCarriesTheTintARuleChose(t *testing.T) {
+	s := parse(t, `app: {name: t, id: dev.example.t, icon: circle, interval: 5s, tint: {color: teal, corner: top-left}}
+watch:
+  up:
+    run: ["true"]
+status:
+  - when: "!up.ok"
+    tint: {color: "#ff000080", style: chip}
+menu:
+  - {text: Quit, quit: true}
+`)
+	frames := render(t, s, []State{
+		state(t, s, "up", "up:\n  code: 0\n"),
+		state(t, s, "down", "up:\n  code: 1\n"),
+	})
+	if got, want := *frames[0].Face.Tint, (Tint{Color: "teal", Alpha: 1, Style: "dot", Size: "small", Corner: "top-left"}); got != want {
+		t.Errorf("up's tint = %+v, want %+v", got, want)
+	}
+	if got := frames[1].Face.Tint; got == nil || got.Style != "chip" || got.Color != "#ff0000" || got.Alpha < 0.5 || got.Alpha > 0.51 {
+		t.Errorf("down's tint = %+v", got)
+	}
+}

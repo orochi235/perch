@@ -49,7 +49,8 @@ func on(first bool) string {
 
 func barHTML(root string, f preview.Frame) string {
 	var b strings.Builder
-	b.WriteString(`<div class="bar"><span class="statusitem` + dimmed(f.Face.Dim) + `">`)
+	tint, style := tintAttrs(f.Face.Tint)
+	b.WriteString(`<div class="bar"><span class="statusitem` + dimmed(f.Face.Dim) + tint + `"` + style + `>`)
 	b.WriteString(iconHTML(root, f.Face.Icon))
 	if f.Face.Badge != "" {
 		b.WriteString(`<span class="badge">` + html.EscapeString(f.Face.Badge) + `</span>`)

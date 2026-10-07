@@ -47,7 +47,7 @@ menu:
 // an exists watch, an untyped .data, open and post, a when: guard, and menu
 // item icons.
 const everyFeature = `
-app: {name: brainhouse, id: dev.brainhouse.menubar, icon: brain, interval: 10s}
+app: {name: brainhouse, id: dev.brainhouse.menubar, icon: brain, interval: 10s, tint: {color: "#eeb48d", corner: top-right}}
 watch:
   server:
     http: http://127.0.0.1:8765/api/health
@@ -61,6 +61,7 @@ status:
     icon: circle.dashed
   - when: "!server.ok"
     icon: {asset: alarm}
+    tint: {color: red, style: chip}
     dim: true
   - badge: "string(server.data.sessions.size())"
 menu:

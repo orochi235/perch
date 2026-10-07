@@ -17,10 +17,7 @@ var previewSwift []byte
 // show. The docs site draws its previews by running this, so a page cannot
 // disagree with the app about what a menubar.yaml builds.
 func (*Backend) EmitPreview(s *spec.Spec) ([]backend.File, error) {
-	fixed := []backend.File{
-		{Name: "Runtime.swift", Body: runtimeSwift},
-		{Name: "Preview.swift", Body: previewSwift},
-	}
+	fixed := append(runtimeFiles(), backend.File{Name: "Preview.swift", Body: previewSwift})
 	return emitFiles(s, fixed, emitDriver)
 }
 

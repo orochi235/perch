@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/orochi235/perch/v2/internal/backend"
 	"github.com/orochi235/perch/v2/internal/install"
 )
 
@@ -50,25 +51,10 @@ func buildWindowProbe(t *testing.T, source string) string {
 	if err != nil {
 		t.Skip("swiftc not on PATH")
 	}
-	dir := t.TempDir()
-	for name, body := range map[string][]byte{
-		"Runtime.swift": runtimeSwift,
-		"Window.swift":  windowSwift,
-		"main.swift":    []byte(source),
-	} {
-		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	bin := filepath.Join(dir, "probe")
-	out, err := exec.Command(swiftc, "-o", bin,
-		filepath.Join(dir, "Runtime.swift"),
-		filepath.Join(dir, "Window.swift"),
-		filepath.Join(dir, "main.swift")).CombinedOutput()
-	if err != nil {
-		t.Fatalf("compiling the probe: %v\n%s", err, out)
-	}
-	return bin
+	files := append(runtimeFiles(),
+		backend.File{Name: "Window.swift", Body: windowSwift},
+		backend.File{Name: "main.swift", Body: []byte(source)})
+	return compileProbe(t, swiftc, files)
 }
 
 // TestInstalledAgentStaysDownAfterACleanExit is the regression for KeepAlive.

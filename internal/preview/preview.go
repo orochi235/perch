@@ -31,8 +31,18 @@ type Icon struct {
 // Face is the status item itself.
 type Face struct {
 	Icon  Icon   `json:"icon"`
+	Tint  *Tint  `json:"tint,omitempty"`
 	Dim   bool   `json:"dim"`
 	Badge string `json:"badge"`
+}
+
+// Tint is the status item's color, with the words menubar.yaml uses for it.
+type Tint struct {
+	Color  string  `json:"color"`
+	Alpha  float64 `json:"alpha"`
+	Style  string  `json:"style"`
+	Size   string  `json:"size"`
+	Corner string  `json:"corner"`
 }
 
 type Post struct {

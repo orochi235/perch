@@ -145,3 +145,14 @@ menu:
 		t.Errorf("Render.swift has no guard for the stop item:\n%s", files["Render.swift"])
 	}
 }
+
+// Render.swift names a tint's color as menubar.yaml does, and Icon.swift is
+// what turns the name into a color: a name it lacks would draw as plain text
+// color, with nothing at build to say so.
+func TestIconSwiftDrawsEverySystemColor(t *testing.T) {
+	for _, name := range spec.SystemColors {
+		if !strings.Contains(string(iconSwift), `case "`+name+`": base = .system`) {
+			t.Errorf("Icon.swift has no case for %q", name)
+		}
+	}
+}

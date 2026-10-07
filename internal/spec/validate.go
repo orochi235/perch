@@ -22,6 +22,9 @@ func (s *Spec) validate() error {
 	if s.App.Icon.IsZero() {
 		return fmt.Errorf("app.icon: required (an SF Symbol name, or {asset: <name>} for a file in menubar/Icons)")
 	}
+	if err := checkTint(s.App.Icon, s.App.Tint, "app.tint"); err != nil {
+		return err
+	}
 	if s.App.Interval <= 0 {
 		return fmt.Errorf("app.interval: required and must be positive, got %v", s.App.Interval)
 	}
@@ -55,6 +58,18 @@ func (s *Spec) validate() error {
 		return err
 	}
 	for i, r := range s.Status {
+		// A rule replaces the icon and the tint separately, so it can pair
+		// either one with the other's app-wide value.
+		icon, tint := s.App.Icon, s.App.Tint
+		if !r.Icon.IsZero() {
+			icon = r.Icon
+		}
+		if !r.Tint.IsZero() {
+			tint = r.Tint
+		}
+		if err := checkTint(icon, tint, r.path); err != nil {
+			return err
+		}
 		if r.When == "" && i != len(s.Status)-1 {
 			return fmt.Errorf("%s: a rule with no when: always matches, so it must be last; %d rule(s) after it can never apply", r.path, len(s.Status)-1-i)
 		}
