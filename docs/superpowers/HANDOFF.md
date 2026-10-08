@@ -1,12 +1,12 @@
 # Handoff — 2026-10-07
 
 Branch `main` in `~/src/perch`, released as
-[`v2.2.0`](https://github.com/orochi235/perch/releases/tag/v2.2.0), with the
+[`v2.3.0`](https://github.com/orochi235/perch/releases/tag/v2.3.0), with the
 Homebrew tap bumped to match.
 
 ## Landed
 
-- **PerchKit** (unreleased): `Package.swift` at the repo root offers a library
+- **PerchKit** (v2.3.0): `Package.swift` at the repo root offers a library
   that draws `app.tint` on a hand-written status item, `item.perchTint(…)`,
   compiled from the same `Icon.swift` generated apps get. brent and colm are
   its first consumers, by path.
