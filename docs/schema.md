@@ -883,6 +883,29 @@ in the menu bar's text color, so they still read on a light or a dark bar.
 vanish on a light bar. `glyph` and `accent` recolor a symbol's parts, which
 artwork does not have, so perch refuses either one on an `{asset:}` icon.
 
+An app whose status item is hand-written Swift can draw the same tint with
+PerchKit, a Swift package library at the root of this repository built from the
+same source as a generated app's icon code:
+
+```swift
+// Package.swift
+.package(path: "../perch"),
+.executableTarget(name: "Brent", dependencies: [.product(name: "PerchKit", package: "perch")]),
+```
+
+```swift
+import PerchKit
+
+item.button?.image = NSImage(systemSymbolName: "figure.run.square.stack", accessibilityDescription: nil)
+item.perchTint(color: "#116C80", style: .chip, menu: true)
+```
+
+`perchTint` takes the options above, with the same defaults, and tints whatever
+image and title the button holds, so set those first; call it again after
+changing them, or with `color: nil` to clear the tint. A chip steps aside while
+the menu is open, the tint follows the inactive menu bar, and the `tint`
+preference replaces the color, read from the app's own defaults.
+
 ### The Dock tile
 
 `menubar/Icons` is the artwork for the status item and menu items. A [`window:`](#window) app also

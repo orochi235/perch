@@ -22,15 +22,10 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate, WindowA
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
-        for (name, open) in [(NSMenu.didBeginTrackingNotification, true), (NSMenu.didEndTrackingNotification, false)] {
-            NotificationCenter.default.addObserver(forName: name, object: menu, queue: nil) { [weak self] _ in
-                self?.menuOpen = open
-                self?.refresh()
-            }
+        StatusButton.follow(menu) { [weak self] open in
+            self?.menuOpen = open
+            self?.refresh()
         }
-        NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-            ) { [weak self] _ in self?.refresh() }
         refresh()
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in

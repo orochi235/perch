@@ -6,6 +6,10 @@ Homebrew tap bumped to match.
 
 ## Landed
 
+- **PerchKit** (unreleased): `Package.swift` at the repo root offers a library
+  that draws `app.tint` on a hand-written status item, `item.perchTint(…)`,
+  compiled from the same `Icon.swift` generated apps get. brent and colm are
+  its first consumers, by path.
 - **Tint** (v2.2.0): `app.tint` or a status rule's `tint` colors the status
   item as a dot, glyph, accent, or chip; `menu: true` tints the dropdown's
   glass; a `tint` user default overrides `app.tint`'s color. Also in v2.2.0:

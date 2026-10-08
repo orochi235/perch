@@ -127,8 +127,9 @@ the Swift when the YAML changed, and nothing of the plugin is linked.
 - `perch build` on an embed file writes the same files by hand, for a host that
   would rather check them in.
 
-`Package.swift` sits at the root of the perch repo, so perch's tags are the
-package's versions. A plugin cannot build Go, so it runs a prebuilt perch from a
+`Package.swift` already sits at the root of the perch repo, carrying the
+PerchKit library; the plugin joins it there, so perch's tags are the package's
+versions. A plugin cannot build Go, so it runs a prebuilt perch from a
 binary target: a `.artifactbundle.zip` holding arm64 and x86_64 binaries,
 attached to each GitHub release and named in `Package.swift` by URL and
 checksum. A release builds the bundle, writes its checksum into `Package.swift`,
