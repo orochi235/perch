@@ -170,9 +170,15 @@ public struct Tint {
         }
     }
 
-    /// While the menu is open a chip draws no patch: macOS puts its own pill
-    /// behind the item then.
-    func shown(menuOpen: Bool) -> Tint? { menuOpen && style == .chip ? nil : self }
+    /// While the menu is open a chip's patch is clear: macOS puts its own pill
+    /// behind the item then. It keeps its size, or the bar redraws the icon
+    /// larger without the padding around it.
+    func shown(menuOpen: Bool) -> Tint {
+        guard menuOpen, style == .chip else { return self }
+        var clear = self
+        clear.alpha = 0
+        return clear
+    }
 
     static func untemplated(_ image: NSImage?) -> NSImage? {
         image?.isTemplate = false

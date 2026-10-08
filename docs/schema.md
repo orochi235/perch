@@ -790,7 +790,7 @@ A mapping picks the style:
 | `dot` | The icon as usual, with a dot of the color on one corner. | Yes |
 | `glyph` | The whole symbol in the color, its secondary parts fainter. | No |
 | `accent` | The symbol's secondary part in the color, the rest as usual. A symbol drawn in one part shows no color at all. | No |
-| `chip` | The icon on a rounded patch of the color, at 35% unless `opacity` or `#rrggbbaa` says otherwise. While the menu is open the patch steps aside for the pill macOS draws behind an open item. | Yes |
+| `chip` | The icon on a rounded patch of the color, at 35% unless `opacity` or `#rrggbbaa` says otherwise. While the menu is open the patch turns clear for the pill macOS draws behind an open item, keeping the icon where it was. | Yes |
 
 Here the color says which environment a deploy tool points at, and each
 environment gets a different style:
@@ -902,9 +902,9 @@ item.perchTint(color: "#116C80", style: .chip, menu: true)
 
 `perchTint` takes the options above, with the same defaults, and tints whatever
 image and title the button holds, so set those first; call it again after
-changing them, or with `color: nil` to clear the tint. A chip steps aside while
-the menu is open, the tint follows the inactive menu bar, and the `tint`
-preference replaces the color, read from the app's own defaults.
+changing them, or with `color: nil` to clear the tint. A chip's patch turns
+clear while the menu is open, the tint follows the inactive menu bar, and the
+`tint` preference replaces the color, read from the app's own defaults.
 
 ### The Dock tile
 
