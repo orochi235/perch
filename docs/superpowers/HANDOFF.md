@@ -44,6 +44,9 @@ Homebrew tap bumped to match.
 
 ## Next
 
+**Embed mode is designed, not built**: [design](specs/2026-10-07-embed-design.md).
+Asked for by the brent session; brent is its first consumer.
+
 **Spec 2 is not written**: code-backed built-ins, and a `services` built-in that
 combines several services' state with one-click Start/Stop for all of them.
 
