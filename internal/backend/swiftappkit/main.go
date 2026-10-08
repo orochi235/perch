@@ -38,7 +38,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("let menu = NSMenu()")
 	b.line("menu.delegate = self")
 	b.line("statusItem.menu = menu")
-	b.line("StatusButton.follow(menu) { [weak self] open in")
+	b.line("StatusButton.follow({ [weak menu] in menu }) { [weak self] open in")
 	b.in()
 	b.line("self?.menuOpen = open")
 	b.line("self?.refresh()")

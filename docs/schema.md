@@ -902,11 +902,11 @@ item.perchTint(color: "#116C80", style: .chip, menu: true)
 
 `perchTint` takes the options above, with the same defaults, and tints whatever
 image and title the button holds, so set those first; call it again after
-changing them, or with `color: nil` to clear the tint. Set `item.menu` first too:
-the chip finds the menu when `perchTint` runs, and one attached afterwards isn't
-followed, so the chip stays drawn while it's open. A chip's patch turns
-clear while the menu is open, the tint follows the inactive menu bar, and the
-`tint` preference replaces the color, read from the app's own defaults.
+changing them, or with `color: nil` to clear the tint. A count passed as
+`badge:` replaces the title, which a chip with `wrap: .all` takes over; pass
+`badge: ""` to clear it. A chip's patch turns clear while the menu is open, the
+tint follows the inactive menu bar, and the `tint` preference replaces the
+color, read from the app's own defaults.
 
 ### The Dock tile
 

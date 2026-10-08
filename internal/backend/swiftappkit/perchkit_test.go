@@ -35,7 +35,7 @@ func TestPerchKitBuildsAsAModule(t *testing.T) {
 import PerchKit
 
 @MainActor func tint(_ item: NSStatusItem) {
-    item.perchTint(color: "#116C80", style: .chip, wrap: .all, menu: true, opacity: 0.5)
+    item.perchTint(color: "#116C80", style: .chip, wrap: .all, menu: true, opacity: 0.5, badge: "3")
     item.perchTint(color: "teal", size: .large, corner: .topLeft)
     item.perchTint(color: nil)
 }

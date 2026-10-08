@@ -22,7 +22,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate, WindowA
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
-        StatusButton.follow(menu) { [weak self] open in
+        StatusButton.follow({ [weak menu] in menu }) { [weak self] open in
             self?.menuOpen = open
             self?.refresh()
         }

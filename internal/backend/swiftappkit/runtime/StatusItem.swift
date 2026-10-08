@@ -8,12 +8,14 @@ public extension NSStatusItem {
     /// Tints the status item as `app.tint` does in menubar.yaml, with the same
     /// options and defaults. Set the button's image first; call again to change
     /// the tint, or pass nil to clear it. `color` is #rrggbb, #rrggbbaa, or a
-    /// system color name, and the user's `tint` default replaces it.
+    /// system color name, and the user's `tint` default replaces it. `badge` is
+    /// the count beside the icon; left nil, it is the button's title.
     @MainActor
     func perchTint(color: String?, style: Tint.Style = .dot, size: Tint.Size = .small,
                    corner: Tint.Corner = .bottomRight, wrap: Tint.Wrap = .icon, menu: Bool = false,
-                   opacity: CGFloat? = nil) {
+                   opacity: CGFloat? = nil, badge: String? = nil) {
         let painter = TintPainter.of(self)
+        painter.badgeGiven = badge
         painter.tint = color.map { color in
             let (base, alpha) = Tint.split(color)
             return Tint(color: base, alpha: opacity ?? alpha ?? (style == .chip ? Tint.chipAlpha : 1),
@@ -38,11 +40,14 @@ final class TintPainter {
     private static var key = 0
     private weak var item: NSStatusItem?
     var tint: Tint?
+    /// A badge the app passed, which wins over the title: with wrap: .all the
+    /// title is blanked, so an app blanking it too could not be told apart.
+    var badgeGiven: String?
     private var image: NSImage?
     private var badge = ""
     private var drawn: (image: NSImage?, title: String)?
     private var menuOpen = false
-    private var following: NSMenu?
+    private var following = false
 
     private init(_ item: NSStatusItem) { self.item = item }
 
@@ -62,10 +67,14 @@ final class TintPainter {
         guard let item, let button = item.button else { return }
         // Whatever the button holds that this did not draw is the app's own.
         if button.image !== drawn?.image { image = button.image }
-        if button.title != drawn?.title { badge = button.title.trimmingCharacters(in: .whitespaces) }
-        if let menu = item.menu, menu !== following {
-            following = menu
-            StatusButton.follow(menu) { [weak self] open in
+        if let badgeGiven {
+            badge = badgeGiven
+        } else if button.title != drawn?.title {
+            badge = button.title.trimmingCharacters(in: .whitespaces)
+        }
+        if !following {
+            following = true
+            StatusButton.follow({ [weak item] in item?.menu }) { [weak self] open in
                 MainActor.assumeIsolated {
                     self?.menuOpen = open
                     self?.paint()
