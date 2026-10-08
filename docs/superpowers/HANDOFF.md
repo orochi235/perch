@@ -1,7 +1,7 @@
 # Handoff — 2026-10-07
 
 Branch `main` in `~/src/perch`, released as
-[`v2.3.0`](https://github.com/orochi235/perch/releases/tag/v2.3.0), with the
+[`v2.3.1`](https://github.com/orochi235/perch/releases/tag/v2.3.1), with the
 Homebrew tap bumped to match.
 
 ## Landed
