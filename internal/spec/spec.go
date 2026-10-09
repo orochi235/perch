@@ -139,6 +139,7 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 	}
 	s.Uses = uses
 	applyVerbDefaults(s.Menu)
+	s.Menu = addQuit(s.Menu)
 	if err := s.validate(); err != nil {
 		return nil, err
 	}
