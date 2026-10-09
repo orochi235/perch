@@ -7,9 +7,11 @@ func addQuit(menu []Item) []Item {
 		return menu
 	}
 	const path = "menu (added by perch)"
-	return append(menu,
-		Item{Separator: true, path: path},
-		Item{Text: "Quit", Action: Action{Kind: ActionQuit}, path: path})
+	quit := Item{Text: "Quit", Action: Action{Kind: ActionQuit}, path: path}
+	if len(menu) == 0 {
+		return []Item{quit}
+	}
+	return append(menu, Item{Separator: true, path: path}, quit)
 }
 
 func quits(items []Item) bool {

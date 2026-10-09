@@ -37,7 +37,6 @@ menu:
     text: "{{it.user}}"
   - separator
   - {text: Open, open: "http://127.0.0.1:8765"}
-  - {text: Quit, quit: true}
 ```
 
 ```state busy

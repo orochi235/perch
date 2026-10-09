@@ -36,7 +36,6 @@ menu:
   - text: Open the run
     when: "ci.ok"
     open: "{{ci.data[0].url}}"
-  - {text: Quit, quit: true}
 ```
 
 ```state passing

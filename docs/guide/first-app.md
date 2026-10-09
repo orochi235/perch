@@ -13,9 +13,6 @@ app:
   id: dev.example.ghstatus
   icon: cloud
   interval: 60s
-
-menu:
-  - {text: Quit, quit: true}
 ```
 
 Then:
@@ -24,8 +21,9 @@ Then:
 perch run
 ```
 
-A cloud appears in the menu bar with one item in it. `perch run` builds,
-compiles and runs in the foreground; quit it from the menu or with `^C`.
+A cloud appears in the menu bar with one item in it: Quit, which perch adds to
+any menu that has none. `perch run` builds, compiles and runs in the
+foreground; quit it from the menu or with `^C`.
 
 ## 2. Watch something
 
@@ -46,8 +44,6 @@ watch:
 
 menu:
   - text: "{{gh.data.status.description}}"
-  - separator
-  - {text: Quit, quit: true}
 ```
 
 `json: true` decodes what came back and binds it as `gh.data`. Run it again and
@@ -81,7 +77,6 @@ menu:
   - text: "{{gh.data.status.description}}"
   - separator
   - {text: Open the status page, open: "https://www.githubstatus.com"}
-  - {text: Quit, quit: true}
 ```
 
 The last rule dims the icon when everything is fine, which is what you want from
@@ -125,7 +120,6 @@ menu:
   - text: "{{gh.data.status.description}}"
   - separator
   - {text: Open the status page, open: "https://www.githubstatus.com"}
-  - {text: Quit, quit: true}
 ```
 
 ```state operational

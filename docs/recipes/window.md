@@ -35,8 +35,6 @@ menu:
   - {text: "Server: running", when: up}
   - separator
   - {text: Open Dashboard, window: open}
-  - separator
-  - {text: Quit, quit: true}
 ```
 
 ```state up

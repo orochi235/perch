@@ -22,8 +22,6 @@ menu:
   - outlet
   - separator
   - outlet: controls
-  - separator
-  - {text: Quit, quit: true}
 ```
 
 ```state running

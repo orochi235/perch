@@ -113,6 +113,4 @@ misspelled key is underlined as you type rather than at build:
 ```yaml
 # yaml-language-server: $schema=./menubar.schema.json
 app: {name: fleet, id: dev.example.fleet, icon: circle, interval: 5s}
-menu:
-  - {text: Quit, quit: true}
 ```

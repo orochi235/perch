@@ -27,8 +27,6 @@ status:
 
 menu:
   - text: "{{fleet.data.jobs.size()}} running"
-  - separator
-  - {text: Quit, quit: true}
 ```
 
 `perch schema -o menubar.schema.json` writes the JSON Schema that header points
@@ -219,7 +217,6 @@ menu:
   - {text: Not installed, when: uninstalled}
   - {text: Not loaded,    when: stopped}
   - {text: Running,       when: running}
-  - {text: Quit, quit: true}
 ```
 
 A state means "the widget is in this state", not "this condition holds" — the
@@ -259,8 +256,6 @@ menu:
   - outlet
   - separator
   - outlet: controls
-  - separator
-  - {text: Quit, quit: true}
 ```
 
 ```state both running
@@ -370,7 +365,6 @@ menu:
   - agent: worker.start
   - agent: worker.stop
   - agent: worker.restart
-  - {text: Quit, quit: true}
 ```
 
 The plist is assumed to be `~/Library/LaunchAgents/<label>.plist`; say `plist:`
@@ -455,7 +449,6 @@ window:
 
 menu:
   - {text: Open Dashboard, window: open}
-  - {text: Quit, quit: true}
 ```
 
 Only `url` is required.
@@ -488,6 +481,12 @@ A Dock tile wants artwork: see [The Dock tile](#the-dock-tile).
 
 A list of items, rebuilt from the last poll every time the menu opens, so the
 menu never offers an action that cannot work.
+
+If no item carries `quit: true` — counting submenus, items a [template](#use)
+supplies, and items guarded by `when:` — perch ends the menu with a separator
+and **Quit**. A status item has no Dock icon and no ⌘Q, so without one it could
+only be closed from Activity Monitor. Write your own Quit item to change its
+label, icon or place.
 
 The bare items are `separator` and [`outlet`](#outlets) (or `outlet: <name>`).
 Everything else is a mapping:
@@ -560,7 +559,6 @@ menu:
     menu:
       - {text: Logs, run: [onto, logs, "{{it.id}}"]}
       - {text: Kill, run: [onto, kill, "{{it.id}}"]}
-  - {text: Quit, quit: true}
 ```
 
 [Jobs, with a submenu each](recipes/jobs.md) is the whole widget.
@@ -581,7 +579,6 @@ menu:
     open: "https://github.com/search?q={{query}}"
   - field: Find a job
     run: [onto, find, "{{query}}"]
-  - {text: Quit, quit: true}
 ```
 
 The action is one of `run`, `open`, `post` or `swift`, and is required. A field
@@ -776,8 +773,6 @@ status:
   - when: "!fleet.ok"
     icon: {asset: o-problem}
   - icon: {asset: o-4}
-menu:
-  - {text: Quit, quit: true}
 ```
 
 Every `.png` in that directory is copied into the bundle, and `perch build`
@@ -802,8 +797,6 @@ down, say. A color by itself draws a small dot on the icon's corner:
 
 ```yaml
 app: {name: wall, id: dev.example.wall.menubar, icon: rectangle.stack, interval: 5s, tint: teal}
-menu:
-  - {text: Quit, quit: true}
 ```
 
 A mapping picks the style:
@@ -848,7 +841,6 @@ status:
 menu:
   - text: "Deploying to {{target.out}}"
     when: target.ok
-  - {text: Quit, quit: true}
 ```
 
 ```state dev
@@ -881,8 +873,6 @@ watch:
 status:
   - tint: {color: purple, style: chip, wrap: all, menu: true, opacity: 'unread.out == "0" ? 0.15 : 0.5'}
     badge: 'unread.out == "0" ? "" : unread.out'
-menu:
-  - {text: Quit, quit: true}
 ```
 
 ```state empty

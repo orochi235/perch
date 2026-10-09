@@ -47,8 +47,6 @@ status:
 
 menu:
   - text: "{{fleet.data.jobs.size()}} running"
-  - separator
-  - {text: Quit, quit: true}
 ```
 
 ```state busy

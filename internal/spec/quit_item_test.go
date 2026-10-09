@@ -17,7 +17,7 @@ func addsQuit(t *testing.T, doc string, ts TemplateSource) bool {
 		t.Fatalf("Parse: %v", err)
 	}
 	n := len(s.Menu)
-	if n < 2 || !s.Menu[n-2].Separator {
+	if n == 0 || (n > 1 && !s.Menu[n-2].Separator) {
 		return false
 	}
 	last := s.Menu[n-1]
@@ -32,6 +32,7 @@ func TestDefaultQuit(t *testing.T) {
 	}{
 		"no quit item":       {"menu: [{text: a}]\n", true},
 		"empty menu":         {"menu: []\n", true},
+		"no menu key":        {"status: []\n", true},
 		"top-level quit":     {"menu: [{text: Bye, quit: true}]\n", false},
 		"quit in a submenu":  {"menu: [{text: More, menu: [{text: Bye, quit: true}]}]\n", false},
 		"guarded quit":       {"menu: [{text: Bye, quit: true, when: w.ok}]\n", false},

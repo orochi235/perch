@@ -419,8 +419,9 @@ func TestRenderResolvesATemplatedIconPerElement(t *testing.T) {
 
 	want := []Icon{{Symbol: "bird"}, {Symbol: ""}, {Asset: "logo-perch"}, {Asset: "logo-slop"}}
 	menu := frames[0].Menu
-	if len(menu) != len(want) {
-		t.Fatalf("got %d items, want %d: %+v", len(menu), len(want), menu)
+	// Then the separator and Quit perch adds to a menu with none.
+	if len(menu) != len(want)+2 || menu[len(want)+1].Title != "Quit" {
+		t.Fatalf("got %d items, want %d and Quit: %+v", len(menu), len(want), menu)
 	}
 	for i, w := range want {
 		if menu[i].Icon == nil || *menu[i].Icon != w {

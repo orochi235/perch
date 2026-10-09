@@ -6,6 +6,12 @@ Homebrew tap bumped to match.
 
 ## Landed
 
+- **Default Quit** (unreleased, same branch): a menu with no `quit: true` item
+  anywhere gets a separator and Quit; see [`menu`](../schema.md#menu). There is
+  deliberately no opt-out: none has been asked for, and adding one later breaks
+  nobody. If one is added, it is not `quit: never` — the Dock tile, logout and
+  `kill` still end the app — but a key naming the item, refused beside any
+  `quit: true`.
 - **Search field** (unreleased, on `search-field-and-default-quit`): a `field:`
   menu item; see [`field`](../schema.md#field). Holes in a `post:` body are
   now JSON-escaped, which fixed bodies built from values holding `"` or `\`.
@@ -50,8 +56,6 @@ Homebrew tap bumped to match.
   pattern.
 
 ## Next
-
-**Default Quit item is designed, not built**: [design](specs/2026-10-08-default-quit-design.md). No plan yet.
 
 **A string literal inside a `post:` body hole does not build.** `body: {q:
 '{{s.ok ? "y" : "n"}}'}` fails with a CEL parse error at `\"y\"`: the body is
