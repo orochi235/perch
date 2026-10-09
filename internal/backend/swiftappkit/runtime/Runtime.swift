@@ -310,6 +310,23 @@ enum Act {
         }
     }
 
+    /// Text as the inside of a JSON string, for a hole in a post: body.
+    static func jsonEscaped(_ s: String) -> String {
+        var out = ""
+        for u in s.unicodeScalars {
+            switch u {
+            case "\"": out += "\\\""
+            case "\\": out += "\\\\"
+            case "\n": out += "\\n"
+            case "\r": out += "\\r"
+            case "\t": out += "\\t"
+            case _ where u.value < 0x20: out += String(format: "\\u%04x", u.value)
+            default: out.unicodeScalars.append(u)
+            }
+        }
+        return out
+    }
+
     /// Typed text as one query component. urlQueryAllowed leaves & + = alone,
     /// which would split the text into several parameters.
     static func urlQuery(_ s: String) -> String {

@@ -7,13 +7,28 @@ import (
 
 // LowerTemplate lowers text containing {{ }} holes to a Swift String
 // expression. Literal text is escaped; each hole becomes an interpolation.
-func (e *Env) LowerTemplate(src string) (string, error) { return e.lowerTemplate(src, false) }
+func (e *Env) LowerTemplate(src string) (string, error) {
+	return e.lowerTemplate(src, func(_, lowered string) string { return lowered })
+}
 
 // LowerURL is LowerTemplate for an open: target: a hole that is exactly query
 // is percent-encoded, so the typed text arrives as one query parameter.
-func (e *Env) LowerURL(src string) (string, error) { return e.lowerTemplate(src, true) }
+func (e *Env) LowerURL(src string) (string, error) {
+	return e.lowerTemplate(src, func(expr, lowered string) string {
+		if _, ok := e.Query(); ok && expr == "query" {
+			return "Act.urlQuery(" + lowered + ")"
+		}
+		return lowered
+	})
+}
 
-func (e *Env) lowerTemplate(src string, url bool) (string, error) {
+// LowerJSON is LowerTemplate for a post: body. The body is JSON perch wrote, so
+// every hole sits inside a JSON string and is escaped for one.
+func (e *Env) LowerJSON(src string) (string, error) {
+	return e.lowerTemplate(src, func(_, lowered string) string { return "Act.jsonEscaped(" + lowered + ")" })
+}
+
+func (e *Env) lowerTemplate(src string, wrap func(expr, lowered string) string) (string, error) {
 	var b strings.Builder
 	b.WriteByte('"')
 	rest := src
@@ -35,12 +50,7 @@ func (e *Env) lowerTemplate(src string, url bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if url && expr == "query" {
-			if _, ok := e.Query(); ok {
-				lowered = "Act.urlQuery(" + lowered + ")"
-			}
-		}
-		b.WriteString(`\(` + lowered + `)`)
+		b.WriteString(`\(` + wrap(expr, lowered) + `)`)
 		rest = tail
 	}
 	b.WriteByte('"')

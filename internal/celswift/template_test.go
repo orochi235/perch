@@ -93,3 +93,14 @@ func TestQueryIsAStringInRunArgs(t *testing.T) {
 		t.Errorf("got %q, %v", got, err)
 	}
 }
+
+func TestLowerJSONEscapesEveryHole(t *testing.T) {
+	got, err := shaped(t).WithQuery("query1").LowerJSON(`{"q":"{{query}}","n":"{{fleet.data.label}}"}`)
+	if err != nil {
+		t.Fatalf("LowerJSON: %v", err)
+	}
+	want := `"{\"q\":\"\(Act.jsonEscaped(query1))\",\"n\":\"\(Act.jsonEscaped(fleet.data.label))\"}"`
+	if got != want {
+		t.Errorf("\n got %q\nwant %q", got, want)
+	}
+}

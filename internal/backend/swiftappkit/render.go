@@ -455,6 +455,9 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		g.b.line("%s.append(.separator)", into)
 		return nil
 	}
+	if it.Field != "" {
+		return g.field(it, into, e, path)
+	}
 
 	title, err := e.LowerTemplate(it.Text)
 	if err != nil {
@@ -485,6 +488,22 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		return err
 	}
 	g.b.line("%s.append(.item(%s, %s%s))", into, title, action, icon)
+	return nil
+}
+
+// field lowers the action inside a closure: the text it hands on is typed after
+// the menu is built, so it cannot be lowered as data like other actions.
+func (g *menuGen) field(it spec.Item, into string, e *celswift.Env, path string) error {
+	placeholder, err := e.LowerTemplate(it.Field)
+	if err != nil {
+		return fmt.Errorf("%s.field: %w", path, err)
+	}
+	q := g.name("query")
+	action, err := g.action(it.Action, e.WithQuery(q), path, it.Scope)
+	if err != nil {
+		return err
+	}
+	g.b.line("%s.append(.field(%s, { %s in %s }))", into, placeholder, q, action)
 	return nil
 }
 
@@ -521,7 +540,7 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path, scope string) (st
 		return ".run(" + argv + ")", nil
 
 	case spec.ActionOpen:
-		target, err := e.LowerTemplate(a.Open)
+		target, err := e.LowerURL(a.Open)
 		if err != nil {
 			return "", fmt.Errorf("%s.open: %w", path, err)
 		}
@@ -536,8 +555,12 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path, scope string) (st
 			celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), a.Verb), nil
 
 	case spec.ActionSwift:
-		// Emitted verbatim as a method reference, which is a () -> Void. perch
-		// cannot check the target exists; swiftc does, in the same module.
+		// Emitted verbatim: a method reference, which is a () -> Void, or in a
+		// field a call taking the text. perch cannot check the target exists;
+		// swiftc does, in the same module.
+		if q, ok := e.Query(); ok {
+			return ".swift({ " + a.Swift + "(" + q + ") })", nil
+		}
 		return ".swift(" + a.Swift + ")", nil
 
 	case spec.ActionWindow:
@@ -548,7 +571,7 @@ func (g *menuGen) action(a spec.Action, e *celswift.Env, path, scope string) (st
 		if err != nil {
 			return "", fmt.Errorf("%s.post.url: %w", path, err)
 		}
-		body, err := e.LowerTemplate(a.PostBody)
+		body, err := e.LowerJSON(a.PostBody)
 		if err != nil {
 			return "", fmt.Errorf("%s.post.body: %w", path, err)
 		}

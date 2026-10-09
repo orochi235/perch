@@ -27,11 +27,44 @@ func TestSwiftActionLowersToAMethodReference(t *testing.T) {
 // The point of the dotted path: perch cannot typecheck the target, swiftc can.
 // This compiles the emitted call beside the file a consumer would write.
 func TestSwiftActionCompilesAgainstHandWrittenSources(t *testing.T) {
+	compileWithHand(t, swiftActionDoc, `import AppKit
+
+enum Dash {
+    static func showPreferences() {
+        NSLog("hand-written")
+    }
+}
+`)
+}
+
+const swiftFieldDoc = `
+app: {name: w, id: dev.example.w, icon: gear, interval: 5s}
+menu:
+  - {field: Find, swift: Dash.find}
+`
+
+func TestSwiftActionInAFieldTakesTheText(t *testing.T) {
+	if r := emit(t, swiftFieldDoc)["Render.swift"]; !strings.Contains(r, ".swift({ Dash.find(query1) })") {
+		t.Errorf("Render.swift does not pass the text:\n%s", r)
+	}
+	compileWithHand(t, swiftFieldDoc, `import AppKit
+
+enum Dash {
+    static func find(_ query: String) {
+        NSLog("%@", query)
+    }
+}
+`)
+}
+
+// compileWithHand typechecks what doc emits beside hand, as Dash.swift.
+func compileWithHand(t *testing.T, doc, hand string) {
+	t.Helper()
 	swiftc, err := exec.LookPath("swiftc")
 	if err != nil {
 		t.Skip("swiftc not on PATH")
 	}
-	s, err := spec.Parse([]byte(swiftActionDoc))
+	s, err := spec.Parse([]byte(doc))
 	if err != nil {
 		t.Fatalf("spec.Parse: %v", err)
 	}
@@ -48,18 +81,11 @@ func TestSwiftActionCompilesAgainstHandWrittenSources(t *testing.T) {
 		}
 		paths = append(paths, p)
 	}
-	hand := filepath.Join(dir, "Dash.swift")
-	if err := os.WriteFile(hand, []byte(`import AppKit
-
-enum Dash {
-    static func showPreferences() {
-        NSLog("hand-written")
-    }
-}
-`), 0o644); err != nil {
+	path := filepath.Join(dir, "Dash.swift")
+	if err := os.WriteFile(path, []byte(hand), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	paths = append(paths, hand)
+	paths = append(paths, path)
 	out, err := exec.Command(swiftc, append([]string{"-typecheck"}, paths...)...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("emitted swift: action does not compile against a hand-written target: %v\n%s", err, out)

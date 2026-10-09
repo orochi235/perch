@@ -2,6 +2,7 @@ package swiftappkit
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -19,6 +20,7 @@ for text in ["", "   ", "a&b c"] {
 }
 print("submitted=\(got)")
 print("encoded=\(Act.urlQuery("a&b c+d#e=é/?"))")
+print("json=\(Act.jsonEscaped("say \"hi\" \\ é\n\u{1}"))")
 
 let menu = NSMenu()
 Draw.menu([.field("Find", { q in .open("x:" + q) })], into: menu, repoll: {})
@@ -34,6 +36,7 @@ func TestFieldItemHandsOnTextAndEncodesIt(t *testing.T) {
 	want := "placeholder=Search\n" +
 		`submitted=["a&b c"]` + "\n" +
 		"encoded=a%26b%20c%2Bd%23e%3D%C3%A9%2F%3F\n" +
+		`json=say \"hi\" \\ é\n\u0001` + "\n" +
 		"drawn=true\n"
 	if string(out) != want {
 		t.Errorf("got\n%s\nwant\n%s", out, want)
@@ -76,5 +79,36 @@ func TestFieldTakesFocusWhenTheMenuOpens(t *testing.T) {
 	out, _ := exec.Command(bin).CombinedOutput()
 	if want := "focused=true\nsubmitted=a&b c\n"; string(out) != want {
 		t.Errorf("got\n%s\nwant\n%s", out, want)
+	}
+}
+
+const fieldDoc = `
+app: {name: w, id: dev.example.w, icon: gear, interval: 5s}
+watch:
+  fleet:
+    run: [onto, top, --json]
+    json: true
+    shape: {jobs: [{id: string, node: string}]}
+menu:
+  - field: Search GitHub
+    open: "https://github.com/search?q={{query}}"
+  - field: Find job
+    run: [onto, find, "{{query}}"]
+  - each: fleet.data.jobs
+    field: "Grep {{it.node}}"
+    post: {url: "http://localhost/{{it.id}}", body: {q: "{{query}}"}}
+  - {text: Quit, quit: true}
+`
+
+func TestFieldLowersToAClosureOverTheText(t *testing.T) {
+	r := emit(t, fieldDoc)["Render.swift"]
+	for _, want := range []string{
+		`.field("Search GitHub", { query1 in .open("https://github.com/search?q=\(Act.urlQuery(query1))") })`,
+		`.field("Find job", { query2 in .run(["onto", "find", "\(query2)"]) })`,
+		`.field("Grep \(`,
+	} {
+		if !strings.Contains(r, want) {
+			t.Errorf("Render.swift lacks %s\n%s", want, r)
+		}
 	}
 }
