@@ -48,6 +48,8 @@ Homebrew tap bumped to match.
 
 ## Next
 
+**Default Quit item is designed, not built**: [design](specs/2026-10-08-default-quit-design.md). No plan yet.
+
 **Search field is designed, not built**: [design](specs/2026-10-08-search-field-design.md).
 Plan: [plans/2026-10-08-search-field.md](plans/2026-10-08-search-field.md); Task 1 is the menu-focus spike.
 
