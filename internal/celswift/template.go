@@ -7,7 +7,13 @@ import (
 
 // LowerTemplate lowers text containing {{ }} holes to a Swift String
 // expression. Literal text is escaped; each hole becomes an interpolation.
-func (e *Env) LowerTemplate(src string) (string, error) {
+func (e *Env) LowerTemplate(src string) (string, error) { return e.lowerTemplate(src, false) }
+
+// LowerURL is LowerTemplate for an open: target: a hole that is exactly query
+// is percent-encoded, so the typed text arrives as one query parameter.
+func (e *Env) LowerURL(src string) (string, error) { return e.lowerTemplate(src, true) }
+
+func (e *Env) lowerTemplate(src string, url bool) (string, error) {
 	var b strings.Builder
 	b.WriteByte('"')
 	rest := src
@@ -28,6 +34,11 @@ func (e *Env) LowerTemplate(src string) (string, error) {
 		lowered, err := e.LowerText(expr)
 		if err != nil {
 			return "", err
+		}
+		if url && expr == "query" {
+			if _, ok := e.Query(); ok {
+				lowered = "Act.urlQuery(" + lowered + ")"
+			}
 		}
 		b.WriteString(`\(` + lowered + `)`)
 		rest = tail

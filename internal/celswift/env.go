@@ -35,6 +35,20 @@ func (e *Env) WithEach(elem *spec.Type, swiftName string) *Env {
 	return out
 }
 
+// WithQuery returns a copy of e with query bound to a field's typed text, for
+// lowering that field's action.
+func (e *Env) WithQuery(swiftName string) *Env {
+	out := &Env{vars: append([]binding(nil), e.vars...)}
+	out.vars = append(out.vars, binding{name: "query", typ: &spec.Type{Kind: spec.TypeString}, swift: swiftName, local: true})
+	return out
+}
+
+// Query is how the typed text is spelled in Swift, when e lowers a field's action.
+func (e *Env) Query() (string, bool) {
+	b, ok := e.lookup("query")
+	return b.swift, ok
+}
+
 // WithState returns a copy of e with name bound to a boolean the emitted code
 // spells swiftName. Declaring states one at a time, in order, is what makes a
 // condition naming a later state fail as an undeclared name rather than
@@ -165,14 +179,15 @@ func useType(u spec.Use, withStates bool) *spec.Type {
 	return t
 }
 
-// inTemplate reports whether e is a template's: self, and at most an each:'s it.
+// inTemplate reports whether e is a template's: self, and at most an each:'s it
+// and a field's query.
 func (e *Env) inTemplate() bool {
 	self := false
 	for _, v := range e.vars {
 		switch v.name {
 		case "self":
 			self = true
-		case "it":
+		case "it", "query":
 		default:
 			return false
 		}

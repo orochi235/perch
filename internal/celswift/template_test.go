@@ -66,3 +66,30 @@ func TestLowerTemplateEmptyHoleIsAnError(t *testing.T) {
 		t.Fatal("want an error for an empty hole, got nil")
 	}
 }
+
+func TestLowerURLEncodesOnlyABareQueryHole(t *testing.T) {
+	e := shaped(t).WithQuery("query1")
+	got, err := e.LowerURL("https://x/?q={{query}}&n={{fleet.data.label}}")
+	if err != nil {
+		t.Fatalf("LowerURL: %v", err)
+	}
+	want := `"https://x/?q=\(Act.urlQuery(query1))&n=\(fleet.data.label)"`
+	if got != want {
+		t.Errorf("\n got %q\nwant %q", got, want)
+	}
+}
+
+func TestLowerURLWithoutAQueryIsLowerTemplate(t *testing.T) {
+	a, _ := shaped(t).LowerURL("https://x/{{fleet.data.label}}")
+	b, _ := shaped(t).LowerTemplate("https://x/{{fleet.data.label}}")
+	if a != b {
+		t.Errorf("LowerURL %q, LowerTemplate %q", a, b)
+	}
+}
+
+func TestQueryIsAStringInRunArgs(t *testing.T) {
+	got, err := runWatch(t).WithQuery("query1").LowerTemplate("{{query}}")
+	if err != nil || got != `"\(query1)"` {
+		t.Errorf("got %q, %v", got, err)
+	}
+}

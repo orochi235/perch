@@ -119,6 +119,9 @@ func (e *Env) lower(x celast.Expr, src string) (value, error) {
 			if name == "self" {
 				return value{}, fmt.Errorf("%q: self is bound only inside a template, where it is that use", src)
 			}
+			if name == "query" {
+				return value{}, fmt.Errorf("%q: query is bound only in a field: item's action, where it is the typed text", src)
+			}
 			if e.inTemplate() {
 				return value{}, fmt.Errorf("%q: unknown name %q; a template sees only self", src, name)
 			}

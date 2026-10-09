@@ -3,6 +3,8 @@ package celswift
 import (
 	"strings"
 	"testing"
+
+	"github.com/orochi235/perch/v2/internal/spec"
 )
 
 // Every refusal here would otherwise emit Swift that does not compile, which
@@ -118,5 +120,22 @@ func TestLowerRefusesSyntaxCELItselfRejects(t *testing.T) {
 		if got, err := e.LowerExpr(src); err == nil {
 			t.Errorf("%q: want a refusal, lowered to %q", src, got)
 		}
+	}
+}
+
+func TestQueryOutsideAFieldSaysWhereItIsBound(t *testing.T) {
+	_, err := runWatch(t).LowerTemplate("{{query}}")
+	if err == nil || !strings.Contains(err.Error(), "only in a field: item's action") {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestAFieldInATemplateStillSaysATemplateSeesOnlySelf(t *testing.T) {
+	e := ForUse(spec.Use{Name: "d"}, "d").WithQuery("query1")
+	if _, err := e.LowerTemplate("{{query}}"); err != nil {
+		t.Errorf("a field inside a template cannot see query: %v", err)
+	}
+	if _, err := e.LowerTemplate("{{fleet.ok}}"); err == nil || !strings.Contains(err.Error(), "a template sees only self") {
+		t.Errorf("err = %v", err)
 	}
 }
