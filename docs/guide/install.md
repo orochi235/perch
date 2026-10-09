@@ -101,7 +101,8 @@ leaf = H"…"` — neither of which a rebuild changes, which is the whole point.
 
 ## Completion and errors in your editor
 
-`perch schema` writes the JSON Schema for `menubar.yaml`:
+`perch init` writes the schema and the header that points at it. For a
+`menubar.yaml` you started by hand, `perch schema` writes the JSON Schema:
 
 ```
 perch schema -o menubar.schema.json

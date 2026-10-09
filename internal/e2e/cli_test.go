@@ -288,3 +288,25 @@ func keys(m map[string]string) []string {
 	}
 	return out
 }
+
+// What init writes is what a new user builds first, so it has to compile.
+func TestInitWritesAProjectThatCompiles(t *testing.T) {
+	swiftc, err := exec.LookPath("swiftc")
+	if err != nil {
+		t.Skip("swiftc not on PATH")
+	}
+	dir := filepath.Join(t.TempDir(), "My Widget")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init"}, {"build"}} {
+		if r := runPerch(t, dir, args...); r.status != 0 {
+			t.Fatalf("%v: %d\n%s%s", args, r.status, r.stdout, r.stderr)
+		}
+	}
+	sources, _ := filepath.Glob(filepath.Join(dir, "menubar", "Generated", "*.swift"))
+	out, err := exec.Command(swiftc, append([]string{"-typecheck"}, sources...)...).CombinedOutput()
+	if err != nil || len(out) > 0 {
+		t.Fatalf("the starter does not compile cleanly: %v\n%s", err, out)
+	}
+}

@@ -44,7 +44,8 @@ is what perch emits.
 
 ## Use
 
-Write a `menubar.yaml` at the root of a repo, then:
+At the root of a repo, `perch init` writes a starter `menubar.yaml` and the
+schema that gives your editor completion for it. Edit it, then:
 
 ```
 perch run           build, compile, run in the foreground (the dev loop)
@@ -58,6 +59,7 @@ both away.
 The rest:
 
 ```
+perch init          write a starter menubar.yaml and its editor schema
 perch build         emit Swift into menubar/Generated/
 perch shape         run a command once and write its shape declaration
 perch schema        write the JSON Schema for menubar.yaml

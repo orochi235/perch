@@ -6,6 +6,8 @@ Homebrew tap bumped to match.
 
 ## Landed
 
+- **`perch init`** (unreleased): writes a starter `menubar.yaml` named after
+  the directory, plus `menubar.schema.json`; refuses to overwrite a spec.
 - **Hotkey** (unreleased): `app.hotkey: cmd+shift+space` opens the menu from
   any app, which puts the keyboard in a `field:`; see
   [`hotkey`](../schema.md#hotkey). Carbon `RegisterEventHotKey`, so no
@@ -61,6 +63,11 @@ Homebrew tap bumped to match.
   pattern.
 
 ## Next
+
+**An onboarding skill, to ship in this repo**: picks the command to watch,
+drafts the status rules, runs `perch shape`, `perch run` and `perch install`,
+and stops at whether to extend in `menubar/Sources/`. Scaffolding stays in
+`perch init`, not in the skill.
 
 **A string literal inside a `post:` body hole does not build.** `body: {q:
 '{{s.ok ? "y" : "n"}}'}` fails with a CEL parse error at `\"y\"`: the body is

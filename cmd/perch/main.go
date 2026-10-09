@@ -22,6 +22,7 @@ import (
 
 const usage = `perch generates a macOS menu bar app from a menubar.yaml.
 
+  perch init          write a starter menubar.yaml and its editor schema
   perch build         emit Swift into menubar/Generated/
   perch run           build, compile, run in the foreground
   perch install       build, compile, bundle, write the plist, bootstrap
@@ -80,6 +81,8 @@ func run(args []string, e *env) int {
 
 	var err error
 	switch cmd {
+	case "init":
+		err = runInit(rest, e)
 	case "build":
 		err = runBuild(rest, e)
 	case "run":

@@ -5,7 +5,8 @@ anything installed but perch. Five steps, and it runs at the end of each one.
 
 ## 1. An app with nothing in it
 
-Make a directory, and put this in `menubar.yaml`:
+Make a directory, and put this in `menubar.yaml`. (`perch init` writes much the
+same file in any directory, named after it.)
 
 ```yaml
 app:

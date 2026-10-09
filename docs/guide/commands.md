@@ -3,6 +3,15 @@
 Every command takes `-C <dir>` to work somewhere other than the current
 directory. All of them read the `menubar.yaml` at the root of that directory.
 
+## `perch init`
+
+Write a starter `menubar.yaml` — an icon and one menu item, named after the
+directory — and `menubar.schema.json` beside it, for your editor. It refuses
+to overwrite a `menubar.yaml` that is already there.
+
+```help init
+```
+
 ## `perch run`
 
 Build, compile and run in the foreground. This is the loop you work in: quit
