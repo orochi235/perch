@@ -49,7 +49,7 @@ Homebrew tap bumped to match.
 ## Next
 
 **Search field is designed, not built**: [design](specs/2026-10-08-search-field-design.md).
-Spike menu focus first.
+Plan: [plans/2026-10-08-search-field.md](plans/2026-10-08-search-field.md); Task 1 is the menu-focus spike.
 
 **Embed mode is designed, not built**: [design](specs/2026-10-07-embed-design.md).
 Asked for by the brent session; brent is its first consumer.
