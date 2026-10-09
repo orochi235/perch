@@ -44,7 +44,9 @@ func TestFieldItemHandsOnTextAndEncodesIt(t *testing.T) {
 }
 
 // fieldFocusProbe opens a real status item menu and checks the field took the
-// keyboard: a field you must click first is not a search bar. It types no keys,
+// keyboard: a field you must click first is not a search bar. A long label
+// widens the menu past the field's own width, which the field should fill.
+// It types no keys,
 // which would need Accessibility; it asks AppKit who holds focus, then edits
 // through the field editor that focus implies.
 const fieldFocusProbe = `
@@ -55,13 +57,18 @@ app.setActivationPolicy(.accessory)
 let status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 status.button?.title = "probe"
 let menu = NSMenu()
-Draw.menu([.field("Search", { q in .swift({ print("submitted=\(q)"); exit(0) }) })], into: menu, repoll: {})
+Draw.menu([
+    .field("Search", { q in .swift({ print("submitted=\(q)"); exit(0) }) }),
+    .item("A label long enough to make the menu much wider than a search field", nil),
+], into: menu, repoll: {})
 status.menu = menu
 
 let check = Timer(timeInterval: 0.5, repeats: false) { _ in
     let field = (menu.items[0] as! FieldItem).field
     let editor = field.currentEditor()
     print("focused=\(editor != nil && field.window?.firstResponder === editor)")
+    let host = field.superview!
+    print("fills=\(host.frame.width > 400 && field.frame.maxX == host.bounds.maxX - 14)")
     editor?.insertText("a&b c")
     field.sendAction(field.action, to: field.target)
 }
@@ -77,7 +84,7 @@ func TestFieldTakesFocusWhenTheMenuOpens(t *testing.T) {
 	requireScreen(t)
 	bin := buildProbe(t, fieldFocusProbe)
 	out, _ := exec.Command(bin).CombinedOutput()
-	if want := "focused=true\nsubmitted=a&b c\n"; string(out) != want {
+	if want := "focused=true\nfills=true\nsubmitted=a&b c\n"; string(out) != want {
 		t.Errorf("got\n%s\nwant\n%s", out, want)
 	}
 }

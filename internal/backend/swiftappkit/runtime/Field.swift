@@ -20,6 +20,8 @@ final class FieldItem: NSMenuItem {
         let host = FocusView(frame: NSRect(x: 0, y: 0, width: 240, height: 30))
         field.frame = host.bounds.insetBy(dx: 14, dy: 4)
         field.autoresizingMask = [.width]
+        // A menu widens a custom view to its own width only if the view says it can stretch.
+        host.autoresizingMask = [.width]
         host.addSubview(field)
         host.focus = field
         view = host
