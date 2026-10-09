@@ -1,8 +1,9 @@
-enlist: 4
+enlist: 6
 # The suite compiles and runs the Swift perch emits, so a node needs swiftc
 # (the Xcode command line tools). That is not a Homebrew formula, so nothing
 # here can gate on it. use: go holds a node's own Go to go.mod's go line.
 use: go
+runner: go
 run: go test ./... -timeout 10m
 # Two tests raise a window and take focus, which is why they are off by
 # default on a desk. On the fleet nobody is at the screen.
