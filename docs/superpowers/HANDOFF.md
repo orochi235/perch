@@ -1,7 +1,7 @@
 # Handoff — 2026-10-09
 
 Branch `main` in `~/src/perch`, released as
-[`v2.4.0`](https://github.com/orochi235/perch/releases/tag/v2.4.0), with the
+[`v2.4.1`](https://github.com/orochi235/perch/releases/tag/v2.4.1), with the
 Homebrew tap bumped to match.
 
 ## Landed
@@ -112,7 +112,7 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Traps
 
-- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.4.0), not
+- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.4.1), not
   this checkout. Run a local build by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
