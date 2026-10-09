@@ -112,7 +112,7 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Traps
 
-- **No perch is installed on this Mac** (checked 2026-10-09): not from brew,
-  `~/.local/bin` or `~/go/bin`. Run a local build by path.
+- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.4.0), not
+  this checkout. Run a local build by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
