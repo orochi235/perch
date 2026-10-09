@@ -112,6 +112,9 @@ private func encoded(_ node: MenuNode) -> [String: Any] {
     case .submenu(let title, let items, let i):
         out = ["title": title, "items": items.map { encoded($0) }]
         icon = i
+    case .field(let placeholder, let make):
+        out = ["field": placeholder, "action": encoded(make("query"))]
+        icon = nil
     }
     if let icon { out["icon"] = encoded(icon) }
     return out

@@ -131,6 +131,7 @@ func show(_ nodes: [MenuNode]) -> String {
         case .submenu(let t, let items, let icon):
             let mark = if case .symbol(let name)? = icon { "[" + name + "]" } else { "" }
             return t + mark + "(" + show(items) + ")"
+        case .field(let t, _): return "[" + t + "]"
         }
     }.joined(separator: ",")
 }

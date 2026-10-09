@@ -16,9 +16,16 @@ var runtimeSwift []byte
 //go:embed runtime/Icon.swift
 var iconSwift []byte
 
+//go:embed runtime/Field.swift
+var fieldSwift []byte
+
 // runtimeFiles is the Swift every app is built on, whatever its spec says.
 func runtimeFiles() []backend.File {
-	return []backend.File{{Name: "Runtime.swift", Body: runtimeSwift}, {Name: "Icon.swift", Body: iconSwift}}
+	return []backend.File{
+		{Name: "Runtime.swift", Body: runtimeSwift},
+		{Name: "Icon.swift", Body: iconSwift},
+		{Name: "Field.swift", Body: fieldSwift},
+	}
 }
 
 //go:embed runtime/Window.swift
