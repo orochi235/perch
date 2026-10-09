@@ -1,6 +1,9 @@
 package spec
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func menuOf(t *testing.T, menu string) []Item {
 	t.Helper()
@@ -140,6 +143,33 @@ func TestSwiftActionRefusals(t *testing.T) {
 				"app: {name: w, id: dev.example.w, icon: gear, interval: 5s}\nmenu:\n  - " + item + "\n"))
 			if err == nil {
 				t.Fatal("accepted; want a refusal")
+			}
+		})
+	}
+}
+
+func TestParseField(t *testing.T) {
+	items := menuOf(t, `  - field: Search GitHub
+    open: "https://github.com/search?q={{query}}"`)
+	if items[0].Field != "Search GitHub" || items[0].Action.Kind != ActionOpen {
+		t.Errorf("got %+v", items[0])
+	}
+}
+
+func TestParseFieldRefusals(t *testing.T) {
+	for name, tc := range map[string]struct{ item, want string }{
+		"no action": {`{field: Find}`, "needs an action"},
+		"quit":      {`{field: Find, quit: true}`, "cannot take a quit"},
+		"agent":     {`{field: Find, agent: w.stop}`, "cannot take an agent"},
+		"window":    {`{field: Find, window: open}`, "cannot take a window"},
+		"text":      {`{field: Find, text: Go, open: x}`, "takes no text"},
+		"icon":      {`{field: Find, icon: star, open: x}`, "takes no icon"},
+		"submenu":   {"field: Find\n    menu: [{text: a}]", "takes no submenu"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse([]byte("app: {name: a, id: b, icon: c, interval: 1s}\nmenu:\n  - " + tc.item + "\n"))
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("err = %v, want it to say %q", err, tc.want)
 			}
 		})
 	}

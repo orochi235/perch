@@ -66,8 +66,8 @@ func parseQuitButton(n *yaml.Node, path string) (QuitButton, error) {
 	if err := decodeStrict(n, &f, path); err != nil {
 		return QuitButton{}, err
 	}
-	if f.When != "" || f.Each != "" || f.Menu.Kind != 0 {
-		return QuitButton{}, fmt.Errorf("%s: a button takes a label and at most one action; when, each and menu have no meaning on one", path)
+	if f.When != "" || f.Each != "" || f.Menu.Kind != 0 || f.Field != "" {
+		return QuitButton{}, fmt.Errorf("%s: a button takes a label and at most one action; when, each, menu and field have no meaning on one", path)
 	}
 	act, err := actionFrom(f, path)
 	if err != nil {

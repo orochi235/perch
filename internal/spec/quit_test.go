@@ -1,6 +1,9 @@
 package spec
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 const quitDoc = `
 app:
@@ -79,5 +82,22 @@ func TestQuitIsOptional(t *testing.T) {
 	}
 	if len(s.App.Quit) != 0 {
 		t.Errorf("got %d rules from a doc with no quit:", len(s.App.Quit))
+	}
+}
+
+func TestQuitButtonRefusesAField(t *testing.T) {
+	_, err := Parse([]byte(`
+app:
+  name: a
+  id: b
+  icon: c
+  interval: 1s
+  quit:
+    - confirm: Stop?
+      buttons: [{field: Why, run: [x]}]
+menu: [{text: a}]
+`))
+	if err == nil || !strings.Contains(err.Error(), "field have no meaning") {
+		t.Errorf("err = %v", err)
 	}
 }

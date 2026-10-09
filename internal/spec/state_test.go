@@ -103,3 +103,10 @@ menu: [{text: Quit, quit: true}]
 		t.Fatalf("Parse: %v", err)
 	}
 }
+
+func TestQueryIsBoundByPerch(t *testing.T) {
+	_, err := Parse([]byte("app: {name: a, id: b, icon: c, interval: 1s}\nwatch: {query: {exists: /tmp}}\nmenu: [{text: a}]\n"))
+	if err == nil || !strings.Contains(err.Error(), "bound by perch itself") {
+		t.Errorf("err = %v", err)
+	}
+}

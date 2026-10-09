@@ -66,10 +66,14 @@ func checkOutletName(path, name string) error {
 	return nil
 }
 
-// checkBound refuses the two names perch binds itself: it inside an each:, and
-// self inside a template.
+// checkBound refuses the names perch binds itself: it inside an each:, self
+// inside a template, and query in a field: item's action.
 func checkBound(path, name, kind string) error {
-	binder := map[string]string{"it": "each: binds its element to it", "self": "a template binds its own use to self"}[name]
+	binder := map[string]string{
+		"it":    "each: binds its element to it",
+		"self":  "a template binds its own use to self",
+		"query": "a field: item binds its typed text to query",
+	}[name]
 	if binder == "" {
 		return nil
 	}

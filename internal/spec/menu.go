@@ -90,11 +90,13 @@ type Action struct {
 type Item struct {
 	Separator bool
 	Text      string
-	Icon      Icon
-	When      string
-	Each      string
-	Menu      []Item
-	Action    Action
+	// Field is a search field's placeholder; set, the item is a field.
+	Field  string
+	Icon   Icon
+	When   string
+	Each   string
+	Menu   []Item
+	Action Action
 	// Scope is the use this item came from, or "" for the file's own.
 	Scope string
 	// Guard is the condition its agent: verb needs to work; empty for other items.
@@ -111,6 +113,7 @@ func (it Item) Path() string { return it.path }
 
 type itemFields struct {
 	Text   string    `yaml:"text"`
+	Field  string    `yaml:"field"`
 	Icon   yaml.Node `yaml:"icon"`
 	When   string    `yaml:"when"`
 	Each   string    `yaml:"each"`
@@ -184,7 +187,32 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if len(sub) > 0 && act.Kind != ActionNone {
 		return Item{}, fmt.Errorf("%s: has a submenu and %s action; opening a submenu supersedes the action, so it would never run", path, withArticle(act.Kind.String()))
 	}
-	return Item{Text: f.Text, Icon: icon, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	if f.Field != "" {
+		if err := checkField(f, act, sub, icon, path); err != nil {
+			return Item{}, err
+		}
+	}
+	return Item{Text: f.Text, Field: f.Field, Icon: icon, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+}
+
+// checkField refuses what a field: item cannot use: everything but an action
+// that can take the typed text.
+func checkField(f itemFields, act Action, sub []Item, icon Icon, path string) error {
+	switch {
+	case len(sub) > 0:
+		return fmt.Errorf("%s: a field: item takes no submenu; Enter cannot open one", path)
+	case f.Text != "":
+		return fmt.Errorf("%s: a field: item takes no text:; its placeholder is its label", path)
+	case !icon.IsZero():
+		return fmt.Errorf("%s: a field: item takes no icon:; the search field draws its own", path)
+	}
+	switch act.Kind {
+	case ActionRun, ActionOpen, ActionPost, ActionSwift:
+		return nil
+	case ActionNone:
+		return fmt.Errorf("%s: a field: item needs an action to hand the text to: run, open, post or swift", path)
+	}
+	return fmt.Errorf("%s: a field: item cannot take %s action; it does nothing with typed text. Use run, open, post or swift", path, withArticle(act.Kind.String()))
 }
 
 func actionFrom(f itemFields, path string) (Action, error) {
