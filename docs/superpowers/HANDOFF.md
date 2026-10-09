@@ -1,25 +1,25 @@
-# Handoff — 2026-10-07
+# Handoff — 2026-10-09
 
 Branch `main` in `~/src/perch`, released as
-[`v2.3.1`](https://github.com/orochi235/perch/releases/tag/v2.3.1), with the
+[`v2.4.0`](https://github.com/orochi235/perch/releases/tag/v2.4.0), with the
 Homebrew tap bumped to match.
 
 ## Landed
 
-- **`perch init`** (unreleased): writes a starter `menubar.yaml` named after
+- **`perch init`** (v2.4.0): writes a starter `menubar.yaml` named after
   the directory, plus `menubar.schema.json`; refuses to overwrite a spec.
-- **Hotkey** (unreleased): `app.hotkey: cmd+shift+space` opens the menu from
+- **Hotkey** (v2.4.0): `app.hotkey: cmd+shift+space` opens the menu from
   any app, which puts the keyboard in a `field:`; see
   [`hotkey`](../schema.md#hotkey). Carbon `RegisterEventHotKey`, so no
   Accessibility prompt. The gated test presses it from code; a real keystroke
   has not been checked by hand.
-- **Default Quit** (unreleased, same branch): a menu with no `quit: true` item
+- **Default Quit** (v2.4.0): a menu with no `quit: true` item
   anywhere gets a separator and Quit; see [`menu`](../schema.md#menu). There is
   deliberately no opt-out: none has been asked for, and adding one later breaks
   nobody. If one is added, it is not `quit: never` — the Dock tile, logout and
   `kill` still end the app — but a key naming the item, refused beside any
   `quit: true`.
-- **Search field** (unreleased, on `search-field-and-default-quit`): a `field:`
+- **Search field** (v2.4.0): a `field:`
   menu item; see [`field`](../schema.md#field). Holes in a `post:` body are
   now JSON-escaped, which fixed bodies built from values holding `"` or `\`.
 - **PerchKit** (v2.3.0): `Package.swift` at the repo root offers a library
@@ -112,8 +112,7 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Traps
 
-- **Three perch binaries are installed.** `/opt/homebrew/bin/perch` (brew)
-  is first on PATH, then `~/.local/bin/perch`; `~/go/bin` is not on
-  PATH. Testing a local build means running it by path.
+- **No perch is installed on this Mac** (checked 2026-10-09): not from brew,
+  `~/.local/bin` or `~/go/bin`. Run a local build by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
