@@ -83,7 +83,7 @@ func TestFieldTakesFocusWhenTheMenuOpens(t *testing.T) {
 }
 
 const fieldDoc = `
-app: {name: w, id: dev.example.w, icon: gear, interval: 5s}
+app: {name: w, id: dev.example.w, icon: gear, interval: 5s, hotkey: cmd+shift+space}
 watch:
   fleet:
     run: [onto, top, --json]

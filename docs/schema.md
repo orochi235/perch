@@ -47,6 +47,7 @@ The first four keys are required.
 | `tint` | Optional. A color, or a mapping that picks how it is drawn, to tell this app's status item from others. See [Tint](#tint). |
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 | `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
+| `hotkey` | Optional. A shortcut that opens the menu from any app, like `cmd+shift+space`. See [`hotkey`](#hotkey). |
 
 ### `quit`
 
@@ -97,6 +98,40 @@ Logging out, restarting and shutting down skip the prompt and quit. A helper
 that cancels someone's logout is worse than one that exits without asking.
 
 Leave the block out and the app quits without asking.
+
+### `hotkey`
+
+A shortcut that opens the menu from whatever app is in front, as clicking the
+status item would. With a [`field`](#field) in the menu, the field has the
+keyboard as soon as it opens, so the shortcut lands you in a search box.
+
+```yaml
+app: {name: finder, id: dev.example.finder.menubar, icon: magnifyingglass, interval: 1m, hotkey: cmd+shift+space}
+
+menu:
+  - field: Search GitHub
+    open: "https://github.com/search?q={{query}}"
+```
+
+Write modifiers, then one key, joined by `+` and in lowercase. The modifiers
+are `cmd`, `opt`, `ctrl` and `shift`, in any order. A shortcut needs `cmd`,
+`opt` or `ctrl` unless its key is a function key, because `shift+k` would take
+the capital K from every app.
+
+| Keys | Names |
+|---|---|
+| Letters and digits | `a` to `z`, `0` to `9` |
+| Function keys | `f1` to `f20` |
+| Named keys | `space`, `return`, `tab`, `escape`, `delete`, `forwarddelete`, `left`, `right`, `up`, `down`, `home`, `end`, `pageup`, `pagedown` |
+| Punctuation | `-` `=` `[` `]` `;` `'` `,` `.` `/` `\` `` ` `` |
+
+A key is named by where it sits on a US keyboard, so on another layout `cmd+z`
+is whatever key is in the US Z's place.
+
+No Accessibility or Input Monitoring permission is needed, and the keystroke
+goes to the app alone, not to the app in front as well. If another app already
+holds the shortcut, the system refuses it: the app runs without one and writes
+`perch: the system refused the hotkey …` to its log.
 
 ## `watch`
 
@@ -570,6 +605,7 @@ keyboard when the menu opens. Enter fires the item's action with what was typed
 bound as `query`, then closes the menu and re-polls like any other action.
 Enter on an empty field does nothing, and the text is gone the next time the
 menu opens.
+An [`app.hotkey`](#hotkey) opens the menu straight into the field.
 
 ```yaml
 app: {name: finder, id: dev.example.finder.menubar, icon: magnifyingglass, interval: 1m}

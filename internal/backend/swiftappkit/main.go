@@ -16,6 +16,9 @@ func emitMain(s *spec.Spec, n structNames) string {
 
 	b.line("%s", header)
 	b.line("import AppKit")
+	if s.App.Hotkey.IsSet() {
+		b.line("import Carbon.HIToolbox")
+	}
 	b.line("import Foundation")
 	b.line("")
 
@@ -30,6 +33,9 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("fileprivate var results = Results()")
 	b.line("private var timer: Timer?")
 	b.line("private var menuOpen = false")
+	if s.App.Hotkey.IsSet() {
+		b.line("private var hotkey: Hotkey?")
+	}
 	b.line("")
 	emitWindowMembers(b, s)
 	b.line("override init() {")
@@ -57,6 +63,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 	if s.Window != nil {
 		b.line("setUpWindow()")
 	}
+	emitHotkey(b, s)
 	b.out()
 	b.line("}")
 	b.line("")

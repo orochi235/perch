@@ -100,6 +100,14 @@ menu: [{text: Q, quit: true}]
 `)
 	}
 
+	hotkey := nameRule(t, "properties", "app", "properties", "hotkey")
+	for _, key := range []string{"cmd+shift+space", "ctrl+opt+k", "cmd+`", "cmd+\\", "cmd+]", "f13", "shift+f20", "f21", "f", "k", "shift+k", "cmd+shift", "Cmd+K", "cmd+enter"} {
+		agree(t, key, hotkey, `
+app: {name: a, id: dev.a, icon: circle, interval: 1s, hotkey: `+strconv.Quote(key)+`}
+menu: [{text: Q, quit: true}]
+`)
+	}
+
 	watchName := nameRule(t, "properties", "watch", "propertyNames")
 	for _, name := range []string{"fleet", "my_fleet", "my-fleet", "9x", "it", "self", "package", "size", "init", "Type", "Protocol"} {
 		agree(t, name, watchName, `

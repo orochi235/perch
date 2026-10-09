@@ -32,6 +32,8 @@ type App struct {
 	Sign string
 	// Quit is what quitting asks first. Empty quits without asking.
 	Quit []QuitRule
+	// Hotkey opens the menu from any app.
+	Hotkey Hotkey
 }
 
 type rawSpec struct {
@@ -52,6 +54,7 @@ type rawApp struct {
 	Interval string    `yaml:"interval"`
 	Sign     string    `yaml:"sign"`
 	Quit     yaml.Node `yaml:"quit"`
+	Hotkey   string    `yaml:"hotkey"`
 }
 
 // Parse reads a menubar.yaml document into a Spec, with perch's shipped
@@ -108,6 +111,9 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 		return nil, err
 	}
 	s.App.Quit = quit
+	if s.App.Hotkey, err = parseHotkey(raw.App.Hotkey, "app.hotkey"); err != nil {
+		return nil, err
+	}
 	win, err := parseWindow(&raw.Window, s.App.Name)
 	if err != nil {
 		return nil, err

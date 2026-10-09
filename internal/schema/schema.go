@@ -30,6 +30,7 @@ const body = `{
         "tint": {"$ref": "#/definitions/tint"},
         "interval": {"type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$", "description": "Poll interval, e.g. 5s or 1m30s."},
         "sign": {"type": "string", "description": "Keychain code signing identity for the .app. Omit to sign ad-hoc."},
+        "hotkey": {"type": "string", "pattern": "^(((cmd|opt|ctrl|shift)\\+)*f([1-9]|1[0-9]|20)|((cmd|opt|ctrl|shift)\\+)*(cmd|opt|ctrl)\\+((cmd|opt|ctrl|shift)\\+)*([a-z0-9]|space|return|tab|escape|delete|forwarddelete|left|right|up|down|home|end|pageup|pagedown|[-=;',./\u0060\\[\\]\\\\]))$", "description": "A shortcut that opens the menu from any app, e.g. cmd+shift+space: modifiers (cmd, opt, ctrl, shift) joined by + before one key, in lowercase. It needs cmd, opt or ctrl unless the key is f1 to f20."},
         "quit": {
           "type": "array",
           "description": "What quitting asks first. First matching rule wins; the last takes no when:.",

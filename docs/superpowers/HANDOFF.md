@@ -6,6 +6,11 @@ Homebrew tap bumped to match.
 
 ## Landed
 
+- **Hotkey** (unreleased): `app.hotkey: cmd+shift+space` opens the menu from
+  any app, which puts the keyboard in a `field:`; see
+  [`hotkey`](../schema.md#hotkey). Carbon `RegisterEventHotKey`, so no
+  Accessibility prompt. The gated test presses it from code; a real keystroke
+  has not been checked by hand.
 - **Default Quit** (unreleased, same branch): a menu with no `quit: true` item
   anywhere gets a separator and Quit; see [`menu`](../schema.md#menu). There is
   deliberately no opt-out: none has been asked for, and adding one later breaks
