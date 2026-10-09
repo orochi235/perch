@@ -73,6 +73,7 @@ type Agent struct {
 type Node struct {
 	Separator bool    `json:"separator,omitempty"`
 	Title     string  `json:"title,omitempty"`
+	Field     string  `json:"field,omitempty"`
 	Icon      *Icon   `json:"icon,omitempty"`
 	Action    *Action `json:"action,omitempty"`
 	Items     []Node  `json:"items,omitempty"`

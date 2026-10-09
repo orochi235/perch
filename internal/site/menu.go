@@ -107,6 +107,13 @@ func nodeHTML(root string, n preview.Node) string {
 	if n.Separator {
 		return `<div class="sep"></div>`
 	}
+	if n.Field != "" {
+		tip := ""
+		if n.Action != nil {
+			tip = ` title="` + html.EscapeString(actionText(*n.Action)) + `"`
+		}
+		return `<div class="row field"` + tip + `><span class="input">` + html.EscapeString(n.Field) + `</span></div>`
+	}
 	title := html.EscapeString(n.Title)
 	if n.Icon != nil && (n.Icon.Symbol != "" || n.Icon.Asset != "") {
 		title = iconHTML(root, *n.Icon) + title

@@ -316,6 +316,7 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 
 .row { position: relative; padding: 4px 12px; color: var(--ink); }
 .row.label { color: var(--ink-faint); }
+.row.field .input { display: block; padding: 2px 8px; border: 1px solid var(--ink-faint); border-radius: 6px; color: var(--ink-faint); }
 .row.action:hover, .row.sub:hover, .row.sub:focus { background: var(--accent); color: #fff; outline: none; }
 .sep { height: 1px; margin: 5px 10px; background: var(--menu-line); }
 .chev { position: absolute; right: 10px; }

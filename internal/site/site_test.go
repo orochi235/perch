@@ -182,3 +182,10 @@ func TestMissingSymbolsNamesOnlyTheUndrawn(t *testing.T) {
 		t.Errorf("missingSymbols = %v, want [no.such.symbol also.missing]", got)
 	}
 }
+
+func TestMenuDrawsAFieldAsASearchRow(t *testing.T) {
+	got := nodeHTML("", preview.Node{Field: "Search", Action: &preview.Action{Open: "x"}})
+	if !strings.Contains(got, `class="row field" title="opens x"`) || !strings.Contains(got, ">Search<") {
+		t.Errorf("got %s", got)
+	}
+}

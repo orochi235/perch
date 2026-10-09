@@ -451,3 +451,19 @@ menu:
 		t.Errorf("down's tint = %+v", got)
 	}
 }
+
+const fieldPreviewDoc = `
+app: {name: w, id: dev.example.w, icon: circle, interval: 10s}
+menu:
+  - field: Search GitHub
+    open: "https://github.com/search?q={{query}}"
+`
+
+func TestRenderShowsAFieldAndWhatItWouldOpen(t *testing.T) {
+	s := parse(t, fieldPreviewDoc)
+	frames := render(t, s, []State{state(t, s, "any", "")})
+	n := frames[0].Menu[0]
+	if n.Field != "Search GitHub" || n.Action == nil || n.Action.Open != "https://github.com/search?q=query" {
+		t.Errorf("got %+v", n)
+	}
+}
