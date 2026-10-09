@@ -66,7 +66,7 @@ const body = `{
     "watch": {
       "type": "object",
       "description": "Named sources, polled concurrently every interval.",
-      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
+      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "query", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
@@ -95,13 +95,13 @@ const body = `{
         "minProperties": 1,
         "maxProperties": 1,
         "additionalProperties": {"type": ["string", "null"], "description": "CEL condition reaching this state; omit on the last one."},
-        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}}
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "query", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}}
       }
     },
     "use": {
       "type": "object",
       "description": "Named uses of templates. Each takes exactly one template, and its arguments.",
-      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
+      "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["it", "self", "query", "init", "Type", "Protocol", "as", "break", "const", "continue", "else", "false", "for", "function", "if", "import", "in", "let", "loop", "namespace", "null", "package", "return", "true", "var", "void", "while"]}},
       "additionalProperties": {
         "type": "object",
         "minProperties": 1,
@@ -200,6 +200,7 @@ const body = `{
             "additionalProperties": false,
             "properties": {
               "text": {"type": "string", "description": "Label; {{ }} holes are CEL."},
+              "field": {"type": "string", "description": "A search field; this is its placeholder. Enter fires the item's run, open, post or swift with the typed text bound as query. {{ }} holes are CEL."},
               "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons, drawn beside the label. {{ }} holes are CEL; a name that resolves to nothing draws no icon.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^([A-Za-z0-9_-]|\\{\\{[^}]*\\}\\})+$"}}}]},
               "when": {"type": "string", "description": "CEL condition deciding whether the item appears."},
               "each": {"type": "string", "description": "CEL list expression; the element binds to it."},

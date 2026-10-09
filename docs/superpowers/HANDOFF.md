@@ -6,6 +6,9 @@ Homebrew tap bumped to match.
 
 ## Landed
 
+- **Search field** (unreleased, on `search-field-and-default-quit`): a `field:`
+  menu item; see [`field`](../schema.md#field). Holes in a `post:` body are
+  now JSON-escaped, which fixed bodies built from values holding `"` or `\`.
 - **PerchKit** (v2.3.0): `Package.swift` at the repo root offers a library
   that draws `app.tint` on a hand-written status item, `item.perchTint(…)`,
   compiled from the same `Icon.swift` generated apps get. brent and colm are
@@ -50,8 +53,15 @@ Homebrew tap bumped to match.
 
 **Default Quit item is designed, not built**: [design](specs/2026-10-08-default-quit-design.md). No plan yet.
 
-**Search field is designed, not built**: [design](specs/2026-10-08-search-field-design.md).
-Plan: [plans/2026-10-08-search-field.md](plans/2026-10-08-search-field.md); Task 1 is the menu-focus spike.
+**A string literal inside a `post:` body hole does not build.** `body: {q:
+'{{s.ok ? "y" : "n"}}'}` fails with a CEL parse error at `\"y\"`: the body is
+`json.Marshal`ed before its holes are lowered, so quotes inside a hole arrive
+escaped. Holes are lowered with `LowerJSON` (`internal/celswift/template.go`);
+the fix is to cut holes out before marshaling, or unescape each hole's text.
+
+**A `field:` inside a submenu is untested for focus.** The gated test covers a
+top-level field (it passed on teitou); AppKit has no supported call to open a
+submenu from code, so that case needs a hand check with `perch run`.
 
 **Embed mode is designed, not built**: [design](specs/2026-10-07-embed-design.md).
 Asked for by the brent session; brent is its first consumer.

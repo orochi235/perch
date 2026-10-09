@@ -107,10 +107,11 @@ re-poll on the [`interval`](#app) the `app:` block sets. Their results are what
 every expression in the document reads.
 
 A name is letters, digits and underscores, starting with a letter or
-underscore. It cannot be `it` or `self`, which perch binds itself (`it` in an
-[`each:`](#each), `self` in a [template](#use)); a CEL reserved word; or `init`,
-`Type` or `Protocol`, which Swift reserves after a dot. A [shape](#shape) field
-follows the same rule, except that it may be `it`.
+underscore. It cannot be `it`, `self` or `query`, which perch binds itself (`it`
+in an [`each:`](#each), `self` in a [template](#use), `query` in a
+[`field:`](#field)); a CEL reserved word; or `init`, `Type` or `Protocol`, which
+Swift reserves after a dot. A [shape](#shape) field follows the same rule, except
+that it may be `it` or `query`.
 
 Each watch is exactly one of four kinds. The kind is the key it carries:
 
@@ -494,6 +495,7 @@ Everything else is a mapping:
 | Key | Takes |
 |---|---|
 | `text` | A string: the label. `{{ }}` holes interpolate expressions. |
+| `field` | A string: the placeholder of a search field drawn in the menu. `{{ }}` holes interpolate expressions. See [`field`](#field). |
 | `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
@@ -562,6 +564,37 @@ menu:
 ```
 
 [Jobs, with a submenu each](recipes/jobs.md) is the whole widget.
+
+### `field`
+
+`field:` draws a search field, with its value as the placeholder. It takes the
+keyboard when the menu opens. Enter fires the item's action with what was typed
+bound as `query`, then closes the menu and re-polls like any other action.
+Enter on an empty field does nothing, and the text is gone the next time the
+menu opens.
+
+```yaml
+app: {name: finder, id: dev.example.finder.menubar, icon: magnifyingglass, interval: 1m}
+
+menu:
+  - field: Search GitHub
+    open: "https://github.com/search?q={{query}}"
+  - field: Find a job
+    run: [onto, find, "{{query}}"]
+  - {text: Quit, quit: true}
+```
+
+The action is one of `run`, `open`, `post` or `swift`, and is required. A field
+also takes `when` and `each`; inside `each`, `it` and `query` are both bound.
+It takes no `text` (the placeholder is its label), no `icon` (the field draws a
+magnifier), and no submenu.
+
+| Action | What `{{query}}` becomes |
+|---|---|
+| `open` | Percent-encoded, so `a&b c` arrives as one parameter. Other holes in the URL are left as they are. |
+| `run` | The text as typed, as one argument. It is never a shell. |
+| `post` | The text, escaped for the JSON string it sits in — as is every hole in a body. |
+| `swift` | The method is called with it: `static func find(_ query: String)`. |
 
 ## Expressions
 
