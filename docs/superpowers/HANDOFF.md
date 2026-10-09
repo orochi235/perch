@@ -57,6 +57,10 @@ Homebrew tap bumped to match.
 
 ## Next
 
+**Switch `.onto/tests` to `runner: go`** (add `runner: go`, set `enlist: 5`, keep
+`run:` as plain `go test`) once onto 06e0fa3 is on every fleet node; a node on
+the old onto refuses the runner. The onto session says when.
+
 **A string literal inside a `post:` body hole does not build.** `body: {q:
 '{{s.ok ? "y" : "n"}}'}` fails with a CEL parse error at `\"y\"`: the body is
 `json.Marshal`ed before its holes are lowered, so quotes inside a hole arrive
