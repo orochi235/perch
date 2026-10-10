@@ -121,6 +121,16 @@ public struct Tint {
         (Tint.base(name) ?? .labelColor).withAlphaComponent(min(max(alpha, 0), 1))
     }
 
+    /// What a chip's icon and badge are drawn in. A patch strong enough to hide
+    /// the bar takes the ink that reads on its own color; a fainter one lets
+    /// the bar through, so its ink follows the bar.
+    var ink: NSColor {
+        guard alpha >= Tint.coversBar, let c = Tint.base(name)?.usingColorSpace(.sRGB) else { return .labelColor }
+        return 0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent < 0.6 ? .white : .black
+    }
+
+    static let coversBar: CGFloat = 0.6
+
     private static func base(_ name: String) -> NSColor? {
         if name.hasPrefix("#") {
             guard name.count == 7, let v = UInt32(name.dropFirst(), radix: 16) else { return nil }
@@ -165,7 +175,7 @@ public struct Tint {
         case .dot:
             return dot(plain.withSymbolConfiguration(.init(hierarchicalColor: .labelColor)) ?? plain)
         case .chip:
-            return chip(plain.withSymbolConfiguration(.init(hierarchicalColor: .labelColor)) ?? plain,
+            return chip(plain.withSymbolConfiguration(.init(hierarchicalColor: ink)) ?? plain,
                         badge: wrap == .all ? badge : "")
         }
     }
@@ -208,7 +218,7 @@ public struct Tint {
     func chip(_ icon: NSImage, badge: String = "") -> NSImage {
         let pad = NSSize(width: 4, height: 2), gap: CGFloat = 3, color = color
         let font = NSFont.menuBarFont(ofSize: 0)
-        let label = NSAttributedString(string: badge, attributes: [.font: font, .foregroundColor: NSColor.labelColor])
+        let label = NSAttributedString(string: badge, attributes: [.font: font, .foregroundColor: ink])
         let text = badge.isEmpty ? .zero : label.size()
         let width = icon.size.width + 2 * pad.width + (badge.isEmpty ? 0 : gap + ceil(text.width))
         let size = NSSize(width: width, height: icon.size.height + 2 * pad.height)

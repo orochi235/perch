@@ -51,6 +51,29 @@ func TestStatusItemKeepsItsLayoutWhileTheMenuIsOpen(t *testing.T) {
 	}
 }
 
+const inkProbe = `
+import AppKit
+
+func ink(_ color: String, _ alpha: CGFloat, open: Bool = false) -> String {
+    let ink = Tint(color: color, alpha: alpha, style: .chip, size: .small, corner: .bottomRight).shown(menuOpen: open).ink
+    return ink == .white ? "white" : ink == .black ? "black" : "label"
+}
+print(ink("#a50a22", 0.85), ink("#ffe066", 0.85), ink("#a50a22", 0.35), ink("#a50a22", 0.85, open: true))
+`
+
+// A chip that hides the bar can't use the bar's text color: dark red at 85%
+// under a light bar's black icon is unreadable.
+func TestAStrongChipInksForItsOwnColor(t *testing.T) {
+	requireAqua(t)
+	out, err := exec.Command(buildProbe(t, inkProbe)).CombinedOutput()
+	if err != nil {
+		t.Fatalf("probe: %v\n%s", err, out)
+	}
+	if got, want := strings.TrimSpace(string(out)), "white black label label"; got != want {
+		t.Errorf("ink: got %q, want %q", got, want)
+	}
+}
+
 const perchKitProbe = `
 import AppKit
 
