@@ -74,6 +74,30 @@ func TestAStrongChipInksForItsOwnColor(t *testing.T) {
 	}
 }
 
+const menuInkProbe = `
+import AppKit
+
+func look(_ color: String, _ alpha: CGFloat, menu: Bool = true) -> String {
+    let tint = Tint(color: color, alpha: alpha, style: .chip, size: .small, corner: .bottomRight, menu: menu)
+    return MenuGlass.appearance(for: tint)?.name.rawValue ?? "system"
+}
+print(look("#116C80", 0.85), look("#ffe066", 0.85), look("#116C80", 0.35), look("#116C80", 0.85, menu: false))
+`
+
+// A tinted dropdown is the chip's color behind the menu's text, so it takes
+// the chip's ink: black text on a light bar's teal menu was unreadable.
+func TestAStronglyTintedMenuTakesTheChipsInk(t *testing.T) {
+	requireAqua(t)
+	out, err := exec.Command(buildProbe(t, menuInkProbe)).CombinedOutput()
+	if err != nil {
+		t.Fatalf("probe: %v\n%s", err, out)
+	}
+	want := "NSAppearanceNameDarkAqua NSAppearanceNameAqua system system"
+	if got := strings.TrimSpace(string(out)); got != want {
+		t.Errorf("menu appearance: got %q, want %q", got, want)
+	}
+}
+
 const perchKitProbe = `
 import AppKit
 

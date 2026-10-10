@@ -844,7 +844,7 @@ A mapping picks the style:
 | `size` | A dot's size: `small` (the default), `medium`, or `large`. |
 | `corner` | Where a dot sits: `bottom-right` (the default), `bottom-left`, `top-right`, or `top-left`. |
 | `wrap` | What a chip covers: `icon` (the default), or `all` to put the badge on the patch too. |
-| `menu` | `true` tints the dropdown's glass too, submenus included, in the same color and opacity. macOS has no API for this; perch reaches the menu's glass by a private window class name, so a macOS that changes it shows an untinted menu, not a broken one. |
+| `menu` | `true` tints the dropdown's glass too, submenus included, in the same color and opacity. At 60% or more the menu's text takes the chip's white or black. macOS has no API for this; perch reaches the menu's glass by a private window class name, so a macOS that changes it shows an untinted menu, not a broken one. |
 | `opacity` | The color's opacity, from 0 to 1, or a CEL expression giving one — so how strong the color is can say something, as a chip that fades while nothing is waiting does. Replaces the chip's 35%; a `#rrggbbaa` color and `opacity` cannot both be given. |
 
 | Style | Draws | On artwork |

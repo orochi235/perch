@@ -298,8 +298,21 @@ enum MenuGlass {
             let t = tint()
             let color = t?.menu == true ? t?.color : nil
             if glass.tintColor != color { glass.tintColor = color }
+            let look = appearance(for: t)
+            if window.appearance?.name != look?.name { window.appearance = look }
         }
         #endif
+    }
+
+    /// A menu tinted strongly enough to hide the glass takes the chip's ink, so
+    /// its text reads on the tint rather than on the bar's light or dark.
+    static func appearance(for tint: Tint?) -> NSAppearance? {
+        guard let tint, tint.menu else { return nil }
+        switch tint.ink {
+        case .white: return NSAppearance(named: .darkAqua)
+        case .black: return NSAppearance(named: .aqua)
+        default: return nil
+        }
     }
 
     #if compiler(>=6.2)
