@@ -1,11 +1,16 @@
-# Handoff — 2026-10-09
+# Handoff — 2026-10-20
 
 Branch `main` in `~/src/perch`, released as
-[`v2.4.1`](https://github.com/orochi235/perch/releases/tag/v2.4.1), with the
+[`v2.5.0`](https://github.com/orochi235/perch/releases/tag/v2.5.0), with the
 Homebrew tap bumped to match.
 
 ## Landed
 
+- **`toggle:` and Start at Login** (v2.5.0): a checkmark item over a
+  `launchagent` watch's `.enabled`, `agent:` gains `enable`/`disable`, and
+  `service` ends its controls with `Start <noun> at Login`; see
+  [Start at login](../schema.md#start-at-login). Start enables around its
+  bootstrap because launchd refuses a disabled label.
 - **`perch init`** (v2.4.0): writes a starter `menubar.yaml` named after
   the directory, plus `menubar.schema.json`; refuses to overwrite a spec.
 - **Hotkey** (v2.4.0): `app.hotkey: cmd+shift+space` opens the menu from
@@ -112,7 +117,7 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Traps
 
-- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.4.1), not
+- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.5.0), not
   this checkout. Run a local build by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
