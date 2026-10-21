@@ -74,6 +74,7 @@ func emitResultTypes(b *buf, s *spec.Spec, n structNames) {
 			b.line("var installed = false")
 			b.line("var loaded = false")
 			b.line("var running = false")
+			b.line("var enabled = true")
 			b.line("var pid = 0")
 			b.line(`var label = ""`)
 			b.line(`var plist = ""`)
@@ -146,6 +147,7 @@ func emitResultInits(b *buf, s *spec.Spec, n structNames) {
 			b.line("installed = o.installed")
 			b.line("loaded = o.loaded")
 			b.line("running = o.running")
+			b.line("enabled = o.enabled")
 			b.line("pid = o.pid")
 			b.line("label = o.label")
 			b.line("plist = o.plist")
@@ -478,6 +480,10 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		return nil
 	}
 
+	if !it.Toggle.IsZero() {
+		return g.toggle(it, into, title, icon, e, path)
+	}
+
 	if it.Action.Kind == spec.ActionNone {
 		g.b.line("%s.append(.item(%s, nil%s))", into, title, icon)
 		return nil
@@ -488,6 +494,26 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		return err
 	}
 	g.b.line("%s.append(.item(%s, %s%s))", into, title, action, icon)
+	return nil
+}
+
+// toggle shows the checkmark from the field as written, and flips the field
+// itself, so a negated toggle still enables what is disabled.
+func (g *menuGen) toggle(it spec.Item, into, title, icon string, e *celswift.Env, path string) error {
+	w, err := g.spec.AgentWatch(it.Scope, it.Toggle.Target)
+	if err != nil {
+		return fmt.Errorf("%s.toggle: %w", path, err)
+	}
+	on, err := e.LowerCondition(it.Toggle.Expr())
+	if err != nil {
+		return fmt.Errorf("%s.toggle: %w", path, err)
+	}
+	set, err := e.LowerCondition(it.Toggle.Target + "." + it.Toggle.Field)
+	if err != nil {
+		return fmt.Errorf("%s.toggle: %w", path, err)
+	}
+	g.b.line("%s.append(.toggle(%s, on: %s, .agent(label: %s, plist: %s, verb: %s ? .disable : .enable)%s))",
+		into, title, on, celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), set, icon)
 	return nil
 }
 

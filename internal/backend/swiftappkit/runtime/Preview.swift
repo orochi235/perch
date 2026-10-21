@@ -16,6 +16,7 @@ struct Sample: Decodable {
     var installed: Bool?
     var loaded: Bool?
     var running: Bool?
+    var enabled: Bool?
     var pid: Int?
 }
 
@@ -41,6 +42,7 @@ extension LaunchAgentOutcome {
             installed: sample.installed ?? true,
             loaded: sample.loaded ?? running,
             running: running,
+            enabled: sample.enabled ?? true,
             pid: sample.pid ?? (running ? 1 : 0),
             label: label,
             plist: Launchd.expand(plist)
@@ -108,6 +110,9 @@ private func encoded(_ node: MenuNode) -> [String: Any] {
     case .item(let title, let action, let i):
         out = ["title": title]
         if let action { out["action"] = encoded(action) }
+        icon = i
+    case .toggle(let title, let on, let action, let i):
+        out = ["title": title, "on": on, "action": encoded(action)]
         icon = i
     case .submenu(let title, let items, let i):
         out = ["title": title, "items": items.map { encoded($0) }]

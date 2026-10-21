@@ -91,3 +91,22 @@ func compileWithHand(t *testing.T, doc, hand string) {
 		t.Fatalf("emitted swift: action does not compile against a hand-written target: %v\n%s", err, out)
 	}
 }
+
+const toggleDoc = `
+app: {name: w, id: dev.example.w, icon: gear, interval: 5s}
+watch:
+  worker: {launchagent: dev.example.worker}
+menu:
+  - toggle: "!worker.enabled"
+`
+
+// A negated toggle draws its checkmark inverted but flips the same field, so a
+// click on a checked "Don't Start at Login" enables the job.
+func TestANegatedToggleShowsInvertedAndFlipsTheField(t *testing.T) {
+	r := emit(t, toggleDoc)["Render.swift"]
+	want := `.toggle("Don't Start at Login", on: !(results.worker.enabled), .agent(label: "dev.example.worker", plist: "~/Library/LaunchAgents/dev.example.worker.plist", verb: results.worker.enabled ? .disable : .enable))`
+	if !strings.Contains(r, want) {
+		t.Errorf("Render.swift does not emit\n%s\n%s", want, r)
+	}
+	compileWithHand(t, toggleDoc, "")
+}

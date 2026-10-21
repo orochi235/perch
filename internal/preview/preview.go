@@ -74,6 +74,7 @@ type Node struct {
 	Separator bool    `json:"separator,omitempty"`
 	Title     string  `json:"title,omitempty"`
 	Field     string  `json:"field,omitempty"`
+	On        *bool   `json:"on,omitempty"` // set on a toggle: whether it is checked
 	Icon      *Icon   `json:"icon,omitempty"`
 	Action    *Action `json:"action,omitempty"`
 	Items     []Node  `json:"items,omitempty"`
@@ -96,6 +97,7 @@ type Sample struct {
 	Installed *bool   `json:"installed,omitempty"`
 	Loaded    *bool   `json:"loaded,omitempty"`
 	Running   *bool   `json:"running,omitempty"`
+	Enabled   *bool   `json:"enabled,omitempty"`
 	Pid       *int    `json:"pid,omitempty"`
 }
 
@@ -279,6 +281,12 @@ func parseSample(w spec.Watch, v value) (Sample, error) {
 				return s, fmt.Errorf("running: %w", err)
 			}
 			s.Running = &b
+		case f.key == "enabled" && w.Kind == spec.WatchLaunchAgent:
+			b, err := f.value.bool()
+			if err != nil {
+				return s, fmt.Errorf("enabled: %w", err)
+			}
+			s.Enabled = &b
 		case f.key == "pid" && w.Kind == spec.WatchLaunchAgent:
 			n, err := f.value.number()
 			if err != nil {
@@ -302,7 +310,7 @@ func sampleKeys(w spec.Watch) []string {
 	case spec.WatchExists:
 		return []string{"true or false"}
 	case spec.WatchLaunchAgent:
-		return []string{"installed", "loaded", "running", "pid"}
+		return []string{"installed", "loaded", "running", "enabled", "pid"}
 	default:
 		return []string{"code", "out", "err"}
 	}

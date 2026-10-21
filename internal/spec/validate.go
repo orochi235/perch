@@ -87,6 +87,11 @@ func (s *Spec) validateItems(items []Item) error {
 		if err := s.validateAction(it.Action, it.path, it.Scope); err != nil {
 			return err
 		}
+		if !it.Toggle.IsZero() {
+			if _, err := s.AgentWatch(it.Scope, it.Toggle.Target); err != nil {
+				return fmt.Errorf("%s.toggle: %w", it.path, err)
+			}
+		}
 		if err := s.validateItems(it.Menu); err != nil {
 			return err
 		}

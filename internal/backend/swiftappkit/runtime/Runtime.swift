@@ -186,6 +186,7 @@ struct LaunchAgentOutcome {
     var installed = false
     var loaded = false
     var running = false
+    var enabled = true
     var pid = 0
     var label = ""
     var plist = "" // expanded
@@ -201,6 +202,21 @@ enum Launchd {
 
     /// launchctl is handed argv directly, with no shell to expand a tilde.
     static func expand(_ path: String) -> String { (path as NSString).expandingTildeInPath }
+
+    /// Whether launchd's disabled database holds the label off, which is what
+    /// keeps it from loading at login. A label it has no entry for is enabled.
+    /// Older macOS writes `=> true` where 27 writes `=> disabled`.
+    static func disabled(_ label: String) -> Bool {
+        let printed = Watcher.run(["launchctl", "print-disabled", domain])
+        let key = "\"" + label + "\" => "
+        for line in printed.out.split(separator: "\n") {
+            let field = line.trimmingCharacters(in: .whitespaces)
+            guard field.hasPrefix(key) else { continue }
+            let value = field.dropFirst(key.count)
+            return value == "disabled" || value == "true"
+        }
+        return false
+    }
 }
 
 enum Watcher {
@@ -274,6 +290,7 @@ enum Watcher {
     static func launchAgent(label: String, plist: String) -> LaunchAgentOutcome {
         var o = LaunchAgentOutcome(label: label, plist: Launchd.expand(plist))
         o.installed = FileManager.default.fileExists(atPath: o.plist)
+        o.enabled = !Launchd.disabled(label)
         let printed = run(["launchctl", "print", Launchd.target(label)])
         o.loaded = printed.ok
         guard printed.ok else { return o }
@@ -371,11 +388,15 @@ enum Act {
             let outcome: RunOutcome
             switch verb {
             case .start:
-                outcome = Watcher.run(["launchctl", "bootstrap", Launchd.domain, Launchd.expand(plist)])
+                outcome = bootstrap(label: label, plist: plist)
             case .stop:
                 outcome = Watcher.run(["launchctl", "bootout", Launchd.target(label)])
             case .restart:
                 outcome = restart(label: label, plist: plist)
+            case .enable:
+                outcome = Watcher.run(["launchctl", "enable", Launchd.target(label)])
+            case .disable:
+                outcome = Watcher.run(["launchctl", "disable", Launchd.target(label)])
             }
             DispatchQueue.main.async {
                 if !outcome.ok { alert(verb.gerund + " " + label, outcome.err) }
@@ -391,7 +412,7 @@ enum Act {
         _ = Watcher.run(["launchctl", "bootout", Launchd.target(label)])
         for _ in 0..<40 {
             if !Watcher.run(["launchctl", "print", Launchd.target(label)]).ok {
-                return Watcher.run(["launchctl", "bootstrap", Launchd.domain, Launchd.expand(plist)])
+                return bootstrap(label: label, plist: plist)
             }
             Thread.sleep(forTimeInterval: 0.05)
         }
@@ -399,6 +420,19 @@ enum Act {
             ok: false, code: -1, out: "",
             err: "launchd still holds \(label) after two seconds, so it was not bootstrapped again."
         )
+    }
+
+    /// launchd refuses to bootstrap a disabled label, and disabling is how a
+    /// job is kept from starting at login — so starting one by hand enables
+    /// it for the bootstrap and disables it again, which leaves it running.
+    private static func bootstrap(label: String, plist: String) -> RunOutcome {
+        let start = ["launchctl", "bootstrap", Launchd.domain, Launchd.expand(plist)]
+        guard Launchd.disabled(label) else { return Watcher.run(start) }
+        let enabled = Watcher.run(["launchctl", "enable", Launchd.target(label)])
+        guard enabled.ok else { return enabled }
+        let outcome = Watcher.run(start)
+        _ = Watcher.run(["launchctl", "disable", Launchd.target(label)])
+        return outcome
     }
 
     static func perform(_ action: MenuAction, then repoll: @escaping () -> Void) {
@@ -535,13 +569,15 @@ struct Face {
 /// What agent: does to a LaunchAgent. Closed, because each one is a launchctl
 /// invocation perch writes rather than the author.
 enum LaunchAgentVerb: String {
-    case start, stop, restart
+    case start, stop, restart, enable, disable
 
     var gerund: String {
         switch self {
         case .start: return "Starting"
         case .stop: return "Stopping"
         case .restart: return "Restarting"
+        case .enable: return "Enabling"
+        case .disable: return "Disabling"
         }
     }
 }
@@ -569,6 +605,7 @@ enum MenuAction {
 enum MenuNode {
     case separator
     case item(String, MenuAction?, icon: MenuIcon? = nil)
+    case toggle(String, on: Bool, MenuAction, icon: MenuIcon? = nil)
     case submenu(String, [MenuNode], icon: MenuIcon? = nil)
     case field(String, (String) -> MenuAction)
 }
@@ -627,6 +664,11 @@ enum Draw {
                 menu.addItem(item)
             case .item(let title, let action?, let icon):
                 let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
+                Draw.icon(icon, on: item)
+                menu.addItem(item)
+            case .toggle(let title, let on, let action, let icon):
+                let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
+                item.state = on ? .on : .off
                 Draw.icon(icon, on: item)
                 menu.addItem(item)
             case .submenu(let title, let items, let icon):

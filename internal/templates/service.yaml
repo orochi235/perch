@@ -28,3 +28,4 @@ menu:
     - {text: "Start ${noun}", agent: self.agent.start}
     - {text: "Restart ${noun}", agent: self.agent.restart}
     - {text: "Stop ${noun}", agent: self.agent.stop}
+    - {text: "Start ${noun} at Login", toggle: self.agent.enabled}

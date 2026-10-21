@@ -321,6 +321,7 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 .sep { height: 1px; margin: 5px 10px; background: var(--menu-line); }
 .chev { position: absolute; right: 10px; }
 .row > .icon { margin-right: 6px; vertical-align: -2px; }
+.row > .check { display: inline-block; width: 1.1em; margin-left: -4px; }
 
 .submenu {
   display: none;

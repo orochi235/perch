@@ -54,7 +54,7 @@ const body = `{
                     "run": {"type": "array", "minItems": 1, "items": {"type": "string"}},
                     "open": {"type": "string"},
                     "post": {"type": "object", "required": ["url"], "additionalProperties": false, "properties": {"url": {"type": "string"}, "body": {}}},
-                    "agent": {"type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}(start|stop|restart)$"},
+                    "agent": {"type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}(start|stop|restart|enable|disable)$"},
                     "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"}
                   }
                 }
@@ -81,7 +81,7 @@ const body = `{
           "run": {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "argv, never a shell."},
           "http": {"type": "string", "description": "URL; .ok is a 2xx."},
           "exists": {"type": "string", "description": "Path; binds .ok only."},
-          "launchagent": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "A launchd label, e.g. dev.example.worker. Binds .installed, .loaded, .running, .pid, .label, .plist, .domain, .target."},
+          "launchagent": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "A launchd label, e.g. dev.example.worker. Binds .installed, .loaded, .running, .enabled, .pid, .label, .plist, .domain, .target."},
           "plist": {"type": "string", "description": "Where the LaunchAgent file is; defaults to ~/Library/LaunchAgents/<label>.plist. Needs launchagent."},
           "json": {"type": "boolean", "description": "Decode the output into .data."},
           "shape": {"$ref": "#/definitions/shape"}
@@ -201,6 +201,7 @@ const body = `{
             "additionalProperties": false,
             "properties": {
               "text": {"type": "string", "description": "Label; {{ }} holes are CEL."},
+              "toggle": {"type": "string", "pattern": "^!?([A-Za-z_][A-Za-z0-9_]*\\.){1,2}enabled$", "description": "A checkmark item: <watch>.enabled shows whether a launchagent watch's job starts at login, and clicking flips it. !<watch>.enabled shows the checkmark the other way round."},
               "field": {"type": "string", "description": "A search field; this is its placeholder. Enter fires the item's run, open, post or swift with the typed text bound as query. {{ }} holes are CEL."},
               "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons, drawn beside the label. {{ }} holes are CEL; a name that resolves to nothing draws no icon.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^([A-Za-z0-9_-]|\\{\\{[^}]*\\}\\})+$"}}}]},
               "when": {"type": "string", "description": "CEL condition deciding whether the item appears."},
@@ -215,7 +216,7 @@ const body = `{
                 "properties": {"url": {"type": "string"}, "body": {}}
               },
               "quit": {"type": "boolean"},
-              "agent": {"type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}(start|stop|restart)$", "description": "<watch>, <use>.<watch> or self.<watch>, then .start, .stop or .restart."},
+              "agent": {"type": "string", "pattern": "^([A-Za-z_][A-Za-z0-9_]*\\.){1,2}(start|stop|restart|enable|disable)$", "description": "<watch>, <use>.<watch> or self.<watch>, then .start, .stop, .restart, .enable or .disable."},
               "swift": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$", "description": "A static method in menubar/Sources/, written Type.method."},
               "window": {"enum": ["open", "close", "reload"], "description": "Act on the declared window."}
             }

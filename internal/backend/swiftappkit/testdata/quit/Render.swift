@@ -6,6 +6,7 @@ struct SvcResult {
     var installed = false
     var loaded = false
     var running = false
+    var enabled = true
     var pid = 0
     var label = ""
     var plist = ""
@@ -23,6 +24,7 @@ extension SvcResult {
         installed = o.installed
         loaded = o.loaded
         running = o.running
+        enabled = o.enabled
         pid = o.pid
         label = o.label
         plist = o.plist

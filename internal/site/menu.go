@@ -118,6 +118,13 @@ func nodeHTML(root string, n preview.Node) string {
 	if n.Icon != nil && (n.Icon.Symbol != "" || n.Icon.Asset != "") {
 		title = iconHTML(root, *n.Icon) + title
 	}
+	if n.On != nil {
+		mark := ""
+		if *n.On {
+			mark = "✓"
+		}
+		title = `<span class="check">` + mark + `</span>` + title
+	}
 	if len(n.Items) > 0 {
 		var sub strings.Builder
 		for _, item := range n.Items {

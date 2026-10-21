@@ -128,6 +128,7 @@ func show(_ nodes: [MenuNode]) -> String {
         switch node {
         case .separator: return "-"
         case .item(let t, _, _): return t
+        case .toggle(let t, let on, _, _): return (on ? "✓" : "") + t
         case .submenu(let t, let items, let icon):
             let mark = if case .symbol(let name)? = icon { "[" + name + "]" } else { "" }
             return t + mark + "(" + show(items) + ")"

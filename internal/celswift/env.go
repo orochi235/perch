@@ -99,6 +99,7 @@ func watchType(w spec.Watch) *spec.Type {
 			field("installed", spec.TypeBool),
 			field("loaded", spec.TypeBool),
 			field("running", spec.TypeBool),
+			field("enabled", spec.TypeBool),
 			field("pid", spec.TypeInt),
 			field("label", spec.TypeString),
 			field("plist", spec.TypeString),

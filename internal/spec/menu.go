@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -55,10 +56,35 @@ const (
 	AgentStart   AgentVerb = "start"
 	AgentStop    AgentVerb = "stop"
 	AgentRestart AgentVerb = "restart"
+	AgentEnable  AgentVerb = "enable"
+	AgentDisable AgentVerb = "disable"
 )
 
 // AgentVerbs is every verb agent: accepts, in the order the docs list them.
-var AgentVerbs = []AgentVerb{AgentStart, AgentStop, AgentRestart}
+var AgentVerbs = []AgentVerb{AgentStart, AgentStop, AgentRestart, AgentEnable, AgentDisable}
+
+// Toggle is what a toggle: item shows checked and flips: one field perch can
+// both read and write, optionally negated.
+type Toggle struct {
+	Target  string // <watch>, <use>.<watch> or self.<watch>
+	Field   string // the only one so far is enabled
+	Negated bool
+}
+
+// IsZero reports an item that is not a toggle.
+func (t Toggle) IsZero() bool { return t.Target == "" }
+
+// Expr is the condition the checkmark shows, as the author wrote it.
+func (t Toggle) Expr() string {
+	e := t.Target + "." + t.Field
+	if t.Negated {
+		return "!" + e
+	}
+	return e
+}
+
+// toggleFields are what toggle: can flip, each with what perch does to flip it.
+var toggleFields = []string{"enabled"}
 
 // WindowVerb is what a window: action does to the declared window.
 type WindowVerb string
@@ -91,7 +117,9 @@ type Item struct {
 	Separator bool
 	Text      string
 	// Field is a search field's placeholder; set, the item is a field.
-	Field  string
+	Field string
+	// Toggle is what a checkmark item reads and flips; set, the item is a toggle.
+	Toggle Toggle
 	Icon   Icon
 	When   string
 	Each   string
@@ -99,7 +127,7 @@ type Item struct {
 	Action Action
 	// Scope is the use this item came from, or "" for the file's own.
 	Scope string
-	// Guard is the condition its agent: verb needs to work; empty for other items.
+	// Guard is the condition its agent: verb or toggle: needs to work; empty for other items.
 	Guard string
 
 	outlet   string // set with isOutlet: the outlet's name, "" for the default
@@ -114,6 +142,7 @@ func (it Item) Path() string { return it.path }
 type itemFields struct {
 	Text   string    `yaml:"text"`
 	Field  string    `yaml:"field"`
+	Toggle string    `yaml:"toggle"`
 	Icon   yaml.Node `yaml:"icon"`
 	When   string    `yaml:"when"`
 	Each   string    `yaml:"each"`
@@ -192,7 +221,50 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 			return Item{}, err
 		}
 	}
-	return Item{Text: f.Text, Field: f.Field, Icon: icon, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	var tog Toggle
+	if f.Toggle != "" {
+		if tog, err = parseToggle(f.Toggle, path); err != nil {
+			return Item{}, err
+		}
+		if err := checkToggle(f, act, sub, path); err != nil {
+			return Item{}, err
+		}
+	}
+	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+}
+
+// parseToggle reads [!]<target>.<field>. Anything richer has no single value a
+// click could flip, so it is refused rather than guessed at.
+func parseToggle(src, path string) (Toggle, error) {
+	var t Toggle
+	expr := strings.TrimSpace(src)
+	if rest, ok := strings.CutPrefix(expr, "!"); ok {
+		t.Negated, expr = true, strings.TrimSpace(rest)
+	}
+	i := strings.LastIndex(expr, ".")
+	if i < 0 || !togglePath.MatchString(expr) {
+		return t, fmt.Errorf("%s.toggle: %q is not something a click can flip; toggle: takes <watch>.enabled, or !<watch>.enabled to show the checkmark the other way round. For a condition, use when:", path, src)
+	}
+	t.Target, t.Field = expr[:i], expr[i+1:]
+	if !slices.Contains(toggleFields, t.Field) {
+		return t, fmt.Errorf("%s.toggle: %q is not something perch can flip; it flips a launchagent watch's %s", path, t.Field, strings.Join(toggleFields, ", "))
+	}
+	return t, nil
+}
+
+var togglePath = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){1,2}$`)
+
+// checkToggle refuses what a toggle: item cannot also be: its click is the flip.
+func checkToggle(f itemFields, act Action, sub []Item, path string) error {
+	switch {
+	case act.Kind != ActionNone:
+		return fmt.Errorf("%s: a toggle: item flips what it names when clicked, so it takes no %s action", path, act.Kind)
+	case len(sub) > 0:
+		return fmt.Errorf("%s: a toggle: item takes no submenu; clicking it is the flip", path)
+	case f.Field != "":
+		return fmt.Errorf("%s: an item is a toggle: or a field:, not both", path)
+	}
+	return nil
 }
 
 // checkField refuses what a field: item cannot use: everything but an action

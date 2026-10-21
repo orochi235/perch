@@ -12,6 +12,7 @@ struct DaemonAgentResult {
     var installed = false
     var loaded = false
     var running = false
+    var enabled = true
     var pid = 0
     var label = ""
     var plist = ""
@@ -23,6 +24,7 @@ struct ClientAgentResult {
     var installed = false
     var loaded = false
     var running = false
+    var enabled = true
     var pid = 0
     var label = ""
     var plist = ""
@@ -59,6 +61,7 @@ extension DaemonAgentResult {
         installed = o.installed
         loaded = o.loaded
         running = o.running
+        enabled = o.enabled
         pid = o.pid
         label = o.label
         plist = o.plist
@@ -73,6 +76,7 @@ extension ClientAgentResult {
         installed = o.installed
         loaded = o.loaded
         running = o.running
+        enabled = o.enabled
         pid = o.pid
         label = o.label
         plist = o.plist
@@ -152,6 +156,9 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     if results.daemon.agent.loaded {
         menu.append(.item("Stop Service", .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: .stop)))
     }
+    if results.daemon.agent.installed {
+        menu.append(.toggle("Start Service at Login", on: results.daemon.agent.enabled, .agent(label: "dev.example.wall.daemon", plist: "~/Library/LaunchAgents/dev.example.wall.daemon.plist", verb: results.daemon.agent.enabled ? .disable : .enable)))
+    }
     if (results.client.agent.installed && !(results.client.agent.loaded)) {
         menu.append(.item("Start Client", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .start)))
     }
@@ -160,6 +167,9 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     }
     if results.client.agent.loaded {
         menu.append(.item("Stop Client", .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: .stop)))
+    }
+    if results.client.agent.installed {
+        menu.append(.toggle("Start Client at Login", on: results.client.agent.enabled, .agent(label: "dev.example.wall.client", plist: "~/Library/LaunchAgents/dev.example.wall.client.plist", verb: results.client.agent.enabled ? .disable : .enable)))
     }
     menu.append(.separator)
     menu.append(.item("Quit", .quit))

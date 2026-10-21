@@ -36,6 +36,10 @@ worker: {agent: {loaded: true}}
 worker: {agent: {installed: true}}
 ```
 
+```state off at login
+worker: {agent: {running: true, pid: 4821, enabled: false}}
+```
+
 ```state not installed
 worker: {agent: {installed: false}}
 ```
@@ -44,7 +48,7 @@ worker: {agent: {installed: false}}
 [outlets](../schema.md#outlets): `- outlet` in `status:` gets a warning icon
 while the job is not installed, `- outlet` in `menu:` a line saying what it is
 doing, and `- outlet: controls` Start Worker, Restart Worker and Stop Worker,
-each shown only when it can work.
+each shown only when it can work, then a Start Worker at Login checkmark.
 
 Its states are `worker.uninstalled`, `worker.stopped`, `worker.idle` and
 `worker.running`, and its watch is `worker.agent`. A `launchctl` call perch

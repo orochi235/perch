@@ -330,7 +330,7 @@ run it. It takes `label`, required, and `noun`, which defaults to `Service`.
 | States | `uninstalled` (no plist), `stopped` (not loaded), `idle` (loaded, no process), `running`. |
 | `- outlet` in `status:` | A warning icon while uninstalled. |
 | `- outlet` in `menu:` | One line: `<noun>: running · pid 4821`, `<noun>: not loaded`, and so on. |
-| `- outlet: controls` | `Start <noun>`, `Restart <noun>` and `Stop <noun>`, each shown only when it can work. |
+| `- outlet: controls` | `Start <noun>`, `Restart <noun>` and `Stop <noun>`, each shown only when it can work, and a `Start <noun> at Login` checkmark. |
 
 To change its labels, copy [`service.yaml`](../internal/templates/service.yaml)
 into `menubar/templates/` under another name; a repo template may not take the
@@ -410,6 +410,7 @@ beside `launchagent:` if it is somewhere else. The watch binds:
 | `.installed` | The plist exists. |
 | `.loaded` | launchd holds the label. |
 | `.running` | The job has a process. |
+| `.enabled` | launchd will load it at login: no `launchctl disable` holds it off. |
 | `.pid` | Its pid, or `0` when it is not running. |
 | `.label` | The label. |
 | `.plist` | The plist path, `~` expanded. |
@@ -427,12 +428,49 @@ free, and bootstrapping into that gap fails with `Input/output error`. The
 domain and the plist path are worked out on the Mac the widget runs on, so the
 same file works on every machine.
 
+`worker.enable` and `worker.disable` are `launchctl enable` and `disable`:
+whether launchd loads the job at login. Neither starts or stops it now.
+
 An `agent:` item shows only when its verb can work — Start while installed and
-not loaded, Stop while loaded, Restart while installed — and only when your own
-`when:` holds too. With no `text:`, it is labeled Start, Stop or Restart. The
+not loaded, Stop while loaded, Restart while installed, Enable while disabled,
+Disable while enabled — and only when your own `when:` holds too. With no
+`text:`, it is labeled Start, Stop or Restart, or Start at Login and Don't Start
+at Login. The
 shipped [`service`](#service) template adds a line saying what the job is doing,
 and labels the three with its noun. [Start and stop a
 LaunchAgent](recipes/launchagent.md) is the whole widget.
+
+#### Start at login
+
+A `toggle:` item is a checkmark for one of these, and clicking it flips it:
+
+```yaml
+app: {name: worker, id: dev.example.worker.menubar, icon: gearshape, interval: 10s}
+
+watch:
+  worker:
+    launchagent: dev.example.worker
+
+menu:
+  - agent: worker.stop
+  - {text: Start Worker at Login, toggle: worker.enabled}
+```
+
+```state off at login
+worker: {running: true, pid: 4821, enabled: false}
+```
+
+`toggle:` takes `<watch>.enabled` or `!<watch>.enabled`, which checks the item
+while the job is *off* at login, for a label like "Don't Start at Login". A
+click flips the same field either way. Anything richer — `worker.enabled &&
+worker.running`, a comparison — is refused, because a click would have nothing
+single to flip; use `when:` to decide whether the item shows. It shows only
+while the plist is installed, and with no `text:` it is labeled Start at Login,
+or Don't Start at Login when negated.
+
+launchd refuses to bootstrap a disabled job, so Start and Restart on one enable
+it, bootstrap it, and disable it again: the job runs now and still stays off at
+the next login.
 
 An `agent:` also works as a button on a [quit prompt](#quit), which is how an
 app offers to stop its server on the way out. A button is always offered, so put
@@ -449,6 +487,7 @@ it under a rule whose `when:` says it can work: `svc.loaded` for a stop.
 | `menubar/AppIcon.png` is rendered into every size the Dock asks for. | [The Dock tile](#the-dock-tile) |
 | A quit prompt stands aside for logout, restart and shutdown. | [`quit`](#quit) |
 | An `agent:` item with no `text:` is labeled Start, Stop or Restart, and shows only when its verb can work. | [LaunchAgents](#launchagents) |
+| Starting a job that is off at login still works, and leaves it off at login. | [LaunchAgents](#launchagents) |
 
 ## `status`
 
@@ -530,6 +569,7 @@ Everything else is a mapping:
 |---|---|
 | `text` | A string: the label. `{{ }}` holes interpolate expressions. |
 | `field` | A string: the placeholder of a search field drawn in the menu. `{{ }}` holes interpolate expressions. See [`field`](#field). |
+| `toggle` | A string: what the item's checkmark shows and a click flips — `worker.enabled`, or `!worker.enabled` to show it the other way round. It takes no action and no submenu. See [Start at login](#start-at-login). |
 | `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
@@ -542,7 +582,7 @@ Then at most one action, which is what activating the item does:
 | `run` | A list of at least one string: argv, never a shell. |
 | `open` | A string: a URL, or a path with `~` expanded. |
 | `post` | A mapping of `url` (a string) and `body` (any YAML, sent as JSON). |
-| `agent` | A string, `<watch>.<verb>`: `worker.stop`, `daemon.agent.stop`, or `self.agent.stop` in a template. The watch is a `launchagent` watch; the verb is `start`, `stop` or `restart`. |
+| `agent` | A string, `<watch>.<verb>`: `worker.stop`, `daemon.agent.stop`, or `self.agent.stop` in a template. The watch is a `launchagent` watch; the verb is `start`, `stop`, `restart`, `enable` or `disable`. |
 | `quit` | `true`. Ends the app. |
 | `swift` | A string, `<Type>.<method>`: a static method in `menubar/Sources/`. |
 | `window` | `open`, `close` or `reload`. Needs a [`window:`](#window) block. |

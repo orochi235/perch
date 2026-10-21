@@ -223,3 +223,89 @@ func TestAgentRestartFromRunningAndFromStopped(t *testing.T) {
 		}
 	}
 }
+
+// loginProbe drives the two verbs a toggle: item fires, and starts the job by
+// hand while it is disabled.
+const loginProbe = `
+import Foundation
+
+let label = CommandLine.arguments[1]
+let plist = CommandLine.arguments[2]
+
+func act(_ verb: LaunchAgentVerb) {
+    var repolled = false
+    Act.agent(label: label, plist: plist, verb: verb) { repolled = true }
+    let until = Date().addingTimeInterval(30)
+    while !repolled && Date() < until {
+        RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
+    }
+}
+
+func report(_ what: String) {
+    let o = Watcher.launchAgent(label: label, plist: plist)
+    print("\(what) loaded=\(o.loaded) enabled=\(o.enabled)")
+}
+
+report("fresh")
+act(.disable)
+report("disabled")
+act(.start)
+report("startedByHand")
+act(.stop)
+act(.enable)
+report("enabled")
+`
+
+// Disabling is what keeps a job from loading at login, and launchd refuses to
+// bootstrap a disabled label at all — so without Start enabling around its
+// bootstrap, turning off Start at Login would also break the Start item.
+func TestStartAtLoginTogglesAndStartStillWorksWhileDisabled(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("launchd is macOS only")
+	}
+	out, err := exec.Command("launchctl", "managername").Output()
+	if err != nil || strings.TrimSpace(string(out)) != "Aqua" {
+		t.Skipf("not a GUI login session (%s); gui/<uid> has no domain to bootstrap into", out)
+	}
+
+	// One fixed label: launchd keeps an entry in its disabled database for
+	// every label ever enabled or disabled, and nothing short of root removes one.
+	label := "dev.perch.test.login"
+	domain := "gui/" + strconv.Itoa(os.Getuid())
+	plist := filepath.Join(t.TempDir(), label+".plist")
+	if err := os.WriteFile(plist, []byte(agentPlist(label, []string{"/bin/sleep", "120"}, true)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = exec.Command("launchctl", "bootout", domain+"/"+label).Run()
+		_ = exec.Command("launchctl", "enable", domain+"/"+label).Run()
+	})
+	_ = exec.Command("launchctl", "enable", domain+"/"+label).Run()
+
+	bin := buildProbe(t, loginProbe)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	raw, err := exec.CommandContext(ctx, bin, label, plist).CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatalf("probe never finished:\n%s", raw)
+	}
+	if err != nil {
+		t.Fatalf("probe: %v\n%s", err, raw)
+	}
+
+	want := []string{
+		"fresh loaded=false enabled=true",
+		"disabled loaded=false enabled=false",
+		"startedByHand loaded=true enabled=false",
+		"enabled loaded=false enabled=true",
+	}
+	got := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
+	if len(got) != len(want) {
+		t.Fatalf("got %d lines, want %d:\n%s", len(got), len(want), raw)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("line %d:\n got %q\nwant %q", i+1, got[i], want[i])
+		}
+	}
+}
