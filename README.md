@@ -45,7 +45,7 @@ is what perch emits.
 ### Other platforms
 
 There is no Windows or Linux port, and I won't be writing one. If you want to,
-open an issue first; I'm glad to work with you on it. The seam is
+open an issue first; I'd be happy to work with you on it. The seam is
 `internal/backend`, and the design question that will shape most of the work is
 what the schema's Mac-only parts (SF Symbols, tints, `swift:` actions,
 LaunchAgents) mean on a platform that lacks them.
