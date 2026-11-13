@@ -69,7 +69,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("")
 
 	emitPoll(b, s, n)
-	emitDraw(b)
+	emitDraw(b, s)
 	emitWindowActions(b, s)
 	emitQuitDelegate(b, s)
 	emitWindowSetup(b, s)
@@ -143,7 +143,16 @@ func watchCall(w spec.Watch, n structNames) string {
 	}
 }
 
-func emitDraw(b *buf) {
+// gutterArg is the gutter: argument a drawing of the top-level menu takes, or
+// "" where app.gutter leaves it on.
+func gutterArg(s *spec.Spec) string {
+	if s.App.NoGutter {
+		return ", gutter: false"
+	}
+	return ""
+}
+
+func emitDraw(b *buf, s *spec.Spec) {
 	b.line("func refresh() {")
 	b.in()
 	b.line("guard let button = statusItem.button else { return }")
@@ -153,7 +162,7 @@ func emitDraw(b *buf) {
 	b.line("")
 	b.line("func menuNeedsUpdate(_ menu: NSMenu) {")
 	b.in()
-	b.line("Draw.menu(renderMenu(results), into: menu) { [weak self] in self?.poll() }")
+	b.line("Draw.menu(renderMenu(results), into: menu%s) { [weak self] in self?.poll() }", gutterArg(s))
 	b.out()
 	b.line("}")
 }

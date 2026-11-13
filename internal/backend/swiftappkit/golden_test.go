@@ -26,6 +26,7 @@ func TestGolden(t *testing.T) {
 		"templates":     templatesDoc,
 		"field":         fieldDoc,
 		"badges":        badgesDoc,
+		"look":          lookDoc,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

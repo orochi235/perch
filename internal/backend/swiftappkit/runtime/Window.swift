@@ -139,15 +139,17 @@ final class WebWindow: NSObject, NSWindowDelegate, WKNavigationDelegate {
 /// menu bar and the status item cannot disagree about what is possible.
 final class MenuMirror: NSObject, NSMenuDelegate {
     private let nodes: () -> [MenuNode]
+    private let gutter: Bool
     private let repoll: () -> Void
 
-    init(nodes: @escaping () -> [MenuNode], repoll: @escaping () -> Void) {
+    init(nodes: @escaping () -> [MenuNode], gutter: Bool = true, repoll: @escaping () -> Void) {
         self.nodes = nodes
+        self.gutter = gutter
         self.repoll = repoll
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        Draw.menu(nodes(), into: menu, repoll: repoll)
+        Draw.menu(nodes(), into: menu, gutter: gutter, repoll: repoll)
     }
 }
 

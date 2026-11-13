@@ -94,14 +94,6 @@ func iconHTML(root string, icon preview.Icon) string {
 		style, html.EscapeString(icon.Symbol), svg)
 }
 
-// sizeStyle scales a row from the menu's 13pt, as a per-item number that cannot be a class.
-func sizeStyle(points float64) string {
-	if points <= 0 {
-		return ""
-	}
-	return fmt.Sprintf(` style="font-size: %.3fem"`, points/13)
-}
-
 // colorStyle carries a per-item color, which is data, so it cannot be a class.
 func colorStyle(fg, bg string) string {
 	ink, patch := inkColors(fg, bg)
@@ -175,19 +167,67 @@ func nodeHTML(root string, n preview.Node) string {
 		}
 		title = `<span class="check">` + mark + `</span>` + title
 	}
+	if n.Subtitle != "" {
+		title += `<span class="subtitle">` + html.EscapeString(n.Subtitle) + `</span>`
+	}
+	if n.Key != "" {
+		title += `<span class="key">` + html.EscapeString(n.Key) + `</span>`
+	}
+	look := lookAttrs(n)
 	if len(n.Items) > 0 {
 		var sub strings.Builder
 		for _, item := range n.Items {
 			sub.WriteString(nodeHTML(root, item))
 		}
-		return `<div class="row sub" tabindex="0"` + sizeStyle(n.Size) + `>` + title +
+		return `<div class="row sub` + rowClass(n, true) + `" tabindex="0"` + look + `>` + title +
 			`<span class="chev">›</span><div class="menu submenu">` + sub.String() + `</div></div>`
 	}
-	size := sizeStyle(n.Size)
 	if n.Action == nil {
-		return `<div class="row label"` + size + `>` + title + `</div>`
+		return `<div class="row` + rowClass(n, false) + `"` + look + `>` + title + `</div>`
 	}
-	return `<div class="row action"` + size + ` title="` + html.EscapeString(actionText(*n.Action)) + `">` + title + `</div>`
+	return `<div class="row` + rowClass(n, true) + `"` + look + ` title="` + html.EscapeString(actionText(*n.Action)) + `">` + title + `</div>`
+}
+
+// rowClass is how a row reads: a section header, live, or grayed out, which
+// enabled: decides where it is set and whether the item acts where it is not.
+func rowClass(n preview.Node, acts bool) string {
+	if n.Header {
+		return " header"
+	}
+	if n.Enabled != nil {
+		acts = *n.Enabled
+	}
+	switch {
+	case !acts:
+		return " label"
+	case len(n.Items) > 0:
+		return ""
+	}
+	return " action"
+}
+
+// lookAttrs carries a row's size, weight and indent, which are per-item
+// numbers and names that cannot each be a class.
+func lookAttrs(n preview.Node) string {
+	var decls []string
+	if n.Size > 0 {
+		decls = append(decls, fmt.Sprintf("font-size: %.3fem", n.Size/13))
+	}
+	if w, ok := cssWeights[n.Weight]; ok {
+		decls = append(decls, "font-weight: "+w)
+	}
+	if n.Indent > 0 {
+		decls = append(decls, fmt.Sprintf("padding-left: %dpx", 12+10*n.Indent))
+	}
+	if len(decls) == 0 {
+		return ""
+	}
+	return ` style="` + html.EscapeString(strings.Join(decls, "; ")) + `"`
+}
+
+var cssWeights = map[string]string{
+	"ultralight": "100", "thin": "200", "light": "300", "regular": "400", "medium": "500",
+	"semibold": "600", "bold": "700", "heavy": "800", "black": "900",
 }
 
 // actionText says what activating an item would do, which a picture of a menu

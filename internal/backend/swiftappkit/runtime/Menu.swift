@@ -14,13 +14,6 @@ enum MenuNode {
     case field(String, (String) -> MenuAction)
 }
 
-/// How an item's label is drawn beyond its text: an icon beside it, badges, and
-/// a font size in points, where 0 is the menu's own.
-struct Look {
-    var icon: MenuIcon? = nil
-    var badges: [MenuBadge] = []
-    var size: Double = 0
-}
 
 /// Drops separators with nothing beside them: leading, trailing, and every one
 /// after the first in a run. A divider earns its line by dividing two things,
@@ -49,9 +42,22 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
 }
 
 enum Draw {
+    /// Everything but enabling, which needs to know whether the item acts.
     static func look(_ look: Look, on item: NSMenuItem) {
         Draw.icon(look.icon, on: item)
-        item.attributedTitle = Badges.title(item.title, look.badges, size: look.size)
+        item.attributedTitle = look.title(item.title)
+        item.indentationLevel = Int(min(max(look.indent, 0), 15))
+        if !look.subtitle.isEmpty, #available(macOS 14.0, *) { item.subtitle = look.subtitle }
+        if let key = look.key {
+            item.keyEquivalent = key.key
+            item.keyEquivalentModifierMask = key.modifiers
+        }
+    }
+
+    /// An item that does nothing is shown disabled unless enabled: says
+    /// otherwise; one that acts is shown enabled unless enabled: says otherwise.
+    static func enable(_ item: NSMenuItem, acts: Bool, look: Look) {
+        item.isEnabled = look.enabled ?? acts
     }
 
     /// macOS 27 hides menu item images unless an item asks otherwise. Set by
@@ -71,37 +77,52 @@ enum Draw {
 
     /// Replaces whatever the menu held: it is rebuilt from the last poll every
     /// time it opens.
-    static func menu(_ nodes: [MenuNode], into menu: NSMenu, repoll: @escaping () -> Void) {
+    static func menu(_ nodes: [MenuNode], into menu: NSMenu, gutter: Bool = true, repoll: @escaping () -> Void) {
         menu.removeAllItems()
+        menu.showsStateColumn = gutter
+        // Enabling is decided per item below, so AppKit must not redo it.
+        menu.autoenablesItems = false
         for node in nodes {
             switch node {
             case .separator:
                 menu.addItem(NSMenuItem.separator())
             case .item(let title, nil, let look):
-                let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+                let item = look.header ? Draw.header(title) : NSMenuItem(title: title, action: nil, keyEquivalent: "")
                 Draw.look(look, on: item)
+                Draw.enable(item, acts: false, look: look)
                 menu.addItem(item)
             case .item(let title, let action?, let look):
                 let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
                 Draw.look(look, on: item)
+                Draw.enable(item, acts: true, look: look)
                 menu.addItem(item)
             case .toggle(let title, let on, let action, let look):
                 let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
                 item.state = on ? .on : .off
                 Draw.look(look, on: item)
+                Draw.enable(item, acts: true, look: look)
                 menu.addItem(item)
             case .submenu(let title, let items, let look):
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
                 Draw.look(look, on: item)
+                Draw.enable(item, acts: true, look: look)
                 let sub = NSMenu()
-                Draw.menu(items, into: sub, repoll: repoll)
+                Draw.menu(items, into: sub, gutter: look.gutter, repoll: repoll)
                 item.submenu = sub
                 menu.addItem(item)
             case .field(let placeholder, let make):
-                menu.addItem(FieldItem(placeholder: placeholder) { text in
+                let item = FieldItem(placeholder: placeholder) { text in
                     Act.perform(make(text), then: repoll)
-                })
+                }
+                item.isEnabled = true
+                menu.addItem(item)
             }
         }
+    }
+
+    /// macOS 14's section header, a small bold label; a plain label before it.
+    static func header(_ title: String) -> NSMenuItem {
+        if #available(macOS 14.0, *) { return NSMenuItem.sectionHeader(title: title) }
+        return NSMenuItem(title: title, action: nil, keyEquivalent: "")
     }
 }

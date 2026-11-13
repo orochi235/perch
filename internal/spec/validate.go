@@ -77,13 +77,18 @@ func (s *Spec) validate() error {
 	if err := s.validateQuit(); err != nil {
 		return err
 	}
-	return s.validateItems(s.Menu)
+	return s.validateItems(s.Menu, !s.App.NoGutter, "app.gutter")
 }
 
 // validateItems reports each item at it.path, where the author wrote it, so a
 // template's items already name their use and file.
-func (s *Spec) validateItems(items []Item) error {
+// A toggle in a menu without a gutter is refused: its checkmark would have
+// nowhere to draw. gutterAt names the key that took the gutter away.
+func (s *Spec) validateItems(items []Item, gutter bool, gutterAt string) error {
 	for _, it := range items {
+		if !gutter && !it.Toggle.IsZero() {
+			return fmt.Errorf("%s: a toggle: draws its checkmark in the menu's gutter, which %s: false takes away", it.path, gutterAt)
+		}
 		if err := s.validateAction(it.Action, it.path, it.Scope); err != nil {
 			return err
 		}
@@ -92,7 +97,7 @@ func (s *Spec) validateItems(items []Item) error {
 				return fmt.Errorf("%s.toggle: %w", it.path, err)
 			}
 		}
-		if err := s.validateItems(it.Menu); err != nil {
+		if err := s.validateItems(it.Menu, !it.Look.NoGutter, it.path+".gutter"); err != nil {
 			return err
 		}
 	}

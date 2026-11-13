@@ -34,6 +34,8 @@ type App struct {
 	Quit []QuitRule
 	// Hotkey opens the menu from any app.
 	Hotkey Hotkey
+	// NoGutter drops the top-level menu's checkmark column, so its rows sit left.
+	NoGutter bool
 }
 
 type rawSpec struct {
@@ -55,6 +57,7 @@ type rawApp struct {
 	Sign     string    `yaml:"sign"`
 	Quit     yaml.Node `yaml:"quit"`
 	Hotkey   string    `yaml:"hotkey"`
+	Gutter   *bool     `yaml:"gutter"`
 }
 
 // Parse reads a menubar.yaml document into a Spec, with perch's shipped
@@ -111,6 +114,7 @@ func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {
 		return nil, err
 	}
 	s.App.Quit = quit
+	s.App.NoGutter = raw.App.Gutter != nil && !*raw.App.Gutter
 	if s.App.Hotkey, err = parseHotkey(raw.App.Hotkey, "app.hotkey"); err != nil {
 		return nil, err
 	}

@@ -48,6 +48,7 @@ The first four keys are required.
 | `interval` | A Go duration: a number and a unit, one or more times. The units are `ns`, `us`, `ms`, `s`, `m`, `h` — `5s`, `1m30s`. Must be positive. |
 | `sign` | Optional. A string naming a code signing identity in your keychain. Omitted, the `.app` is signed ad-hoc — see [Signing](guide/install.md#signing-and-why-a-rebuild-can-lose-a-permission). |
 | `hotkey` | Optional. A shortcut that opens the menu from any app, like `cmd+shift+space`. See [`hotkey`](#hotkey). |
+| `gutter` | Optional. `false` drops the menu's checkmark column, so its rows sit left. See [Gutter](#gutter). |
 
 ### `quit`
 
@@ -572,7 +573,10 @@ Everything else is a mapping:
 | `toggle` | A string: what the item's checkmark shows and a click flips — `worker.enabled`, or `!worker.enabled` to show it the other way round. It takes no action and no submenu. See [Start at login](#start-at-login). |
 | `icon` | An [SF Symbol](#sf-symbols) name, `{symbol: <name>, fg: <color>, bg: <color>}` for a [colored symbol](#colored-symbols), or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `badges` | Colored pills beside the label: a list of `{text, fg, bg, at}`, or an expression naming one. See [Badges](#badges). |
-| `size` | The label's font size in points, or an expression giving one. See [Size](#size). |
+| `size`, `weight` | The label's font size in points and its weight. See [Size and weight](#size-and-weight). |
+| `indent`, `subtitle`, `key` | An indent level, a smaller second line, and a shortcut. See [Indent, subtitle and key](#indent-subtitle-and-key). |
+| `header`, `divider`, `enabled` | Conditions: draw the item as a section header, put a separator before it, or override whether it is live. See [Headers, dividers and enabled](#headers-dividers-and-enabled). |
+| `gutter` | `false` drops the checkmark column of the submenu this item opens. See [Gutter](#gutter). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
 | `menu` | A list of items, written the same way. A submenu whose items are all guarded away is drawn as a plain label, so one `each:` can mix rows that open a submenu with rows that don't. |
@@ -936,12 +940,37 @@ The badges are drawn into the item's own title, so a badged item highlights,
 opens its submenu and takes the keyboard like any other. An item may leave out
 `text:` and show only its icon and badges. A `field:` item takes no badges.
 
-### Size
+### Size and weight
 
 `size:` sets an item's font size in points, from 6 to 32; the menu's own is
 13. Its badges grow with it. It takes a number, or an expression giving one,
-where 0 or less leaves the item at the menu's size, so one `each:` can set its
-headings larger than the rows under them:
+where 0 or less leaves the item at the menu's size. `weight:` takes
+`ultralight`, `thin`, `light`, `regular`, `medium`, `semibold`, `bold`,
+`heavy` or `black`, with `{{ }}` holes; a name that resolves to nothing is
+regular.
+
+### Indent, subtitle and key
+
+`indent:` is a level from 0 to 15, or an expression giving one. `subtitle:` is
+a smaller second line under the label, with `{{ }}` holes, on macOS 14 and
+later. `key:` is a shortcut while the menu is open, spelled like
+[`hotkey`](#hotkey): `cmd+r`, `cmd+left`, `f1`. Only an item with an action
+or a `toggle:` takes one, and not an `each:` item, whose rows would all share
+it.
+
+### Headers, dividers and enabled
+
+Each is a condition, so one `each:` can make some of its rows headers and
+start a group at each one:
+
+- `header:` draws the item as a section header, macOS 14's small bold label.
+  A header takes no action, submenu or `key:`.
+- `divider:` draws a separator right before the item. On an `each:`, the
+  first row it draws takes none, so the `each:` decides only the lines between
+  its rows and the separators written around it decide its edges. Like any
+  separator, one at the top of a menu or next to another is dropped.
+- `enabled:` says whether the item is live. Without it, an item that acts or
+  opens a submenu is live and one that does neither is grayed out.
 
 ```yaml
 app: {name: repos, id: dev.example.repos.menubar, icon: folder, interval: 5s}
@@ -951,22 +980,36 @@ watch:
     run: [repos, --json]
     json: true
     shape:
-      rows: [{text: string, header: bool}]
+      rows: [{text: string, header: bool, note: string}]
 
 menu:
   - each: rows.data.rows
     text: "{{it.text}}"
-    size: "it.header ? 15 : 0"
+    header: it.header
+    divider: it.header
+    indent: "it.header ? 0 : 1"
+    subtitle: "{{it.note}}"
+  - separator
+  - {text: Reload, key: cmd+r, run: [repos, --reload]}
 ```
 
-```state a heading and its rows
+```state two repos
 rows:
   out:
     rows:
-      - {text: perch, header: true}
-      - {text: dev server, header: false}
-      - {text: docs, header: false}
+      - {text: perch, header: true, note: ""}
+      - {text: dev server, header: false, note: ":5173"}
+      - {text: emilia, header: true, note: ""}
+      - {text: daemon, header: false, note: "pid 4821"}
 ```
+
+### Gutter
+
+macOS keeps a column at the left of a menu for checkmarks. `gutter: false`
+drops it, so the rows sit left: on `app:` for the top-level menu, or on an item
+for the submenu it opens. A `toggle:` item draws its checkmark in that column,
+so one in a menu without a gutter is refused. The column macOS keeps for icons
+is separate, and stays.
 
 ### Icon assets
 

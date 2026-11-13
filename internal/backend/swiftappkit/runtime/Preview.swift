@@ -123,6 +123,13 @@ private func encoded(_ node: MenuNode) -> [String: Any] {
     }
     if let icon = look.icon { out["icon"] = encoded(icon) }
     if look.size > 0 { out["size"] = min(look.size, Badges.maxSize) }
+    if Look.weights[look.weight] != nil { out["weight"] = look.weight }
+    let indent = Int(min(max(look.indent, 0), 15))
+    if indent > 0 { out["indent"] = indent }
+    if let enabled = look.enabled { out["enabled"] = enabled }
+    if !look.subtitle.isEmpty { out["subtitle"] = look.subtitle }
+    if let key = look.key { out["key"] = shortcut(key) }
+    if look.header { out["header"] = true }
     // Dropped as the menu drops them, so the preview shows what a menu would.
     let shown = Badges.shown(look.badges)
     if !shown.isEmpty {
@@ -131,6 +138,17 @@ private func encoded(_ node: MenuNode) -> [String: Any] {
         }
     }
     return out
+}
+
+/// A shortcut as a menu prints it: ⌃⌥⇧⌘ then the key.
+private func shortcut(_ k: KeyCombo) -> String {
+    var s = ""
+    if k.modifiers.contains(.control) { s += "⌃" }
+    if k.modifiers.contains(.option) { s += "⌥" }
+    if k.modifiers.contains(.shift) { s += "⇧" }
+    if k.modifiers.contains(.command) { s += "⌘" }
+    let names: [String: String] = ["\r": "↩", "\t": "⇥", "\u{1b}": "⎋", "\u{8}": "⌫", "\u{7f}": "⌦", " ": "Space"]
+    return s + (names[k.key] ?? (k.key.unicodeScalars.first.map { $0.value >= 0xF700 } == true ? "•" : k.key.uppercased()))
 }
 
 func emit(_ frames: [Any]) {

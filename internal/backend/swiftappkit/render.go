@@ -407,11 +407,16 @@ func (g *menuGen) item(it spec.Item, into string, e *celswift.Env) error {
 	path := it.Path()
 	inner := e
 	closes := 0
+	first := "" // set inside an each: with a divider: whether no row is drawn yet
 
 	if it.Each != "" {
 		list, elem, err := e.LowerList(it.Each)
 		if err != nil {
 			return fmt.Errorf("%s.each: %w", path, err)
+		}
+		if it.Divider != "" {
+			first = g.name("first")
+			g.b.line("var %s = true", first)
 		}
 		loopVar := g.name("it")
 		g.b.line("for %s in %s {", loopVar, list)
@@ -441,8 +446,23 @@ func (g *menuGen) item(it spec.Item, into string, e *celswift.Env) error {
 		closes++
 	}
 
+	// An each: decides only the lines between its rows, so its first row
+	// takes no divider; the separators written around the block are its edges.
+	if it.Divider != "" {
+		cond, err := inner.LowerCondition(it.Divider)
+		if err != nil {
+			return fmt.Errorf("%s.divider: %w", path, err)
+		}
+		if first != "" {
+			cond = "!" + first + " && " + cond
+		}
+		g.b.line("if %s { %s.append(.separator) }", cond, into)
+	}
 	if err := g.body(it, into, inner, path); err != nil {
 		return err
+	}
+	if first != "" {
+		g.b.line("%s = false", first)
 	}
 
 	for ; closes > 0; closes-- {

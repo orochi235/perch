@@ -43,7 +43,7 @@ func emitWindowSetup(b *buf, s *spec.Spec) {
 	b.line("Windows.handler = { [weak self] verb in self?.act(verb) }")
 	b.line("let mirror = MenuMirror(")
 	b.in()
-	b.line("nodes: { [weak self] in self.map { renderMenu($0.results) } ?? [] },")
+	b.line("nodes: { [weak self] in self.map { renderMenu($0.results) } ?? [] }%s,", gutterArg(s))
 	b.line("repoll: { [weak self] in self?.poll() })")
 	b.out()
 	b.line("self.mirror = mirror")

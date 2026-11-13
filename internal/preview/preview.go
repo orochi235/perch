@@ -89,6 +89,12 @@ type Node struct {
 	Icon      *Icon   `json:"icon,omitempty"`
 	Badges    []Badge `json:"badges,omitempty"`
 	Size      float64 `json:"size,omitempty"` // the label's font size in points; 0 is the menu's own
+	Weight    string  `json:"weight,omitempty"`
+	Indent    int     `json:"indent,omitempty"`
+	Enabled   *bool   `json:"enabled,omitempty"` // set only where enabled: overrides whether it acts
+	Subtitle  string  `json:"subtitle,omitempty"`
+	Key       string  `json:"key,omitempty"` // the shortcut as a menu prints it, ⌘R
+	Header    bool    `json:"header,omitempty"`
 	Action    *Action `json:"action,omitempty"`
 	Items     []Node  `json:"items,omitempty"`
 }

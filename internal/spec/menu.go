@@ -122,13 +122,14 @@ type Item struct {
 	Toggle Toggle
 	Icon   Icon
 	Badges Badges
-	// Size is the label's font size in points: a number, or a CEL expression
-	// giving one, where 0 or less is the menu's own.
-	Size   string
-	When   string
-	Each   string
-	Menu   []Item
-	Action Action
+	Look   Look
+	// Divider is a condition: while it holds, a separator is drawn right before
+	// the item, so an each: can split its rows into groups.
+	Divider string
+	When    string
+	Each    string
+	Menu    []Item
+	Action  Action
 	// Scope is the use this item came from, or "" for the file's own.
 	Scope string
 	// Guard is the condition its agent: verb or toggle: needs to work; empty for other items.
@@ -144,22 +145,30 @@ type Item struct {
 func (it Item) Path() string { return it.path }
 
 type itemFields struct {
-	Text   string    `yaml:"text"`
-	Field  string    `yaml:"field"`
-	Toggle string    `yaml:"toggle"`
-	Icon   yaml.Node `yaml:"icon"`
-	Badges yaml.Node `yaml:"badges"`
-	Size   yaml.Node `yaml:"size"`
-	When   string    `yaml:"when"`
-	Each   string    `yaml:"each"`
-	Menu   yaml.Node `yaml:"menu"`
-	Run    []string  `yaml:"run"`
-	Open   string    `yaml:"open"`
-	Post   *rawPost  `yaml:"post"`
-	Quit   bool      `yaml:"quit"`
-	Agent  string    `yaml:"agent"`
-	Swift  string    `yaml:"swift"`
-	Window string    `yaml:"window"`
+	Text     string    `yaml:"text"`
+	Field    string    `yaml:"field"`
+	Toggle   string    `yaml:"toggle"`
+	Icon     yaml.Node `yaml:"icon"`
+	Badges   yaml.Node `yaml:"badges"`
+	Size     yaml.Node `yaml:"size"`
+	Weight   string    `yaml:"weight"`
+	Indent   yaml.Node `yaml:"indent"`
+	Enabled  string    `yaml:"enabled"`
+	Subtitle string    `yaml:"subtitle"`
+	Key      string    `yaml:"key"`
+	Header   string    `yaml:"header"`
+	Gutter   *bool     `yaml:"gutter"`
+	Divider  string    `yaml:"divider"`
+	When     string    `yaml:"when"`
+	Each     string    `yaml:"each"`
+	Menu     yaml.Node `yaml:"menu"`
+	Run      []string  `yaml:"run"`
+	Open     string    `yaml:"open"`
+	Post     *rawPost  `yaml:"post"`
+	Quit     bool      `yaml:"quit"`
+	Agent    string    `yaml:"agent"`
+	Swift    string    `yaml:"swift"`
+	Window   string    `yaml:"window"`
 }
 
 type rawPost struct {
@@ -222,8 +231,11 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
-	size, err := parseSize(&f.Size, path+".size")
+	look, err := parseLook(f, path)
 	if err != nil {
+		return Item{}, err
+	}
+	if err := checkLook(f, look, act, sub, path); err != nil {
 		return Item{}, err
 	}
 	// Refused here, not in validation: an outlet nothing fills empties the submenu.
@@ -244,7 +256,7 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 			return Item{}, err
 		}
 	}
-	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, Size: size, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, Look: look, Divider: f.Divider, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 
 // parseToggle reads [!]<target>.<field>. Anything richer has no single value a
@@ -293,8 +305,8 @@ func checkField(f itemFields, act Action, sub []Item, icon Icon, badges Badges, 
 		return fmt.Errorf("%s: a field: item takes no icon:; the search field draws its own", path)
 	case !badges.IsZero():
 		return fmt.Errorf("%s: a field: item takes no badges:; it has no label to set them beside", path)
-	case f.Size.Kind != 0:
-		return fmt.Errorf("%s: a field: item takes no size:; the search field sizes itself", path)
+	case f.Size.Kind != 0 || f.Weight != "" || f.Subtitle != "" || f.Key != "" || f.Header != "" || f.Enabled != "":
+		return fmt.Errorf("%s: a field: item takes no size:, weight:, subtitle:, key:, header: or enabled:; the search field draws itself", path)
 	}
 	switch act.Kind {
 	case ActionRun, ActionOpen, ActionPost, ActionSwift:

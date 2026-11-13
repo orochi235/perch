@@ -17,28 +17,6 @@ struct MenuBadge {
 }
 
 enum Badges {
-    /// The label in its own size with its badges laid in as images, or nil
-    /// when it has neither, so the item keeps its plain title. The pills ride
-    /// in the title rather than a custom view, which keeps highlight, the
-    /// submenu arrow and keyboard navigation AppKit's own.
-    static func title(_ title: String, _ badges: [MenuBadge], size: Double = 0) -> NSAttributedString? {
-        let shown = Badges.shown(badges)
-        guard !shown.isEmpty || size > 0 else { return nil }
-        let font = NSFont.menuFont(ofSize: size > 0 ? CGFloat(min(size, maxSize)) : 0)
-        let out = NSMutableAttributedString()
-        let gap = NSAttributedString(string: " ", attributes: [.font: font])
-        // Pills and a label, each part with one space between: an empty label
-        // leaves the pills alone, with nothing leading or trailing.
-        var parts = shown.filter { $0.at == "start" }.map { attachment($0, font: font) }
-        if !title.isEmpty { parts.append(NSAttributedString(string: title, attributes: [.font: font])) }
-        parts += shown.filter { $0.at != "start" }.map { attachment($0, font: font) }
-        for (i, part) in parts.enumerated() {
-            if i > 0 { out.append(gap) }
-            out.append(part)
-        }
-        return out
-    }
-
     /// The largest size a label takes, so a stray number cannot fill the screen.
     static let maxSize = 32.0
 
@@ -54,7 +32,7 @@ enum Badges {
         }
     }
 
-    private static func attachment(_ badge: MenuBadge, font: NSFont) -> NSAttributedString {
+    static func attachment(_ badge: MenuBadge, font: NSFont) -> NSAttributedString {
         let image = pill(badge, font: font)
         let a = NSTextAttachment()
         a.image = image

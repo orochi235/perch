@@ -242,6 +242,7 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		"keywordUse":          keywordUse,
 		"field":               fieldDoc,
 		"badges":              badgesDoc,
+		"look":                lookDoc,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))
