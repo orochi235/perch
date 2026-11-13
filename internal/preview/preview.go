@@ -30,6 +30,14 @@ type Icon struct {
 	BG     string `json:"bg,omitempty"`
 }
 
+// Badge is one pill beside a menu item's label; At is "start" or "end".
+type Badge struct {
+	Text string `json:"text"`
+	FG   string `json:"fg,omitempty"`
+	BG   string `json:"bg,omitempty"`
+	At   string `json:"at"`
+}
+
 // Face is the status item itself.
 type Face struct {
 	Icon  Icon   `json:"icon"`
@@ -78,6 +86,7 @@ type Node struct {
 	Field     string  `json:"field,omitempty"`
 	On        *bool   `json:"on,omitempty"` // set on a toggle: whether it is checked
 	Icon      *Icon   `json:"icon,omitempty"`
+	Badges    []Badge `json:"badges,omitempty"`
 	Action    *Action `json:"action,omitempty"`
 	Items     []Node  `json:"items,omitempty"`
 }

@@ -121,6 +121,7 @@ type Item struct {
 	// Toggle is what a checkmark item reads and flips; set, the item is a toggle.
 	Toggle Toggle
 	Icon   Icon
+	Badges Badges
 	When   string
 	Each   string
 	Menu   []Item
@@ -144,6 +145,7 @@ type itemFields struct {
 	Field  string    `yaml:"field"`
 	Toggle string    `yaml:"toggle"`
 	Icon   yaml.Node `yaml:"icon"`
+	Badges yaml.Node `yaml:"badges"`
 	When   string    `yaml:"when"`
 	Each   string    `yaml:"each"`
 	Menu   yaml.Node `yaml:"menu"`
@@ -212,12 +214,16 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
+	badges, err := parseBadges(&f.Badges, path+".badges")
+	if err != nil {
+		return Item{}, err
+	}
 	// Refused here, not in validation: an outlet nothing fills empties the submenu.
 	if len(sub) > 0 && act.Kind != ActionNone {
 		return Item{}, fmt.Errorf("%s: has a submenu and %s action; opening a submenu supersedes the action, so it would never run", path, withArticle(act.Kind.String()))
 	}
 	if f.Field != "" {
-		if err := checkField(f, act, sub, icon, path); err != nil {
+		if err := checkField(f, act, sub, icon, badges, path); err != nil {
 			return Item{}, err
 		}
 	}
@@ -230,7 +236,7 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 			return Item{}, err
 		}
 	}
-	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 
 // parseToggle reads [!]<target>.<field>. Anything richer has no single value a
@@ -269,7 +275,7 @@ func checkToggle(f itemFields, act Action, sub []Item, path string) error {
 
 // checkField refuses what a field: item cannot use: everything but an action
 // that can take the typed text.
-func checkField(f itemFields, act Action, sub []Item, icon Icon, path string) error {
+func checkField(f itemFields, act Action, sub []Item, icon Icon, badges Badges, path string) error {
 	switch {
 	case len(sub) > 0:
 		return fmt.Errorf("%s: a field: item takes no submenu; Enter cannot open one", path)
@@ -277,6 +283,8 @@ func checkField(f itemFields, act Action, sub []Item, icon Icon, path string) er
 		return fmt.Errorf("%s: a field: item takes no text:; its placeholder is its label", path)
 	case !icon.IsZero():
 		return fmt.Errorf("%s: a field: item takes no icon:; the search field draws its own", path)
+	case !badges.IsZero():
+		return fmt.Errorf("%s: a field: item takes no badges:; it has no label to set them beside", path)
 	}
 	switch act.Kind {
 	case ActionRun, ActionOpen, ActionPost, ActionSwift:

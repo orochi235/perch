@@ -571,6 +571,7 @@ Everything else is a mapping:
 | `field` | A string: the placeholder of a search field drawn in the menu. `{{ }}` holes interpolate expressions. See [`field`](#field). |
 | `toggle` | A string: what the item's checkmark shows and a click flips — `worker.enabled`, or `!worker.enabled` to show it the other way round. It takes no action and no submenu. See [Start at login](#start-at-login). |
 | `icon` | An [SF Symbol](#sf-symbols) name, `{symbol: <name>, fg: <color>, bg: <color>}` for a [colored symbol](#colored-symbols), or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
+| `badges` | Colored pills beside the label: a list of `{text, fg, bg, at}`, or an expression naming one. See [Badges](#badges). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
 | `menu` | A list of items, written the same way. A submenu whose items are all guarded away is drawn as a plain label, so one `each:` can mix rows that open a submenu with rows that don't. |
@@ -858,9 +859,79 @@ menu:
 repos:
   out:
     repos:
-      - {name: perch, icon: bird, fg: "", bg: teal}
-      - {name: emilia, icon: server.rack, fg: "#25f7c5", bg: ""}
+      - {name: perch, icon: shippingbox, fg: "", bg: teal}
+      - {name: emilia, icon: terminal, fg: "#1f9e80", bg: ""}
 ```
+
+### Badges
+
+`badges:` sets small colored pills beside a menu item's label: a state, a
+port, a count. Each badge is `{text, fg, bg, at}`. `fg` and `bg` take colors
+the way a [colored symbol](#colored-symbols) does, and with only `bg` the text
+is white or black, whichever reads on it; with no `bg` the pill is an outline.
+`at: start` puts a badge before the label, and the default, `end`, after it. A
+badge whose text resolves to nothing is not drawn, so one row can show a port
+and the next, with none, does not.
+
+Written as a list, each field takes `{{ }}` holes:
+
+```yaml
+app: {name: servers, id: dev.example.servers.menubar, icon: network, interval: 5s}
+
+watch:
+  servers:
+    run: [servers, --json]
+    json: true
+    shape:
+      servers: [{name: string, state: string, port: string, live: bool}]
+
+menu:
+  - each: servers.data.servers
+    text: "{{it.name}}"
+    badges:
+      - {text: "{{it.state}}", bg: "{{it.live ? 'green' : 'red'}}"}
+      - {text: "{{it.port}}", bg: gray}
+```
+
+```state two servers
+servers:
+  out:
+    servers:
+      - {name: web, state: running, port: ":5173", live: true}
+      - {name: docs, state: exited, port: "", live: false}
+```
+
+Written as an expression, it names a list whose elements carry the same
+fields, so the data decides how many badges a row gets and what they say. A
+declared shape may leave out `fg`, `bg` and `at`, but not `text`:
+
+```yaml
+app: {name: servers, id: dev.example.servers.menubar, icon: network, interval: 5s}
+
+watch:
+  servers:
+    run: [servers, --json]
+    json: true
+    shape:
+      servers: [{name: string, badges: [{text: string, bg: string}]}]
+
+menu:
+  - each: servers.data.servers
+    text: "{{it.name}}"
+    badges: it.badges
+```
+
+```state from the data
+servers:
+  out:
+    servers:
+      - {name: web, badges: [{text: running, bg: green}, {text: ":5173", bg: gray}]}
+      - {name: docs, badges: [{text: exited, bg: red}]}
+```
+
+The badges are drawn into the item's own title, so a badged item highlights,
+opens its submenu and takes the keyboard like any other. An item may leave out
+`text:` and show only its icon and badges. A `field:` item takes no badges.
 
 ### Icon assets
 

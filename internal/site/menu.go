@@ -88,11 +88,44 @@ func iconHTML(root string, icon preview.Icon) string {
 	svg, _ := symbolSVG(icon.Symbol)
 	style := ""
 	if icon.FG != "" || icon.BG != "" {
-		style = fmt.Sprintf(` style="color: %s; background: %s"`, html.EscapeString(cssColor(icon.FG, "currentColor")),
-			html.EscapeString(cssColor(icon.BG, "none")))
+		style = colorStyle(icon.FG, icon.BG)
 	}
 	return fmt.Sprintf(`<span class="icon symbol"%s title="SF Symbol: %s">%s</span>`,
 		style, html.EscapeString(icon.Symbol), svg)
+}
+
+// colorStyle carries a per-item color, which is data, so it cannot be a class.
+func colorStyle(fg, bg string) string {
+	ink, patch := inkColors(fg, bg)
+	var decls []string
+	if ink != "" {
+		decls = append(decls, "color: "+ink)
+	}
+	if patch != "" {
+		decls = append(decls, "background: "+patch)
+	}
+	if len(decls) == 0 {
+		return ""
+	}
+	return ` style="` + html.EscapeString(strings.Join(decls, "; ")) + `"`
+}
+
+// withBadges sets the pills beside an escaped title, on the side each names.
+func withBadges(title string, badges []preview.Badge) string {
+	var before, after strings.Builder
+	for _, b := range badges {
+		class := "pill"
+		if cssColor(b.BG) == "" {
+			class += " outline"
+		}
+		pill := `<span class="` + class + `"` + colorStyle(b.FG, b.BG) + `>` + html.EscapeString(b.Text) + `</span>`
+		if b.At == "start" {
+			before.WriteString(pill)
+		} else {
+			after.WriteString(pill)
+		}
+	}
+	return before.String() + title + after.String()
 }
 
 func menuHTML(root string, nodes []preview.Node) string {
@@ -119,7 +152,7 @@ func nodeHTML(root string, n preview.Node) string {
 		}
 		return `<div class="row field"` + tip + `><span class="input">` + html.EscapeString(n.Field) + `</span></div>`
 	}
-	title := html.EscapeString(n.Title)
+	title := withBadges(html.EscapeString(n.Title), n.Badges)
 	if n.Icon != nil && (n.Icon.Symbol != "" || n.Icon.Asset != "") {
 		title = iconHTML(root, *n.Icon) + title
 	}

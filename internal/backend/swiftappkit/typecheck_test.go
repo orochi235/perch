@@ -241,6 +241,7 @@ func TestEmittedSwiftTypechecks(t *testing.T) {
 		"ontoOnService":       ontoOnService,
 		"keywordUse":          keywordUse,
 		"field":               fieldDoc,
+		"badges":              badgesDoc,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))

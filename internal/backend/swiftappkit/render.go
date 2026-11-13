@@ -469,6 +469,11 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 	if err != nil {
 		return fmt.Errorf("%s.icon: %w", path, err)
 	}
+	badges, err := itemBadges(it.Badges, e, g.name)
+	if err != nil {
+		return fmt.Errorf("%s.badges: %w", path, err)
+	}
+	icon += badges
 
 	if len(it.Menu) > 0 {
 		sub := g.name("sub")

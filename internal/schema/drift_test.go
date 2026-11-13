@@ -31,6 +31,7 @@ var sections = map[string]string{
 	"itemFields":    "definitions.menu.items.oneOf.1.properties",
 	"rawPost":       "definitions.menu.items.oneOf.1.properties.post.properties",
 	"rawTint":       "definitions.tint.oneOf.1.properties",
+	"rawBadge":      "definitions.menu.items.oneOf.1.properties.badges.oneOf.1.items.properties",
 	"rawIcon":       "definitions.menu.items.oneOf.1.properties.icon.oneOf.1.properties|definitions.menu.items.oneOf.1.properties.icon.oneOf.2.properties",
 }
 

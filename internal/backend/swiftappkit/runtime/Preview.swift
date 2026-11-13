@@ -105,24 +105,33 @@ private func encoded(_ action: MenuAction) -> [String: Any] {
 private func encoded(_ node: MenuNode) -> [String: Any] {
     var out: [String: Any]
     let icon: MenuIcon?
+    var badges: [MenuBadge] = []
     switch node {
     case .separator:
         return ["separator": true]
-    case .item(let title, let action, let i):
+    case .item(let title, let action, let i, let b):
         out = ["title": title]
         if let action { out["action"] = encoded(action) }
         icon = i
-    case .toggle(let title, let on, let action, let i):
+        badges = b
+    case .toggle(let title, let on, let action, let i, let b):
         out = ["title": title, "on": on, "action": encoded(action)]
         icon = i
-    case .submenu(let title, let items, let i):
+        badges = b
+    case .submenu(let title, let items, let i, let b):
         out = ["title": title, "items": items.map { encoded($0) }]
         icon = i
+        badges = b
     case .field(let placeholder, let make):
         out = ["field": placeholder, "action": encoded(make("query"))]
         icon = nil
     }
     if let icon { out["icon"] = encoded(icon) }
+    // Dropped as the menu drops them, so the preview shows what a menu would.
+    let shown = badges.filter { !$0.text.isEmpty }
+    if !shown.isEmpty {
+        out["badges"] = shown.map { ["text": $0.text, "fg": $0.fg, "bg": $0.bg, "at": $0.at == "start" ? "start" : "end"] }
+    }
     return out
 }
 

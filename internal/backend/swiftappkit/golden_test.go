@@ -25,6 +25,7 @@ func TestGolden(t *testing.T) {
 		"quit":          quitDoc,
 		"templates":     templatesDoc,
 		"field":         fieldDoc,
+		"badges":        badgesDoc,
 	} {
 		t.Run(name, func(t *testing.T) {
 			s, err := spec.Parse([]byte(doc))
@@ -36,7 +37,7 @@ func TestGolden(t *testing.T) {
 				t.Fatalf("Emit: %v", err)
 			}
 			for _, f := range files {
-				if f.Name == "Runtime.swift" || f.Name == "Icon.swift" || f.Name == "Window.swift" || f.Name == "Field.swift" || f.Name == "Hotkey.swift" {
+				if fixedFile(f.Name) {
 					continue // fixed, not generated from the spec
 				}
 				path := filepath.Join("testdata", name, f.Name)
@@ -59,4 +60,18 @@ func TestGolden(t *testing.T) {
 			}
 		})
 	}
+}
+
+// fixedFile is a runtime file every app or option ships unchanged, so it has no
+// golden copy: it is not generated from the spec.
+func fixedFile(name string) bool {
+	if name == "Window.swift" || name == "Hotkey.swift" {
+		return true
+	}
+	for _, f := range runtimeFiles() {
+		if f.Name == name {
+			return true
+		}
+	}
+	return false
 }
