@@ -156,6 +156,14 @@ const body = `{
     "menu": {"$ref": "#/definitions/menu"}
   },
   "definitions": {
+    "iconColor": {
+      "description": "#rrggbb or a macOS system color; {{ }} holes are CEL, and one that resolves to nothing is left out.",
+      "oneOf": [
+        {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
+        {"$ref": "#/definitions/tintColor/oneOf/1"},
+        {"type": "string", "pattern": "\\{\\{.*\\}\\}"}
+      ]
+    },
     "tintColor": {
       "description": "#rrggbb, #rrggbbaa, or a macOS system color, which shifts between a light and a dark menu bar.",
       "oneOf": [
@@ -203,7 +211,7 @@ const body = `{
               "text": {"type": "string", "description": "Label; {{ }} holes are CEL."},
               "toggle": {"type": "string", "pattern": "^!?([A-Za-z_][A-Za-z0-9_]*\\.){1,2}enabled$", "description": "A checkmark item: <watch>.enabled shows whether a launchagent watch's job starts at login, and clicking flips it. !<watch>.enabled shows the checkmark the other way round."},
               "field": {"type": "string", "description": "A search field; this is its placeholder. Enter fires the item's run, open, post or swift with the typed text bound as query. {{ }} holes are CEL."},
-              "icon": {"description": "An SF Symbol name, or {asset: <name>} for a .png in menubar/Icons, drawn beside the label. {{ }} holes are CEL; a name that resolves to nothing draws no icon.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^([A-Za-z0-9_-]|\\{\\{[^}]*\\}\\})+$"}}}]},
+              "icon": {"description": "An SF Symbol name, {symbol: <name>, fg: <color>, bg: <color>} for a colored symbol, or {asset: <name>} for a .png in menubar/Icons, drawn beside the label. {{ }} holes are CEL; a name that resolves to nothing draws no icon.", "oneOf": [{"type": "string"}, {"type": "object", "required": ["symbol"], "additionalProperties": false, "properties": {"symbol": {"type": "string"}, "fg": {"$ref": "#/definitions/iconColor"}, "bg": {"$ref": "#/definitions/iconColor"}}}, {"type": "object", "required": ["asset"], "additionalProperties": false, "properties": {"asset": {"type": "string", "pattern": "^([A-Za-z0-9_-]|\\{\\{[^}]*\\}\\})+$"}}}]},
               "when": {"type": "string", "description": "CEL condition deciding whether the item appears."},
               "each": {"type": "string", "description": "CEL list expression; the element binds to it."},
               "menu": {"$ref": "#/definitions/menu"},

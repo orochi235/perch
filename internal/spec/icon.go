@@ -107,8 +107,9 @@ func parseIconName(n *yaml.Node, path string) (Icon, error) {
 	return Icon{}, fmt.Errorf("%s: want an SF Symbol name, {symbol: <name>, fg:, bg:}, or {asset: <name>}", path)
 }
 
-// checkColor takes what a tint's color does. A color with {{ }} holes is known
-// only once the app polls, and one that resolves to nothing is drawn as no color.
+// checkColor takes a tint's colors except #rrggbbaa: a patch behind a symbol has
+// no bar to let through. A color with {{ }} holes is known only once the app
+// polls, and one that resolves to nothing is drawn as no color.
 func checkColor(c string) error {
 	if c == "" || hole.MatchString(c) {
 		return nil

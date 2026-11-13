@@ -31,6 +31,7 @@ var sections = map[string]string{
 	"itemFields":    "definitions.menu.items.oneOf.1.properties",
 	"rawPost":       "definitions.menu.items.oneOf.1.properties.post.properties",
 	"rawTint":       "definitions.tint.oneOf.1.properties",
+	"rawIcon":       "definitions.menu.items.oneOf.1.properties.icon.oneOf.1.properties|definitions.menu.items.oneOf.1.properties.icon.oneOf.2.properties",
 }
 
 func TestSchemaDeclaresExactlyTheKeysTheParserAccepts(t *testing.T) {
@@ -42,7 +43,7 @@ func TestSchemaDeclaresExactlyTheKeysTheParserAccepts(t *testing.T) {
 			t.Errorf("internal/spec no longer declares %s; this table is stale", structName)
 			continue
 		}
-		got := keysAt(t, doc, path)
+		got := keysAtEach(t, doc, path)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s at %s\n schema %v\n parser %v", structName, path, got, want)
 		}
@@ -118,6 +119,24 @@ func walk(t *testing.T, doc any, path string) any {
 	return node
 }
 
+// keysAtEach is the union of keysAt over paths split on |, for a struct the
+// schema states as several forms.
+func keysAtEach(t *testing.T, doc map[string]any, paths string) []string {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, p := range strings.Split(paths, "|") {
+		for _, k := range keysAt(t, doc, p) {
+			seen[k] = true
+		}
+	}
+	keys := make([]string, 0, len(seen))
+	for k := range seen {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 // keysAt walks to a properties object and returns the keys it declares.
 func keysAt(t *testing.T, doc map[string]any, path string) []string {
 	t.Helper()
@@ -137,17 +156,19 @@ func keysAt(t *testing.T, doc map[string]any, path string) []string {
 // unknown key everywhere and an editor that accepts one is worse than silent.
 func TestSchemaClosesEveryMappingTheParserCloses(t *testing.T) {
 	doc := decoded(t)
-	for structName, path := range sections {
-		parent := strings.TrimSuffix(path, ".properties")
-		if parent == path {
-			continue // the root, checked by TestSchemaRefusesUnknownTopLevelKeys
-		}
-		m, ok := walk(t, doc, parent).(map[string]any)
-		if !ok {
-			t.Fatalf("%s: %s is not a schema object", structName, parent)
-		}
-		if m["additionalProperties"] != false {
-			t.Errorf("%s at %s does not set additionalProperties: false", structName, parent)
+	for structName, paths := range sections {
+		for _, path := range strings.Split(paths, "|") {
+			parent := strings.TrimSuffix(path, ".properties")
+			if parent == path {
+				continue // the root, checked by TestSchemaRefusesUnknownTopLevelKeys
+			}
+			m, ok := walk(t, doc, parent).(map[string]any)
+			if !ok {
+				t.Fatalf("%s: %s is not a schema object", structName, parent)
+			}
+			if m["additionalProperties"] != false {
+				t.Errorf("%s at %s does not set additionalProperties: false", structName, parent)
+			}
 		}
 	}
 }
