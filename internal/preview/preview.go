@@ -37,6 +37,7 @@ type Badge struct {
 	FG     string `json:"fg,omitempty"`
 	BG     string `json:"bg,omitempty"`
 	At     string `json:"at"`
+	Plain  bool   `json:"plain,omitempty"`
 }
 
 // Face is the status item itself.

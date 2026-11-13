@@ -53,3 +53,14 @@ func TestABadgeCanBeOnlyASymbol(t *testing.T) {
 		t.Errorf("badge = %+v", got)
 	}
 }
+
+func TestAPlainBadgeTakesNoBackground(t *testing.T) {
+	s := parse(t, badgeHead+"menu:\n  - {text: a, badges: [{text: '74915', plain: true}]}\n  - {text: Quit, quit: true}\n")
+	if b := s.Menu[0].Badges.List[0]; !b.Plain || b.At != BadgeEnd {
+		t.Errorf("badge = %+v", b)
+	}
+	_, err := Parse([]byte(badgeHead + "menu: [{text: a, badges: [{text: x, plain: true, bg: teal}]}, {text: Quit, quit: true}]\n"))
+	if err == nil || !strings.Contains(err.Error(), "no pill to fill") {
+		t.Errorf("err = %v", err)
+	}
+}

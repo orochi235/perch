@@ -17,7 +17,7 @@ watch:
     run: [echo, "{}"]
     json: true
     shape:
-      rows: [{text: string, state: string, port: string, badges: [{text: string, symbol: string, bg: string}]}]
+      rows: [{text: string, state: string, port: string, badges: [{text: string, symbol: string, bg: string, plain: bool}]}]
   loose:
     run: [echo, "{}"]
     json: true
@@ -26,6 +26,7 @@ menu:
     text: "{{it.text}}"
     badges:
       - {text: "{{it.state}}", symbol: "{{it.state == 'up' ? 'bolt' : ''}}", bg: green}
+      - {text: "{{it.port}}", plain: true}
       - {text: ":{{it.port}}", fg: "#ffffff", bg: "{{it.state == 'up' ? 'blue' : 'gray'}}", at: start}
   - each: m.data.rows
     text: "{{it.text}}"
@@ -58,6 +59,9 @@ func TestBadgesLowerToMenuBadges(t *testing.T) {
 		`.badges.map { badge`,
 		`in MenuBadge(text: `,
 		`symbol: badge`,
+		`plain: true)`,
+		`plain: badge3.plain`,
+		`plain: badge5["plain"]`,
 		`symbol: "\(`,
 		`.asArray.map { badge`,
 		`size: Double(14)`,

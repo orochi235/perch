@@ -134,7 +134,8 @@ private func encoded(_ node: MenuNode) -> [String: Any] {
     let shown = Badges.shown(look.badges)
     if !shown.isEmpty {
         out["badges"] = shown.map {
-            ["text": $0.text, "symbol": $0.symbol, "fg": $0.fg, "bg": $0.bg, "at": $0.at == "start" ? "start" : "end"]
+            ["text": $0.text, "symbol": $0.symbol, "fg": $0.fg, "bg": $0.bg, "at": $0.at == "start" ? "start" : "end",
+             "plain": $0.plain]
         }
     }
     return out

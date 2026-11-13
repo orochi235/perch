@@ -14,6 +14,9 @@ struct MenuBadge {
     var fg = ""
     var bg = ""
     var at = "end"
+    /// A run of the label's own text, in `fg` or the secondary label color,
+    /// with no pill.
+    var plain = false
 }
 
 enum Badges {
@@ -30,6 +33,28 @@ enum Badges {
             }
             return b.text.isEmpty && b.symbol.isEmpty ? nil : b
         }
+    }
+
+    /// A badge as it sits in a label: a pill image, or a plain run of text.
+    static func part(_ badge: MenuBadge, font: NSFont) -> NSAttributedString {
+        badge.plain ? run(badge, font: font) : attachment(badge, font: font)
+    }
+
+    /// Plain text on the label's baseline, at its size, with digits of one
+    /// width so a number does not shift its row as it changes.
+    static func run(_ badge: MenuBadge, font: NSFont) -> NSAttributedString {
+        let ink = Tint.base(badge.fg) ?? .secondaryLabelColor
+        let digits = NSFont.monospacedDigitSystemFont(ofSize: font.pointSize, weight: .regular)
+        let out = NSMutableAttributedString()
+        if let glyph = symbol(badge.symbol, ink: ink, font: digits) {
+            let a = NSTextAttachment()
+            a.image = glyph
+            a.bounds = NSRect(x: 0, y: 0, width: glyph.size.width, height: glyph.size.height)
+            out.append(NSAttributedString(attachment: a))
+            if !badge.text.isEmpty { out.append(NSAttributedString(string: "\u{2009}", attributes: [.font: digits])) }
+        }
+        out.append(NSAttributedString(string: badge.text, attributes: [.font: digits, .foregroundColor: ink]))
+        return out
     }
 
     static func attachment(_ badge: MenuBadge, font: NSFont) -> NSAttributedString {

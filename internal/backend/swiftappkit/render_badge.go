@@ -27,6 +27,9 @@ func itemBadges(b spec.Badges, e *celswift.Env, name func(string) string) (strin
 			fields = append(fields, f.key+": "+lowered)
 		}
 		fields = append(fields, "at: "+celswift.SwiftString(string(badge.At)))
+		if badge.Plain {
+			fields = append(fields, "plain: true")
+		}
 		parts = append(parts, "MenuBadge("+strings.Join(fields, ", ")+")")
 	}
 	return "[" + strings.Join(parts, ", ") + "]", nil
@@ -55,6 +58,13 @@ func badgesFromExpr(src string, e *celswift.Env, name func(string) string) (stri
 			return "", fmt.Errorf("%q: each badge's %s: %w", src, key, err)
 		}
 		fields = append(fields, key+": "+lowered)
+	}
+	if elem.Kind == spec.TypeAny || hasField(elem, "plain") {
+		plain, err := inner.LowerCondition("it.plain")
+		if err != nil {
+			return "", fmt.Errorf("%q: each badge's plain: %w", src, err)
+		}
+		fields = append(fields, "plain: "+plain)
 	}
 	return fmt.Sprintf("%s.map { %s in MenuBadge(%s) }", list, v, strings.Join(fields, ", ")), nil
 }

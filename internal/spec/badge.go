@@ -25,6 +25,8 @@ type Badge struct {
 	FG     string
 	BG     string
 	At     BadgeAt
+	// Plain draws the text as a run of the label, in FG, with no pill.
+	Plain bool
 }
 
 // BadgeAt is which side of the label a badge sits on.
@@ -41,6 +43,7 @@ type rawBadge struct {
 	FG     string `yaml:"fg"`
 	BG     string `yaml:"bg"`
 	At     string `yaml:"at"`
+	Plain  bool   `yaml:"plain"`
 }
 
 func parseBadges(n *yaml.Node, path string) (Badges, error) {
@@ -86,6 +89,9 @@ func parseBadge(n *yaml.Node, path string) (Badge, error) {
 			return Badge{}, fmt.Errorf("%s.%s: %w", path, key, err)
 		}
 	}
+	if raw.Plain && raw.BG != "" {
+		return Badge{}, fmt.Errorf("%s.bg: a plain: badge is a run of text with no pill to fill", path)
+	}
 	at := BadgeAt(raw.At)
 	switch at {
 	case "":
@@ -94,5 +100,5 @@ func parseBadge(n *yaml.Node, path string) (Badge, error) {
 	default:
 		return Badge{}, fmt.Errorf("%s.at: %q is neither start nor end", path, raw.At)
 	}
-	return Badge{Text: raw.Text, Symbol: raw.Symbol, FG: raw.FG, BG: raw.BG, At: at}, nil
+	return Badge{Text: raw.Text, Symbol: raw.Symbol, FG: raw.FG, BG: raw.BG, At: at, Plain: raw.Plain}, nil
 }

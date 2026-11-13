@@ -45,6 +45,7 @@ struct MDataRowsBadges: Decodable {
     var text: String = ""
     var symbol: String = ""
     var bg: String = ""
+    var plain: Bool = false
 
     init() {}
 
@@ -52,6 +53,7 @@ struct MDataRowsBadges: Decodable {
         case text
         case symbol
         case bg
+        case plain
     }
 
     init(from decoder: Decoder) throws {
@@ -59,6 +61,7 @@ struct MDataRowsBadges: Decodable {
         self.text = (try? c.decode(String.self, forKey: .text)) ?? ""
         self.symbol = (try? c.decode(String.self, forKey: .symbol)) ?? ""
         self.bg = (try? c.decode(String.self, forKey: .bg)) ?? ""
+        self.plain = (try? c.decode(Bool.self, forKey: .plain)) ?? false
     }
 }
 

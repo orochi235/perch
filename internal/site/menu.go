@@ -115,7 +115,10 @@ func withBadges(title string, badges []preview.Badge) string {
 	var before, after strings.Builder
 	for _, b := range badges {
 		class := "pill"
-		if cssColor(b.BG) == "" {
+		switch {
+		case b.Plain:
+			class = "run"
+		case cssColor(b.BG) == "":
 			class += " outline"
 		}
 		glyph := ""

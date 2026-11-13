@@ -41,9 +41,9 @@ struct Look {
         let gap = NSAttributedString(string: " ", attributes: [.font: font])
         // Pills and a label, each part with one space between: an empty label
         // leaves the pills alone, with nothing leading or trailing.
-        var parts = shown.filter { $0.at == "start" }.map { Badges.attachment($0, font: font) }
+        var parts = shown.filter { $0.at == "start" }.map { Badges.part($0, font: font) }
         if !text.isEmpty { parts.append(NSAttributedString(string: text, attributes: [.font: font])) }
-        parts += shown.filter { $0.at != "start" }.map { Badges.attachment($0, font: font) }
+        parts += shown.filter { $0.at != "start" }.map { Badges.part($0, font: font) }
         for (i, part) in parts.enumerated() {
             if i > 0 { out.append(gap) }
             out.append(part)

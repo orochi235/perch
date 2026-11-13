@@ -871,7 +871,7 @@ repos:
 ### Badges
 
 `badges:` sets small colored pills beside a menu item's label: a state, a
-port, a count. Each badge is `{text, symbol, fg, bg, at}`. `symbol` is an SF
+port, a count. Each badge is `{text, symbol, fg, bg, at, plain}`. `symbol` is an SF
 Symbol drawn before the text, inside the pill, the height of its capitals.
 `fg` and `bg` take colors the way a [colored symbol](#colored-symbols) does,
 and with only `bg` the text and symbol are white or black, whichever reads on
@@ -879,6 +879,11 @@ it; with no `bg` the pill is an outline.
 `at: start` puts a badge before the label, and the default, `end`, after it. A
 badge with neither text nor a symbol macOS knows is not drawn, so one row can
 show a port and the next, with none, does not.
+
+`plain: true` draws a badge as part of the label's own text instead of a
+pill: at the label's size and on its baseline, in `fg` or, without one, the
+gray macOS gives secondary text, with digits of one width so a changing number
+does not shift its row. A plain badge has no pill, so it takes no `bg`.
 
 Written as a list, each field takes `{{ }}` holes:
 
