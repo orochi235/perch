@@ -18,7 +18,7 @@ menu:
     weight: "{{it.header ? 'bold' : ''}}"
     subtitle: "{{it.note}}"
     size: "it.header ? 15 : 0"
-    divider: it.header
+    separator: it.header
   - {text: Reload, key: cmd+r, enabled: "m.ok", run: [echo, reload]}
   - {text: Back, key: cmd+left, run: [echo, back]}
   - {text: Help, key: f1, run: [echo, help]}

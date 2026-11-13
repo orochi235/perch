@@ -222,7 +222,7 @@ const body = `{
               "key": {"type": "string", "pattern": "^(((cmd|opt|ctrl|shift)\\+)*f([1-9]|1[0-9]|20)|((cmd|opt|ctrl|shift)\\+)*(cmd|opt|ctrl)\\+((cmd|opt|ctrl|shift)\\+)*([a-z0-9]|space|return|tab|escape|delete|forwarddelete|left|right|up|down|home|end|pageup|pagedown|[-=;',./\u0060\\[\\]\\\\]))$", "description": "A shortcut while the menu is open, like cmd+r. Only on an item with an action, and not on an each: item."},
               "header": {"type": ["string", "boolean"], "description": "CEL condition: draw the item as a section header (macOS 14 and later). A header takes no action, submenu or key."},
               "gutter": {"type": "boolean", "description": "false drops the checkmark column of the submenu this item opens."},
-              "divider": {"type": ["string", "boolean"], "description": "CEL condition: while it holds, a separator is drawn right before the item, so an each: can split its rows into groups. A leading or doubled one is dropped like any separator."},
+              "separator": {"type": ["string", "boolean"], "description": "CEL condition: while it holds, a separator line is drawn before this item (the item still shows), so an each: can split its rows into groups. An each:'s first row takes none, and a leading or doubled one is dropped like any separator."},
               "when": {"type": "string", "description": "CEL condition deciding whether the item appears."},
               "each": {"type": "string", "description": "CEL list expression; the element binds to it."},
               "menu": {"$ref": "#/definitions/menu"},

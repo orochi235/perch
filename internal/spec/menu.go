@@ -123,13 +123,13 @@ type Item struct {
 	Icon   Icon
 	Badges Badges
 	Look   Look
-	// Divider is a condition: while it holds, a separator is drawn right before
-	// the item, so an each: can split its rows into groups.
-	Divider string
-	When    string
-	Each    string
-	Menu    []Item
-	Action  Action
+	// SeparatorBefore is a condition: while it holds, a separator is drawn right
+	// before the item, so an each: can split its rows into groups.
+	SeparatorBefore string
+	When            string
+	Each            string
+	Menu            []Item
+	Action          Action
 	// Scope is the use this item came from, or "" for the file's own.
 	Scope string
 	// Guard is the condition its agent: verb or toggle: needs to work; empty for other items.
@@ -145,30 +145,30 @@ type Item struct {
 func (it Item) Path() string { return it.path }
 
 type itemFields struct {
-	Text     string    `yaml:"text"`
-	Field    string    `yaml:"field"`
-	Toggle   string    `yaml:"toggle"`
-	Icon     yaml.Node `yaml:"icon"`
-	Badges   yaml.Node `yaml:"badges"`
-	Size     yaml.Node `yaml:"size"`
-	Weight   string    `yaml:"weight"`
-	Indent   yaml.Node `yaml:"indent"`
-	Enabled  string    `yaml:"enabled"`
-	Subtitle string    `yaml:"subtitle"`
-	Key      string    `yaml:"key"`
-	Header   string    `yaml:"header"`
-	Gutter   *bool     `yaml:"gutter"`
-	Divider  string    `yaml:"divider"`
-	When     string    `yaml:"when"`
-	Each     string    `yaml:"each"`
-	Menu     yaml.Node `yaml:"menu"`
-	Run      []string  `yaml:"run"`
-	Open     string    `yaml:"open"`
-	Post     *rawPost  `yaml:"post"`
-	Quit     bool      `yaml:"quit"`
-	Agent    string    `yaml:"agent"`
-	Swift    string    `yaml:"swift"`
-	Window   string    `yaml:"window"`
+	Text      string    `yaml:"text"`
+	Field     string    `yaml:"field"`
+	Toggle    string    `yaml:"toggle"`
+	Icon      yaml.Node `yaml:"icon"`
+	Badges    yaml.Node `yaml:"badges"`
+	Size      yaml.Node `yaml:"size"`
+	Weight    string    `yaml:"weight"`
+	Indent    yaml.Node `yaml:"indent"`
+	Enabled   string    `yaml:"enabled"`
+	Subtitle  string    `yaml:"subtitle"`
+	Key       string    `yaml:"key"`
+	Header    string    `yaml:"header"`
+	Gutter    *bool     `yaml:"gutter"`
+	Separator string    `yaml:"separator"`
+	When      string    `yaml:"when"`
+	Each      string    `yaml:"each"`
+	Menu      yaml.Node `yaml:"menu"`
+	Run       []string  `yaml:"run"`
+	Open      string    `yaml:"open"`
+	Post      *rawPost  `yaml:"post"`
+	Quit      bool      `yaml:"quit"`
+	Agent     string    `yaml:"agent"`
+	Swift     string    `yaml:"swift"`
+	Window    string    `yaml:"window"`
 }
 
 type rawPost struct {
@@ -256,7 +256,7 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 			return Item{}, err
 		}
 	}
-	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, Look: look, Divider: f.Divider, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, Look: look, SeparatorBefore: f.Separator, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 
 // parseToggle reads [!]<target>.<field>. Anything richer has no single value a

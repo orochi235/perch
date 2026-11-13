@@ -407,14 +407,14 @@ func (g *menuGen) item(it spec.Item, into string, e *celswift.Env) error {
 	path := it.Path()
 	inner := e
 	closes := 0
-	first := "" // set inside an each: with a divider: whether no row is drawn yet
+	first := "" // set inside an each: with a separator: whether no row is drawn yet
 
 	if it.Each != "" {
 		list, elem, err := e.LowerList(it.Each)
 		if err != nil {
 			return fmt.Errorf("%s.each: %w", path, err)
 		}
-		if it.Divider != "" {
+		if it.SeparatorBefore != "" {
 			first = g.name("first")
 			g.b.line("var %s = true", first)
 		}
@@ -447,11 +447,11 @@ func (g *menuGen) item(it spec.Item, into string, e *celswift.Env) error {
 	}
 
 	// An each: decides only the lines between its rows, so its first row
-	// takes no divider; the separators written around the block are its edges.
-	if it.Divider != "" {
-		cond, err := inner.LowerCondition(it.Divider)
+	// takes no separator:; the separators written around the block are its edges.
+	if it.SeparatorBefore != "" {
+		cond, err := inner.LowerCondition(it.SeparatorBefore)
 		if err != nil {
-			return fmt.Errorf("%s.divider: %w", path, err)
+			return fmt.Errorf("%s.separator: %w", path, err)
 		}
 		if first != "" {
 			cond = "!" + first + " && " + cond

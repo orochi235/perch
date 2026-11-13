@@ -70,9 +70,9 @@ func TestLookTakesEveryPart(t *testing.T) {
 	}
 }
 
-func TestDividerIsACondition(t *testing.T) {
-	s := parse(t, badgeHead+"menu:\n  - {text: a, divider: it.header, each: x}\n  - {text: Quit, quit: true}\n")
-	if s.Menu[0].Divider != "it.header" {
-		t.Errorf("divider = %q", s.Menu[0].Divider)
+func TestSeparatorKeyIsACondition(t *testing.T) {
+	s := parse(t, badgeHead+"menu:\n  - separator\n  - {text: a, separator: it.header, each: x}\n  - {text: Quit, quit: true}\n")
+	if !s.Menu[0].Separator || s.Menu[1].Separator || s.Menu[1].SeparatorBefore != "it.header" {
+		t.Errorf("menu = %+v / %+v", s.Menu[0], s.Menu[1])
 	}
 }

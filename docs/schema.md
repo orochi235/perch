@@ -575,7 +575,7 @@ Everything else is a mapping:
 | `badges` | Colored pills beside the label: a list of `{text, fg, bg, at}`, or an expression naming one. See [Badges](#badges). |
 | `size`, `weight` | The label's font size in points and its weight. See [Size and weight](#size-and-weight). |
 | `indent`, `subtitle`, `key` | An indent level, a smaller second line, and a shortcut. See [Indent, subtitle and key](#indent-subtitle-and-key). |
-| `header`, `divider`, `enabled` | Conditions: draw the item as a section header, put a separator before it, or override whether it is live. See [Headers, dividers and enabled](#headers-dividers-and-enabled). |
+| `header`, `separator`, `enabled` | Conditions: draw the item as a section header, draw a separator line before it (the item still shows), or override whether it is live. See [Headers, separators and enabled](#headers-separators-and-enabled). |
 | `gutter` | `false` drops the checkmark column of the submenu this item opens. See [Gutter](#gutter). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
@@ -958,15 +958,16 @@ later. `key:` is a shortcut while the menu is open, spelled like
 or a `toggle:` takes one, and not an `each:` item, whose rows would all share
 it.
 
-### Headers, dividers and enabled
+### Headers, separators and enabled
 
 Each is a condition, so one `each:` can make some of its rows headers and
 start a group at each one:
 
 - `header:` draws the item as a section header, macOS 14's small bold label.
   A header takes no action, submenu or `key:`.
-- `divider:` draws a separator right before the item. On an `each:`, the
-  first row it draws takes none, so the `each:` decides only the lines between
+- `separator:` draws a separator line before its own item, which still shows
+  below it: it adds a line, it does not turn the item into one. On an
+  `each:`, the first row it draws takes none, so the `each:` decides only the lines between
   its rows and the separators written around it decide its edges. Like any
   separator, one at the top of a menu or next to another is dropped.
 - `enabled:` says whether the item is live. Without it, an item that acts or
@@ -986,7 +987,7 @@ menu:
   - each: rows.data.rows
     text: "{{it.text}}"
     header: it.header
-    divider: it.header
+    separator: it.header
     indent: "it.header ? 0 : 1"
     subtitle: "{{it.note}}"
   - separator
