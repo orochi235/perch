@@ -29,6 +29,15 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
             out.append(node)
             continue
         }
+        // A row whose header: holds is a label: its submenu or action is dropped.
+        if case .submenu(let title, _, let look) = node, look.header {
+            out.append(.item(title, nil, look: look))
+            continue
+        }
+        if case .item(let title, _?, let look) = node, look.header {
+            out.append(.item(title, nil, look: look))
+            continue
+        }
         if case .submenu(let title, let items, let look) = node {
             // Every item guarded away leaves a label, not an arrow into nothing.
             let kept = tidy(items)

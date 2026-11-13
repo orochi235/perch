@@ -63,14 +63,20 @@ func checkLook(f itemFields, l Look, act Action, sub []Item, path string) error 
 			return fmt.Errorf("%s.key: the item has no action for a shortcut to run", path)
 		}
 	}
+	// A header: that always holds makes the item only a label. A condition
+	// may share an item with a submenu or an action, which are dropped on the
+	// rows where it holds, so one each: can give both headings and rows.
 	if l.Header != "" {
+		always := l.Header == "true"
 		switch {
-		case act.Kind != ActionNone || f.Toggle != "":
-			return fmt.Errorf("%s.header: a section header is a label; it takes no action or toggle:", path)
-		case len(sub) > 0:
-			return fmt.Errorf("%s.header: a section header is a label; it takes no submenu", path)
+		case f.Toggle != "":
+			return fmt.Errorf("%s.header: a section header is a label; it takes no toggle:", path)
 		case l.Key.IsSet():
 			return fmt.Errorf("%s.header: a section header takes no key:", path)
+		case always && act.Kind != ActionNone:
+			return fmt.Errorf("%s.header: a section header is a label; it takes no action. A header: condition may, and drops it where it holds", path)
+		case always && len(sub) > 0:
+			return fmt.Errorf("%s.header: a section header is a label; it takes no submenu. A header: condition may, and drops it where it holds", path)
 		}
 	}
 	return nil

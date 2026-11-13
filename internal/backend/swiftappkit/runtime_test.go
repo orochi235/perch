@@ -146,6 +146,7 @@ print("kept=\(show(tidy([.item("a", nil), .separator, .item("b", nil)])))")
 print("nested=\(show(tidy([.submenu("s", [.separator, .item("x", nil), .separator]), .separator])))")
 print("icon=\(show(tidy([.submenu("s", [.item("x", nil)], look: Look(icon: .symbol("gear")))])))")
 print("emptied=\(show(tidy([.submenu("s", [.separator]), .item("b", nil)])))")
+print("header=\(show(tidy([.submenu("h", [.item("x", nil)], look: Look(header: true)), .item("a", .quit, look: Look(header: true)), .submenu("s", [.item("y", nil)])])))")
 print("badged=\(show(tidy([.submenu("s", [.separator], look: Look(badges: [MenuBadge(text: "x")]))])))")
 `
 
@@ -165,6 +166,7 @@ func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
 		"nested=s(x)",
 		"icon=s[gear](x)",
 		"emptied=s,b",
+		"header=h,a,s(y)",
 		"badged=s{x}",
 	}
 	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")

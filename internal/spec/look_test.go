@@ -76,3 +76,8 @@ func TestSeparatorKeyIsACondition(t *testing.T) {
 		t.Errorf("menu = %+v / %+v", s.Menu[0], s.Menu[1])
 	}
 }
+
+func TestAHeaderConditionMayShareAnItemWithASubmenu(t *testing.T) {
+	parse(t, badgeHead+"menu:\n  - {text: a, each: x, header: it.header, menu: [{text: b}]}\n"+
+		"  - {text: c, header: y.ok, open: 'https://x'}\n  - {text: Quit, quit: true}\n")
+}

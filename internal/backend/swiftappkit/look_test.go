@@ -19,6 +19,8 @@ menu:
     subtitle: "{{it.note}}"
     size: "it.header ? 15 : 0"
     separator: it.header
+    menu:
+      - {text: Open, when: "!it.header", run: [echo, open]}
   - {text: Reload, key: cmd+r, enabled: "m.ok", run: [echo, reload]}
   - {text: Back, key: cmd+left, run: [echo, back]}
   - {text: Help, key: f1, run: [echo, help]}

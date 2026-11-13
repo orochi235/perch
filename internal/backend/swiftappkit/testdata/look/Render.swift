@@ -35,16 +35,20 @@ func renderMenu(_ results: Results) -> [MenuNode] {
     var first1 = true
     for it2 in results.m.data.rows {
         if !first1 && it2.header { menu.append(.separator) }
-        menu.append(.item("\(it2.text)", nil, look: Look(size: Double((it2.header ? 15 : 0)), weight: "\((it2.header ? "bold" : ""))", indent: Double((it2.header ? 0 : it2.depth)), subtitle: "\(it2.note)", header: it2.header)))
+        var sub3: [MenuNode] = []
+        if !(it2.header) {
+            sub3.append(.item("Open", .run(["echo", "open"])))
+        }
+        menu.append(.submenu("\(it2.text)", sub3, look: Look(size: Double((it2.header ? 15 : 0)), weight: "\((it2.header ? "bold" : ""))", indent: Double((it2.header ? 0 : it2.depth)), subtitle: "\(it2.note)", header: it2.header)))
         first1 = false
     }
     menu.append(.item("Reload", .run(["echo", "reload"]), look: Look(enabled: results.m.ok, key: KeyCombo(key: "r", modifiers: [.command]))))
     menu.append(.item("Back", .run(["echo", "back"]), look: Look(key: KeyCombo(key: KeyCombo.function("left"), modifiers: [.command]))))
     menu.append(.item("Help", .run(["echo", "help"]), look: Look(key: KeyCombo(key: KeyCombo.function("f1"), modifiers: []))))
     menu.append(.item("Inert but live", nil, look: Look(enabled: true)))
-    var sub3: [MenuNode] = []
-    sub3.append(.item("Inside", .run(["echo", "inside"])))
-    menu.append(.submenu("More", sub3, look: Look(gutter: false)))
+    var sub4: [MenuNode] = []
+    sub4.append(.item("Inside", .run(["echo", "inside"])))
+    menu.append(.submenu("More", sub4, look: Look(gutter: false)))
     menu.append(.item("Quit", .quit))
     return tidy(menu)
 }

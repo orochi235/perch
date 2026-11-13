@@ -964,7 +964,10 @@ Each is a condition, so one `each:` can make some of its rows headers and
 start a group at each one:
 
 - `header:` draws the item as a section header, macOS 14's small bold label.
-  A header takes no action, submenu or `key:`.
+  `header: true` takes no action or submenu. A condition may sit beside
+  either, and on the rows where it holds the action or submenu is dropped,
+  so one `each:` can draw headings and the rows under them. A header takes no
+  `key:` or `toggle:`.
 - `separator:` draws a separator line before its own item, which still shows
   below it: it adds a line, it does not turn the item into one. On an
   `each:`, the first row it draws takes none, so the `each:` decides only the lines between
