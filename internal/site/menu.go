@@ -94,6 +94,14 @@ func iconHTML(root string, icon preview.Icon) string {
 		style, html.EscapeString(icon.Symbol), svg)
 }
 
+// sizeStyle scales a row from the menu's 13pt, as a per-item number that cannot be a class.
+func sizeStyle(points float64) string {
+	if points <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(` style="font-size: %.3fem"`, points/13)
+}
+
 // colorStyle carries a per-item color, which is data, so it cannot be a class.
 func colorStyle(fg, bg string) string {
 	ink, patch := inkColors(fg, bg)
@@ -172,13 +180,14 @@ func nodeHTML(root string, n preview.Node) string {
 		for _, item := range n.Items {
 			sub.WriteString(nodeHTML(root, item))
 		}
-		return `<div class="row sub" tabindex="0">` + title +
+		return `<div class="row sub" tabindex="0"` + sizeStyle(n.Size) + `>` + title +
 			`<span class="chev">›</span><div class="menu submenu">` + sub.String() + `</div></div>`
 	}
+	size := sizeStyle(n.Size)
 	if n.Action == nil {
-		return `<div class="row label">` + title + `</div>`
+		return `<div class="row label"` + size + `>` + title + `</div>`
 	}
-	return `<div class="row action" title="` + html.EscapeString(actionText(*n.Action)) + `">` + title + `</div>`
+	return `<div class="row action"` + size + ` title="` + html.EscapeString(actionText(*n.Action)) + `">` + title + `</div>`
 }
 
 // actionText says what activating an item would do, which a picture of a menu

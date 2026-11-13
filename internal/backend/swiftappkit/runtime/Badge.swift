@@ -17,14 +17,14 @@ struct MenuBadge {
 }
 
 enum Badges {
-    /// The label with its badges laid in as images, or nil when no badge has
-    /// text, so the item keeps its plain title. The pills ride in the title
-    /// rather than a custom view, which keeps highlight, the submenu arrow and
-    /// keyboard navigation AppKit's own.
-    static func title(_ title: String, _ badges: [MenuBadge]) -> NSAttributedString? {
+    /// The label in its own size with its badges laid in as images, or nil
+    /// when it has neither, so the item keeps its plain title. The pills ride
+    /// in the title rather than a custom view, which keeps highlight, the
+    /// submenu arrow and keyboard navigation AppKit's own.
+    static func title(_ title: String, _ badges: [MenuBadge], size: Double = 0) -> NSAttributedString? {
         let shown = Badges.shown(badges)
-        guard !shown.isEmpty else { return nil }
-        let font = NSFont.menuFont(ofSize: 0)
+        guard !shown.isEmpty || size > 0 else { return nil }
+        let font = NSFont.menuFont(ofSize: size > 0 ? CGFloat(min(size, maxSize)) : 0)
         let out = NSMutableAttributedString()
         let gap = NSAttributedString(string: " ", attributes: [.font: font])
         // Pills and a label, each part with one space between: an empty label
@@ -38,6 +38,9 @@ enum Badges {
         }
         return out
     }
+
+    /// The largest size a label takes, so a stray number cannot fill the screen.
+    static let maxSize = 32.0
 
     /// The badges that draw anything, each with a symbol name that names
     /// nothing cleared: one with neither text nor a symbol is dropped.

@@ -572,6 +572,7 @@ Everything else is a mapping:
 | `toggle` | A string: what the item's checkmark shows and a click flips — `worker.enabled`, or `!worker.enabled` to show it the other way round. It takes no action and no submenu. See [Start at login](#start-at-login). |
 | `icon` | An [SF Symbol](#sf-symbols) name, `{symbol: <name>, fg: <color>, bg: <color>}` for a [colored symbol](#colored-symbols), or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `badges` | Colored pills beside the label: a list of `{text, fg, bg, at}`, or an expression naming one. See [Badges](#badges). |
+| `size` | The label's font size in points, or an expression giving one. See [Size](#size). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
 | `menu` | A list of items, written the same way. A submenu whose items are all guarded away is drawn as a plain label, so one `each:` can mix rows that open a submenu with rows that don't. |
@@ -934,6 +935,38 @@ servers:
 The badges are drawn into the item's own title, so a badged item highlights,
 opens its submenu and takes the keyboard like any other. An item may leave out
 `text:` and show only its icon and badges. A `field:` item takes no badges.
+
+### Size
+
+`size:` sets an item's font size in points, from 6 to 32; the menu's own is
+13. Its badges grow with it. It takes a number, or an expression giving one,
+where 0 or less leaves the item at the menu's size, so one `each:` can set its
+headings larger than the rows under them:
+
+```yaml
+app: {name: repos, id: dev.example.repos.menubar, icon: folder, interval: 5s}
+
+watch:
+  rows:
+    run: [repos, --json]
+    json: true
+    shape:
+      rows: [{text: string, header: bool}]
+
+menu:
+  - each: rows.data.rows
+    text: "{{it.text}}"
+    size: "it.header ? 15 : 0"
+```
+
+```state a heading and its rows
+rows:
+  out:
+    rows:
+      - {text: perch, header: true}
+      - {text: dev server, header: false}
+      - {text: docs, header: false}
+```
 
 ### Icon assets
 

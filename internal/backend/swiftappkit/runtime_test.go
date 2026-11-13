@@ -127,10 +127,10 @@ func show(_ nodes: [MenuNode]) -> String {
     nodes.map { node in
         switch node {
         case .separator: return "-"
-        case .item(let t, _, _, let badges): return t + (badges.isEmpty ? "" : "{" + badges.map(\.text).joined() + "}")
-        case .toggle(let t, let on, _, _, _): return (on ? "✓" : "") + t
-        case .submenu(let t, let items, let icon, _):
-            let mark = if case .symbol(let name)? = icon { "[" + name + "]" } else { "" }
+        case .item(let t, _, let look): return t + (look.badges.isEmpty ? "" : "{" + look.badges.map(\.text).joined() + "}")
+        case .toggle(let t, let on, _, _): return (on ? "✓" : "") + t
+        case .submenu(let t, let items, let look):
+            let mark = if case .symbol(let name)? = look.icon { "[" + name + "]" } else { "" }
             return t + mark + "(" + show(items) + ")"
         case .field(let t, _): return "[" + t + "]"
         }
@@ -144,9 +144,9 @@ print("trailing=\(show(tidy([.item("a", nil), .separator])))")
 print("run=\(show(tidy([.item("a", nil), .separator, .separator, .separator, .item("b", nil)])))")
 print("kept=\(show(tidy([.item("a", nil), .separator, .item("b", nil)])))")
 print("nested=\(show(tidy([.submenu("s", [.separator, .item("x", nil), .separator]), .separator])))")
-print("icon=\(show(tidy([.submenu("s", [.item("x", nil)], icon: .symbol("gear"))])))")
+print("icon=\(show(tidy([.submenu("s", [.item("x", nil)], look: Look(icon: .symbol("gear")))])))")
 print("emptied=\(show(tidy([.submenu("s", [.separator]), .item("b", nil)])))")
-print("badged=\(show(tidy([.submenu("s", [.separator], badges: [MenuBadge(text: "x")])])))")
+print("badged=\(show(tidy([.submenu("s", [.separator], look: Look(badges: [MenuBadge(text: "x")]))])))")
 `
 
 func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
@@ -251,9 +251,9 @@ func describe(_ item: NSMenuItem) -> String {
 let menu = NSMenu()
 Draw.menu([
     .item("plain", nil),
-    .item("label", nil, icon: .symbol("gearshape")),
-    .item("action", .quit, icon: .symbol("power")),
-    .submenu("sub", [.item("inner", nil, icon: .symbol("star"))], icon: .symbol("folder")),
+    .item("label", nil, look: Look(icon: .symbol("gearshape"))),
+    .item("action", .quit, look: Look(icon: .symbol("power"))),
+    .submenu("sub", [.item("inner", nil, look: Look(icon: .symbol("star")))], look: Look(icon: .symbol("folder"))),
 ], into: menu, repoll: {})
 for item in menu.items { print(describe(item)) }
 if let inner = menu.items.last?.submenu?.items.first { print(describe(inner)) }

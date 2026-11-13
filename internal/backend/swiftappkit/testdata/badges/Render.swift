@@ -53,14 +53,14 @@ func renderFace(_ results: Results) -> Face {
 func renderMenu(_ results: Results) -> [MenuNode] {
     var menu: [MenuNode] = []
     for it1 in results.m.data.rows {
-        menu.append(.item("\(it1.text)", nil, badges: [MenuBadge(text: "\(it1.state)", symbol: "\(((it1.state == "up") ? "bolt" : ""))", fg: "", bg: "green", at: "end"), MenuBadge(text: ":\(it1.port)", symbol: "", fg: "#ffffff", bg: "\(((it1.state == "up") ? "blue" : "gray"))", at: "start")]))
+        menu.append(.item("\(it1.text)", nil, look: Look(badges: [MenuBadge(text: "\(it1.state)", symbol: "\(((it1.state == "up") ? "bolt" : ""))", fg: "", bg: "green", at: "end"), MenuBadge(text: ":\(it1.port)", symbol: "", fg: "#ffffff", bg: "\(((it1.state == "up") ? "blue" : "gray"))", at: "start")])))
     }
     for it2 in results.m.data.rows {
         var sub4: [MenuNode] = []
         sub4.append(.item("Open", .open("https://example.com")))
-        menu.append(.submenu("\(it2.text)", sub4, badges: it2.badges.map { badge3 in MenuBadge(text: badge3.text, symbol: badge3.symbol, bg: badge3.bg) }))
+        menu.append(.submenu("\(it2.text)", sub4, look: Look(badges: it2.badges.map { badge3 in MenuBadge(text: badge3.text, symbol: badge3.symbol, bg: badge3.bg) }, size: Double(((it2.state == "up") ? 15 : 0)))))
     }
-    menu.append(.item("Loose", nil, badges: results.loose.data["badges"].asArray.map { badge5 in MenuBadge(text: badge5["text"].asString, symbol: badge5["symbol"].asString, fg: badge5["fg"].asString, bg: badge5["bg"].asString, at: badge5["at"].asString) }))
+    menu.append(.item("Loose", nil, look: Look(badges: results.loose.data["badges"].asArray.map { badge5 in MenuBadge(text: badge5["text"].asString, symbol: badge5["symbol"].asString, fg: badge5["fg"].asString, bg: badge5["bg"].asString, at: badge5["at"].asString) }, size: Double(14))))
     menu.append(.item("Quit", .quit))
     return tidy(menu)
 }

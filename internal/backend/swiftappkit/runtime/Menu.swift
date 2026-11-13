@@ -8,10 +8,18 @@ import AppKit
 /// which macOS shows disabled.
 enum MenuNode {
     case separator
-    case item(String, MenuAction?, icon: MenuIcon? = nil, badges: [MenuBadge] = [])
-    case toggle(String, on: Bool, MenuAction, icon: MenuIcon? = nil, badges: [MenuBadge] = [])
-    case submenu(String, [MenuNode], icon: MenuIcon? = nil, badges: [MenuBadge] = [])
+    case item(String, MenuAction?, look: Look = Look())
+    case toggle(String, on: Bool, MenuAction, look: Look = Look())
+    case submenu(String, [MenuNode], look: Look = Look())
     case field(String, (String) -> MenuAction)
+}
+
+/// How an item's label is drawn beyond its text: an icon beside it, badges, and
+/// a font size in points, where 0 is the menu's own.
+struct Look {
+    var icon: MenuIcon? = nil
+    var badges: [MenuBadge] = []
+    var size: Double = 0
 }
 
 /// Drops separators with nothing beside them: leading, trailing, and every one
@@ -28,11 +36,10 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
             out.append(node)
             continue
         }
-        if case .submenu(let title, let items, let icon, let badges) = node {
+        if case .submenu(let title, let items, let look) = node {
             // Every item guarded away leaves a label, not an arrow into nothing.
             let kept = tidy(items)
-            out.append(kept.isEmpty ? .item(title, nil, icon: icon, badges: badges)
-                                    : .submenu(title, kept, icon: icon, badges: badges))
+            out.append(kept.isEmpty ? .item(title, nil, look: look) : .submenu(title, kept, look: look))
             continue
         }
         out.append(node)
@@ -42,12 +49,13 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
 }
 
 enum Draw {
-    /// macOS 27 hides menu item images unless an item asks otherwise. Set by
-    /// selector so the app still compiles against an SDK older than 27.
-    static func badges(_ badges: [MenuBadge], on item: NSMenuItem) {
-        item.attributedTitle = Badges.title(item.title, badges)
+    static func look(_ look: Look, on item: NSMenuItem) {
+        Draw.icon(look.icon, on: item)
+        item.attributedTitle = Badges.title(item.title, look.badges, size: look.size)
     }
 
+    /// macOS 27 hides menu item images unless an item asks otherwise. Set by
+    /// selector so the app still compiles against an SDK older than 27.
     static func icon(_ icon: MenuIcon?, on item: NSMenuItem) {
         item.image = icon?.menuImage()
         let visible = Selector(("setPreferredImageVisibility:"))
@@ -69,26 +77,22 @@ enum Draw {
             switch node {
             case .separator:
                 menu.addItem(NSMenuItem.separator())
-            case .item(let title, nil, let icon, let badges):
+            case .item(let title, nil, let look):
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                Draw.icon(icon, on: item)
-                Draw.badges(badges, on: item)
+                Draw.look(look, on: item)
                 menu.addItem(item)
-            case .item(let title, let action?, let icon, let badges):
+            case .item(let title, let action?, let look):
                 let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
-                Draw.icon(icon, on: item)
-                Draw.badges(badges, on: item)
+                Draw.look(look, on: item)
                 menu.addItem(item)
-            case .toggle(let title, let on, let action, let icon, let badges):
+            case .toggle(let title, let on, let action, let look):
                 let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
                 item.state = on ? .on : .off
-                Draw.icon(icon, on: item)
-                Draw.badges(badges, on: item)
+                Draw.look(look, on: item)
                 menu.addItem(item)
-            case .submenu(let title, let items, let icon, let badges):
+            case .submenu(let title, let items, let look):
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                Draw.icon(icon, on: item)
-                Draw.badges(badges, on: item)
+                Draw.look(look, on: item)
                 let sub = NSMenu()
                 Draw.menu(items, into: sub, repoll: repoll)
                 item.submenu = sub

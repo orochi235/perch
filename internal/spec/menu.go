@@ -122,6 +122,9 @@ type Item struct {
 	Toggle Toggle
 	Icon   Icon
 	Badges Badges
+	// Size is the label's font size in points: a number, or a CEL expression
+	// giving one, where 0 or less is the menu's own.
+	Size   string
 	When   string
 	Each   string
 	Menu   []Item
@@ -146,6 +149,7 @@ type itemFields struct {
 	Toggle string    `yaml:"toggle"`
 	Icon   yaml.Node `yaml:"icon"`
 	Badges yaml.Node `yaml:"badges"`
+	Size   yaml.Node `yaml:"size"`
 	When   string    `yaml:"when"`
 	Each   string    `yaml:"each"`
 	Menu   yaml.Node `yaml:"menu"`
@@ -218,6 +222,10 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
+	size, err := parseSize(&f.Size, path+".size")
+	if err != nil {
+		return Item{}, err
+	}
 	// Refused here, not in validation: an outlet nothing fills empties the submenu.
 	if len(sub) > 0 && act.Kind != ActionNone {
 		return Item{}, fmt.Errorf("%s: has a submenu and %s action; opening a submenu supersedes the action, so it would never run", path, withArticle(act.Kind.String()))
@@ -236,7 +244,7 @@ func parseItem(n *yaml.Node, path string) (Item, error) {
 			return Item{}, err
 		}
 	}
-	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
+	return Item{Text: f.Text, Field: f.Field, Toggle: tog, Icon: icon, Badges: badges, Size: size, When: f.When, Each: f.Each, Menu: sub, Action: act, path: path}, nil
 }
 
 // parseToggle reads [!]<target>.<field>. Anything richer has no single value a
@@ -285,6 +293,8 @@ func checkField(f itemFields, act Action, sub []Item, icon Icon, badges Badges, 
 		return fmt.Errorf("%s: a field: item takes no icon:; the search field draws its own", path)
 	case !badges.IsZero():
 		return fmt.Errorf("%s: a field: item takes no badges:; it has no label to set them beside", path)
+	case f.Size.Kind != 0:
+		return fmt.Errorf("%s: a field: item takes no size:; the search field sizes itself", path)
 	}
 	switch act.Kind {
 	case ActionRun, ActionOpen, ActionPost, ActionSwift:

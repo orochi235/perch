@@ -276,7 +276,7 @@ th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: v
 .icon.symbol > svg { display: block; width: 100%; height: 100%; }
 .icon.art { width: auto; height: 13px; border-radius: 2px; }
 .pill { flex: none; display: inline-block; margin: 0 4px; padding: 0 5px; border-radius: 4px;
-  font-size: 10px; font-weight: 600; line-height: 14px; font-variant-numeric: tabular-nums; }
+  font-size: 0.77em; font-weight: 600; line-height: 1.4em; font-variant-numeric: tabular-nums; }
 .row > .pill:first-child { margin-left: 0; }
 .pill .glyph { display: inline-block; width: 8px; height: 8px; vertical-align: 0; }
 .pill .glyph:not(:last-child) { margin-right: 3px; }

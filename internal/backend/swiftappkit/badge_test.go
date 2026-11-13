@@ -29,10 +29,11 @@ menu:
       - {text: ":{{it.port}}", fg: "#ffffff", bg: "{{it.state == 'up' ? 'blue' : 'gray'}}", at: start}
   - each: m.data.rows
     text: "{{it.text}}"
+    size: "it.state == 'up' ? 15 : 0"
     badges: it.badges
     menu:
       - {text: Open, open: "https://example.com"}
-  - {text: Loose, badges: loose.data.badges}
+  - {text: Loose, size: 14, badges: loose.data.badges}
   - {text: Quit, quit: true}
 `
 
@@ -59,6 +60,8 @@ func TestBadgesLowerToMenuBadges(t *testing.T) {
 		`symbol: badge`,
 		`symbol: "\(`,
 		`.asArray.map { badge`,
+		`size: Double(14)`,
+		`size: Double(((it2.state == "up")`,
 	} {
 		if !strings.Contains(render, want) {
 			t.Errorf("Render.swift lacks %q\n%s", want, render)

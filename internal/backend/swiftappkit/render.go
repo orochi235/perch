@@ -465,15 +465,10 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 	if err != nil {
 		return fmt.Errorf("%s.text: %w", path, err)
 	}
-	icon, err := itemIcon(it.Icon, e)
+	look, err := itemLook(it, e, g.name)
 	if err != nil {
-		return fmt.Errorf("%s.icon: %w", path, err)
+		return err
 	}
-	badges, err := itemBadges(it.Badges, e, g.name)
-	if err != nil {
-		return fmt.Errorf("%s.badges: %w", path, err)
-	}
-	icon += badges
 
 	if len(it.Menu) > 0 {
 		sub := g.name("sub")
@@ -481,16 +476,16 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 		if err := g.items(it.Menu, sub, e, it.Scope); err != nil {
 			return err
 		}
-		g.b.line("%s.append(.submenu(%s, %s%s))", into, title, sub, icon)
+		g.b.line("%s.append(.submenu(%s, %s%s))", into, title, sub, look)
 		return nil
 	}
 
 	if !it.Toggle.IsZero() {
-		return g.toggle(it, into, title, icon, e, path)
+		return g.toggle(it, into, title, look, e, path)
 	}
 
 	if it.Action.Kind == spec.ActionNone {
-		g.b.line("%s.append(.item(%s, nil%s))", into, title, icon)
+		g.b.line("%s.append(.item(%s, nil%s))", into, title, look)
 		return nil
 	}
 
@@ -498,13 +493,13 @@ func (g *menuGen) body(it spec.Item, into string, e *celswift.Env, path string) 
 	if err != nil {
 		return err
 	}
-	g.b.line("%s.append(.item(%s, %s%s))", into, title, action, icon)
+	g.b.line("%s.append(.item(%s, %s%s))", into, title, action, look)
 	return nil
 }
 
 // toggle shows the checkmark from the field as written, and flips the field
 // itself, so a negated toggle still enables what is disabled.
-func (g *menuGen) toggle(it spec.Item, into, title, icon string, e *celswift.Env, path string) error {
+func (g *menuGen) toggle(it spec.Item, into, title, look string, e *celswift.Env, path string) error {
 	w, err := g.spec.AgentWatch(it.Scope, it.Toggle.Target)
 	if err != nil {
 		return fmt.Errorf("%s.toggle: %w", path, err)
@@ -518,7 +513,7 @@ func (g *menuGen) toggle(it spec.Item, into, title, icon string, e *celswift.Env
 		return fmt.Errorf("%s.toggle: %w", path, err)
 	}
 	g.b.line("%s.append(.toggle(%s, on: %s, .agent(label: %s, plist: %s, verb: %s ? .disable : .enable)%s))",
-		into, title, on, celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), set, icon)
+		into, title, on, celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist), set, look)
 	return nil
 }
 
@@ -536,35 +531,6 @@ func (g *menuGen) field(it spec.Item, into string, e *celswift.Env, path string)
 	}
 	g.b.line("%s.append(.field(%s, { %s in %s }))", into, placeholder, q, action)
 	return nil
-}
-
-// itemIcon is the trailing icon: argument, omitted where the item sets none so
-// an item without one emits what it always did. The name is lowered where the
-// item is built, so an each: item can take its icon from its element.
-func itemIcon(i spec.Icon, e *celswift.Env) (string, error) {
-	if i.IsZero() {
-		return "", nil
-	}
-	kind, name := "symbol", i.Symbol
-	if i.Asset != "" {
-		kind, name = "asset", i.Asset
-	}
-	lowered, err := e.LowerTemplate(name)
-	if err != nil {
-		return "", err
-	}
-	if i.Colored() {
-		fg, err := e.LowerTemplate(i.FG)
-		if err != nil {
-			return "", fmt.Errorf("fg: %w", err)
-		}
-		bg, err := e.LowerTemplate(i.BG)
-		if err != nil {
-			return "", fmt.Errorf("bg: %w", err)
-		}
-		return ", icon: MenuIcon.colored(" + lowered + ", fg: " + fg + ", bg: " + bg + ")", nil
-	}
-	return ", icon: MenuIcon." + kind + "(" + lowered + ")", nil
 }
 
 // action writes the verb as data. It is lowered where the menu is built rather

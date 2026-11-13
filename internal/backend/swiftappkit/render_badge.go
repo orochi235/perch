@@ -8,8 +8,7 @@ import (
 	"github.com/orochi235/perch/v2/internal/spec"
 )
 
-// itemBadges is the trailing badges: argument, omitted where the item sets none
-// so an item without them emits what it always did.
+// itemBadges is the badges as a Swift [MenuBadge], or "" where the item sets none.
 func itemBadges(b spec.Badges, e *celswift.Env, name func(string) string) (string, error) {
 	if b.Expr != "" {
 		return badgesFromExpr(b.Expr, e, name)
@@ -30,7 +29,7 @@ func itemBadges(b spec.Badges, e *celswift.Env, name func(string) string) (strin
 		fields = append(fields, "at: "+celswift.SwiftString(string(badge.At)))
 		parts = append(parts, "MenuBadge("+strings.Join(fields, ", ")+")")
 	}
-	return ", badges: [" + strings.Join(parts, ", ") + "]", nil
+	return "[" + strings.Join(parts, ", ") + "]", nil
 }
 
 // badgesFromExpr maps a list's elements to badges. Each element is bound as it,
@@ -57,7 +56,7 @@ func badgesFromExpr(src string, e *celswift.Env, name func(string) string) (stri
 		}
 		fields = append(fields, key+": "+lowered)
 	}
-	return fmt.Sprintf(", badges: %s.map { %s in MenuBadge(%s) }", list, v, strings.Join(fields, ", ")), nil
+	return fmt.Sprintf("%s.map { %s in MenuBadge(%s) }", list, v, strings.Join(fields, ", ")), nil
 }
 
 func hasField(t *spec.Type, name string) bool {

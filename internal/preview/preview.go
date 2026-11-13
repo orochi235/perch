@@ -88,6 +88,7 @@ type Node struct {
 	On        *bool   `json:"on,omitempty"` // set on a toggle: whether it is checked
 	Icon      *Icon   `json:"icon,omitempty"`
 	Badges    []Badge `json:"badges,omitempty"`
+	Size      float64 `json:"size,omitempty"` // the label's font size in points; 0 is the menu's own
 	Action    *Action `json:"action,omitempty"`
 	Items     []Node  `json:"items,omitempty"`
 }
