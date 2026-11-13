@@ -32,10 +32,11 @@ type Icon struct {
 
 // Badge is one pill beside a menu item's label; At is "start" or "end".
 type Badge struct {
-	Text string `json:"text"`
-	FG   string `json:"fg,omitempty"`
-	BG   string `json:"bg,omitempty"`
-	At   string `json:"at"`
+	Text   string `json:"text"`
+	Symbol string `json:"symbol,omitempty"`
+	FG     string `json:"fg,omitempty"`
+	BG     string `json:"bg,omitempty"`
+	At     string `json:"at"`
 }
 
 // Face is the status item itself.

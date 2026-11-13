@@ -31,18 +31,26 @@ func symbolSVG(name string) (string, bool) {
 // would draw in the app too.
 func missingSymbols(frames []preview.Frame) []string {
 	var out []string
-	note := func(i *preview.Icon) {
-		if i == nil || i.Symbol == "" {
+	noteName := func(name string) {
+		if name == "" {
 			return
 		}
-		if _, ok := symbolSVG(i.Symbol); !ok && !slices.Contains(out, i.Symbol) {
-			out = append(out, i.Symbol)
+		if _, ok := symbolSVG(name); !ok && !slices.Contains(out, name) {
+			out = append(out, name)
+		}
+	}
+	note := func(i *preview.Icon) {
+		if i != nil {
+			noteName(i.Symbol)
 		}
 	}
 	var walk func([]preview.Node)
 	walk = func(nodes []preview.Node) {
 		for _, n := range nodes {
 			note(n.Icon)
+			for _, b := range n.Badges {
+				noteName(b.Symbol)
+			}
 			walk(n.Items)
 		}
 	}

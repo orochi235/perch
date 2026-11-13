@@ -866,12 +866,14 @@ repos:
 ### Badges
 
 `badges:` sets small colored pills beside a menu item's label: a state, a
-port, a count. Each badge is `{text, fg, bg, at}`. `fg` and `bg` take colors
-the way a [colored symbol](#colored-symbols) does, and with only `bg` the text
-is white or black, whichever reads on it; with no `bg` the pill is an outline.
+port, a count. Each badge is `{text, symbol, fg, bg, at}`. `symbol` is an SF
+Symbol drawn before the text, inside the pill, the height of its capitals.
+`fg` and `bg` take colors the way a [colored symbol](#colored-symbols) does,
+and with only `bg` the text and symbol are white or black, whichever reads on
+it; with no `bg` the pill is an outline.
 `at: start` puts a badge before the label, and the default, `end`, after it. A
-badge whose text resolves to nothing is not drawn, so one row can show a port
-and the next, with none, does not.
+badge with neither text nor a symbol macOS knows is not drawn, so one row can
+show a port and the next, with none, does not.
 
 Written as a list, each field takes `{{ }}` holes:
 
@@ -890,7 +892,7 @@ menu:
     text: "{{it.name}}"
     badges:
       - {text: "{{it.state}}", bg: "{{it.live ? 'green' : 'red'}}"}
-      - {text: "{{it.port}}", bg: gray}
+      - {text: "{{it.port}}", symbol: network, bg: gray}
 ```
 
 ```state two servers
@@ -903,7 +905,7 @@ servers:
 
 Written as an expression, it names a list whose elements carry the same
 fields, so the data decides how many badges a row gets and what they say. A
-declared shape may leave out `fg`, `bg` and `at`, but not `text`:
+declared shape may leave out any field but `text`:
 
 ```yaml
 app: {name: servers, id: dev.example.servers.menubar, icon: network, interval: 5s}

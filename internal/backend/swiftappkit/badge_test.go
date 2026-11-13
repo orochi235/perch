@@ -17,7 +17,7 @@ watch:
     run: [echo, "{}"]
     json: true
     shape:
-      rows: [{text: string, state: string, port: string, badges: [{text: string, bg: string}]}]
+      rows: [{text: string, state: string, port: string, badges: [{text: string, symbol: string, bg: string}]}]
   loose:
     run: [echo, "{}"]
     json: true
@@ -25,7 +25,7 @@ menu:
   - each: m.data.rows
     text: "{{it.text}}"
     badges:
-      - {text: "{{it.state}}", bg: green}
+      - {text: "{{it.state}}", symbol: "{{it.state == 'up' ? 'bolt' : ''}}", bg: green}
       - {text: ":{{it.port}}", fg: "#ffffff", bg: "{{it.state == 'up' ? 'blue' : 'gray'}}", at: start}
   - each: m.data.rows
     text: "{{it.text}}"
@@ -56,6 +56,8 @@ func TestBadgesLowerToMenuBadges(t *testing.T) {
 		`at: "start")]`,
 		`.badges.map { badge`,
 		`in MenuBadge(text: `,
+		`symbol: badge`,
+		`symbol: "\(`,
 		`.asArray.map { badge`,
 	} {
 		if !strings.Contains(render, want) {

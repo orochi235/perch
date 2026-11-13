@@ -17,13 +17,14 @@ type Badges struct {
 
 func (b Badges) IsZero() bool { return len(b.List) == 0 && b.Expr == "" }
 
-// Badge is one pill: Text in FG on a rounded patch of BG. Each takes {{ }} holes;
-// a badge whose text resolves to nothing is not drawn.
+// Badge is one pill: Symbol and Text in FG on a rounded patch of BG. Each takes
+// {{ }} holes; a badge whose text and symbol both resolve to nothing is not drawn.
 type Badge struct {
-	Text string
-	FG   string
-	BG   string
-	At   BadgeAt
+	Text   string
+	Symbol string
+	FG     string
+	BG     string
+	At     BadgeAt
 }
 
 // BadgeAt is which side of the label a badge sits on.
@@ -35,10 +36,11 @@ const (
 )
 
 type rawBadge struct {
-	Text string `yaml:"text"`
-	FG   string `yaml:"fg"`
-	BG   string `yaml:"bg"`
-	At   string `yaml:"at"`
+	Text   string `yaml:"text"`
+	Symbol string `yaml:"symbol"`
+	FG     string `yaml:"fg"`
+	BG     string `yaml:"bg"`
+	At     string `yaml:"at"`
 }
 
 func parseBadges(n *yaml.Node, path string) (Badges, error) {
@@ -65,19 +67,19 @@ func parseBadges(n *yaml.Node, path string) (Badges, error) {
 		}
 		return Badges{List: out}, nil
 	}
-	return Badges{}, fmt.Errorf("%s: want a list of {text, fg, bg, at}, or an expression naming one", path)
+	return Badges{}, fmt.Errorf("%s: want a list of {text, symbol, fg, bg, at}, or an expression naming one", path)
 }
 
 func parseBadge(n *yaml.Node, path string) (Badge, error) {
 	if n.Kind != yaml.MappingNode {
-		return Badge{}, fmt.Errorf("%s: want {text: <text>, fg: <color>, bg: <color>, at: start|end}", path)
+		return Badge{}, fmt.Errorf("%s: want {text: <text>, symbol: <SF Symbol>, fg: <color>, bg: <color>, at: start|end}", path)
 	}
 	var raw rawBadge
 	if err := decodeStrict(n, &raw, path); err != nil {
 		return Badge{}, err
 	}
-	if raw.Text == "" {
-		return Badge{}, fmt.Errorf("%s.text: required", path)
+	if raw.Text == "" && raw.Symbol == "" {
+		return Badge{}, fmt.Errorf("%s: needs text:, symbol:, or both", path)
 	}
 	for key, c := range map[string]string{"fg": raw.FG, "bg": raw.BG} {
 		if err := checkColor(c); err != nil {
@@ -92,5 +94,5 @@ func parseBadge(n *yaml.Node, path string) (Badge, error) {
 	default:
 		return Badge{}, fmt.Errorf("%s.at: %q is neither start nor end", path, raw.At)
 	}
-	return Badge{Text: raw.Text, FG: raw.FG, BG: raw.BG, At: at}, nil
+	return Badge{Text: raw.Text, Symbol: raw.Symbol, FG: raw.FG, BG: raw.BG, At: at}, nil
 }

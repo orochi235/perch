@@ -20,7 +20,7 @@ func itemBadges(b spec.Badges, e *celswift.Env, name func(string) string) (strin
 	parts := make([]string, 0, len(b.List))
 	for i, badge := range b.List {
 		var fields []string
-		for _, f := range []struct{ key, src string }{{"text", badge.Text}, {"fg", badge.FG}, {"bg", badge.BG}} {
+		for _, f := range []struct{ key, src string }{{"text", badge.Text}, {"symbol", badge.Symbol}, {"fg", badge.FG}, {"bg", badge.BG}} {
 			lowered, err := e.LowerTemplate(f.src)
 			if err != nil {
 				return "", fmt.Errorf("[%d].%s: %w", i, f.key, err)
@@ -34,20 +34,20 @@ func itemBadges(b spec.Badges, e *celswift.Env, name func(string) string) (strin
 }
 
 // badgesFromExpr maps a list's elements to badges. Each element is bound as it,
-// so its fields are read the way any expression reads them; fg, bg and at may
-// be left out of a declared shape, text may not.
+// so its fields are read the way any expression reads them; a declared shape
+// may leave out any field but text.
 func badgesFromExpr(src string, e *celswift.Env, name func(string) string) (string, error) {
 	list, elem, err := e.LowerList(src)
 	if err != nil {
-		return "", fmt.Errorf("%w; badges: takes a list of {text, fg, bg, at}", err)
+		return "", fmt.Errorf("%w; badges: takes a list of {text, symbol, fg, bg, at}", err)
 	}
 	if elem.Kind != spec.TypeObject && elem.Kind != spec.TypeAny {
-		return "", fmt.Errorf("%q: badges: needs a list of {text, fg, bg, at}, this is a list of %v", src, elem.Kind)
+		return "", fmt.Errorf("%q: badges: needs a list of {text, symbol, fg, bg, at}, this is a list of %v", src, elem.Kind)
 	}
 	v := name("badge")
 	inner := e.WithEach(elem, v)
-	fields := make([]string, 0, 4)
-	for _, key := range []string{"text", "fg", "bg", "at"} {
+	fields := make([]string, 0, 5)
+	for _, key := range []string{"text", "symbol", "fg", "bg", "at"} {
 		if key != "text" && elem.Kind == spec.TypeObject && !hasField(elem, key) {
 			continue
 		}

@@ -4,11 +4,13 @@
 
 import AppKit
 
-/// One pill: `text` in `fg` on a rounded patch of `bg`. A color that names
-/// nothing is left out; with only `bg`, the text is white or black, whichever
-/// reads on it. `at` is "start" to sit before the label, anything else after.
+/// One pill: `symbol` and `text` in `fg` on a rounded patch of `bg`. A color
+/// that names nothing is left out; with only `bg`, the ink is white or black,
+/// whichever reads on it. `at` is "start" to sit before the label, anything
+/// else after.
 struct MenuBadge {
     var text: String
+    var symbol = ""
     var fg = ""
     var bg = ""
     var at = "end"
@@ -20,7 +22,7 @@ enum Badges {
     /// rather than a custom view, which keeps highlight, the submenu arrow and
     /// keyboard navigation AppKit's own.
     static func title(_ title: String, _ badges: [MenuBadge]) -> NSAttributedString? {
-        let shown = badges.filter { !$0.text.isEmpty }
+        let shown = Badges.shown(badges)
         guard !shown.isEmpty else { return nil }
         let font = NSFont.menuFont(ofSize: 0)
         let out = NSMutableAttributedString()
@@ -35,6 +37,18 @@ enum Badges {
             out.append(part)
         }
         return out
+    }
+
+    /// The badges that draw anything, each with a symbol name that names
+    /// nothing cleared: one with neither text nor a symbol is dropped.
+    static func shown(_ badges: [MenuBadge]) -> [MenuBadge] {
+        badges.compactMap { badge in
+            var b = badge
+            if !b.symbol.isEmpty, NSImage(systemSymbolName: b.symbol, accessibilityDescription: nil) == nil {
+                b.symbol = ""
+            }
+            return b.text.isEmpty && b.symbol.isEmpty ? nil : b
+        }
     }
 
     private static func attachment(_ badge: MenuBadge, font: NSFont) -> NSAttributedString {
@@ -54,8 +68,11 @@ enum Badges {
         let textFont = NSFont.systemFont(ofSize: (font.pointSize * 0.8).rounded(), weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [.font: textFont, .foregroundColor: ink]
         let text = NSAttributedString(string: badge.text, attributes: attrs)
+        let glyph = symbol(badge.symbol, ink: ink, font: textFont)
+        let gap = glyph != nil && !badge.text.isEmpty ? (textFont.pointSize * 0.3).rounded() : 0
         let height = (textFont.ascender - textFont.descender + 3).rounded()
-        let width = (text.size().width + height * 0.8).rounded(.up)
+        let content = (glyph?.size.width ?? 0) + gap + (badge.text.isEmpty ? 0 : text.size().width)
+        let width = (content + height * 0.8).rounded(.up)
         let image = NSImage(size: NSSize(width: width, height: height), flipped: false) { rect in
             let path = NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5),
                                     xRadius: height * 0.3, yRadius: height * 0.3)
@@ -67,11 +84,31 @@ enum Badges {
                 path.lineWidth = 1
                 path.stroke()
             }
-            let size = text.size()
-            text.draw(at: NSPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2))
+            var x = rect.midX - content / 2
+            if let glyph {
+                glyph.draw(in: NSRect(x: x, y: rect.midY - glyph.size.height / 2,
+                                      width: glyph.size.width, height: glyph.size.height))
+                x += glyph.size.width + gap
+            }
+            if !badge.text.isEmpty {
+                text.draw(at: NSPoint(x: x, y: rect.midY - text.size().height / 2))
+            }
             return true
         }
         image.isTemplate = false
+        return image
+    }
+
+    /// The symbol in the pill's ink, scaled so its height is the text's cap
+    /// height, or nil where the name is empty or names nothing.
+    private static func symbol(_ name: String, ink: NSColor, font: NSFont) -> NSImage? {
+        guard !name.isEmpty,
+              let base = NSImage(systemSymbolName: name, accessibilityDescription: nil),
+              let image = base.withSymbolConfiguration(
+                  .init(pointSize: font.pointSize, weight: .semibold).applying(.init(hierarchicalColor: ink))),
+              image.size.height > 0 else { return nil }
+        let height = font.capHeight.rounded(.up) + 1
+        image.size = NSSize(width: height * image.size.width / image.size.height, height: height)
         return image
     }
 }

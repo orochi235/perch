@@ -128,9 +128,11 @@ private func encoded(_ node: MenuNode) -> [String: Any] {
     }
     if let icon { out["icon"] = encoded(icon) }
     // Dropped as the menu drops them, so the preview shows what a menu would.
-    let shown = badges.filter { !$0.text.isEmpty }
+    let shown = Badges.shown(badges)
     if !shown.isEmpty {
-        out["badges"] = shown.map { ["text": $0.text, "fg": $0.fg, "bg": $0.bg, "at": $0.at == "start" ? "start" : "end"] }
+        out["badges"] = shown.map {
+            ["text": $0.text, "symbol": $0.symbol, "fg": $0.fg, "bg": $0.bg, "at": $0.at == "start" ? "start" : "end"]
+        }
     }
     return out
 }

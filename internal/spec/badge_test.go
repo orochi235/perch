@@ -24,7 +24,7 @@ func TestBadgesTakeAListOrAnExpression(t *testing.T) {
 
 func TestBadgesRefuseWhatTheyCannotDraw(t *testing.T) {
 	for name, c := range map[string]struct{ item, want string }{
-		"no text":     {"{text: a, badges: [{bg: teal}]}", "menu[0].badges[0].text: required"},
+		"nothing":     {"{text: a, badges: [{bg: teal}]}", "menu[0].badges[0]: needs text:, symbol:, or both"},
 		"bad color":   {"{text: a, badges: [{text: x, bg: chartreuse}]}", "menu[0].badges[0].bg"},
 		"alpha":       {"{text: a, badges: [{text: x, bg: '#ff000080'}]}", "menu[0].badges[0].bg"},
 		"bad side":    {"{text: a, badges: [{text: x, at: middle}]}", "neither start nor end"},
@@ -44,5 +44,12 @@ func TestAnItemCanBeOnlyBadges(t *testing.T) {
 	s := parse(t, badgeHead+"menu:\n  - {icon: folder, badges: [{text: perch, fg: '#000000', bg: teal}]}\n  - {text: Quit, quit: true}\n")
 	if got := s.Menu[0]; got.Text != "" || len(got.Badges.List) != 1 {
 		t.Errorf("item = %+v", got)
+	}
+}
+
+func TestABadgeCanBeOnlyASymbol(t *testing.T) {
+	s := parse(t, badgeHead+"menu:\n  - {text: a, badges: [{symbol: '{{x}}', bg: teal}]}\n  - {text: Quit, quit: true}\n")
+	if got := s.Menu[0].Badges.List[0]; got.Symbol != "{{x}}" || got.Text != "" {
+		t.Errorf("badge = %+v", got)
 	}
 }

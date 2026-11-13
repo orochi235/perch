@@ -118,7 +118,11 @@ func withBadges(title string, badges []preview.Badge) string {
 		if cssColor(b.BG) == "" {
 			class += " outline"
 		}
-		pill := `<span class="` + class + `"` + colorStyle(b.FG, b.BG) + `>` + html.EscapeString(b.Text) + `</span>`
+		glyph := ""
+		if svg, ok := symbolSVG(b.Symbol); ok {
+			glyph = `<span class="glyph" title="SF Symbol: ` + html.EscapeString(b.Symbol) + `">` + svg + `</span>`
+		}
+		pill := `<span class="` + class + `"` + colorStyle(b.FG, b.BG) + `>` + glyph + html.EscapeString(b.Text) + `</span>`
 		if b.At == "start" {
 			before.WriteString(pill)
 		} else {

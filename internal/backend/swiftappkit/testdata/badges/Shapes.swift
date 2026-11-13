@@ -43,18 +43,21 @@ struct MDataRows: Decodable {
 
 struct MDataRowsBadges: Decodable {
     var text: String = ""
+    var symbol: String = ""
     var bg: String = ""
 
     init() {}
 
     private enum CodingKeys: String, CodingKey {
         case text
+        case symbol
         case bg
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.text = (try? c.decode(String.self, forKey: .text)) ?? ""
+        self.symbol = (try? c.decode(String.self, forKey: .symbol)) ?? ""
         self.bg = (try? c.decode(String.self, forKey: .bg)) ?? ""
     }
 }
