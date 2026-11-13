@@ -127,9 +127,9 @@ func show(_ nodes: [MenuNode]) -> String {
     nodes.map { node in
         switch node {
         case .separator: return "-"
-        case .item(let t, _, _): return t
-        case .toggle(let t, let on, _, _): return (on ? "✓" : "") + t
-        case .submenu(let t, let items, let icon):
+        case .item(let t, _, _, let badges): return t + (badges.isEmpty ? "" : "{" + badges.map(\.text).joined() + "}")
+        case .toggle(let t, let on, _, _, _): return (on ? "✓" : "") + t
+        case .submenu(let t, let items, let icon, _):
             let mark = if case .symbol(let name)? = icon { "[" + name + "]" } else { "" }
             return t + mark + "(" + show(items) + ")"
         case .field(let t, _): return "[" + t + "]"
@@ -146,6 +146,7 @@ print("kept=\(show(tidy([.item("a", nil), .separator, .item("b", nil)])))")
 print("nested=\(show(tidy([.submenu("s", [.separator, .item("x", nil), .separator]), .separator])))")
 print("icon=\(show(tidy([.submenu("s", [.item("x", nil)], icon: .symbol("gear"))])))")
 print("emptied=\(show(tidy([.submenu("s", [.separator]), .item("b", nil)])))")
+print("badged=\(show(tidy([.submenu("s", [.separator], badges: [MenuBadge(text: "x")])])))")
 `
 
 func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
@@ -164,6 +165,7 @@ func TestSeparatorsWithNothingBesideThemAreDropped(t *testing.T) {
 		"nested=s(x)",
 		"icon=s[gear](x)",
 		"emptied=s,b",
+		"badged=s{x}",
 	}
 	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 	if len(got) != len(want) {

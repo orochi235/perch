@@ -13,7 +13,7 @@ let package = Package(
         .target(
             name: "PerchKit",
             path: "internal/backend/swiftappkit/runtime",
-            exclude: ["Runtime.swift", "Preview.swift", "Window.swift", "Field.swift", "Hotkey.swift"],
+            exclude: ["Runtime.swift", "Menu.swift", "Badge.swift", "Preview.swift", "Window.swift", "Field.swift", "Hotkey.swift"],
             sources: ["Icon.swift", "StatusItem.swift"]
         ),
     ]
