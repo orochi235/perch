@@ -86,8 +86,13 @@ func iconHTML(root string, icon preview.Icon) string {
 			root, html.EscapeString(icon.Asset))
 	}
 	svg, _ := symbolSVG(icon.Symbol)
-	return fmt.Sprintf(`<span class="icon symbol" title="SF Symbol: %s">%s</span>`,
-		html.EscapeString(icon.Symbol), svg)
+	style := ""
+	if icon.FG != "" || icon.BG != "" {
+		style = fmt.Sprintf(` style="color: %s; background: %s"`, html.EscapeString(cssColor(icon.FG, "currentColor")),
+			html.EscapeString(cssColor(icon.BG, "none")))
+	}
+	return fmt.Sprintf(`<span class="icon symbol"%s title="SF Symbol: %s">%s</span>`,
+		style, html.EscapeString(icon.Symbol), svg)
 }
 
 func menuHTML(root string, nodes []preview.Node) string {

@@ -35,3 +35,14 @@ func tintAttrs(t *preview.Tint) (classes, style string) {
 	}
 	return classes, ` style="--tint: ` + html.EscapeString(rgba) + `"`
 }
+
+// cssColor is a menu icon's fg or bg as CSS, or fallback where it names nothing.
+func cssColor(c, fallback string) string {
+	if css, ok := systemCSS[c]; ok {
+		return css
+	}
+	if len(c) == 7 && c[0] == '#' {
+		return c
+	}
+	return fallback
+}

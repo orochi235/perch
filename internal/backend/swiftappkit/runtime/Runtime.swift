@@ -625,7 +625,9 @@ func tidy(_ nodes: [MenuNode]) -> [MenuNode] {
             continue
         }
         if case .submenu(let title, let items, let icon) = node {
-            out.append(.submenu(title, tidy(items), icon: icon))
+            // Every item guarded away leaves a label, not an arrow into nothing.
+            let kept = tidy(items)
+            out.append(kept.isEmpty ? .item(title, nil, icon: icon) : .submenu(title, kept, icon: icon))
             continue
         }
         out.append(node)

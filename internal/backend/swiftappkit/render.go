@@ -548,6 +548,17 @@ func itemIcon(i spec.Icon, e *celswift.Env) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if i.Colored() {
+		fg, err := e.LowerTemplate(i.FG)
+		if err != nil {
+			return "", fmt.Errorf("fg: %w", err)
+		}
+		bg, err := e.LowerTemplate(i.BG)
+		if err != nil {
+			return "", fmt.Errorf("bg: %w", err)
+		}
+		return ", icon: MenuIcon.colored(" + lowered + ", fg: " + fg + ", bg: " + bg + ")", nil
+	}
 	return ", icon: MenuIcon." + kind + "(" + lowered + ")", nil
 }
 

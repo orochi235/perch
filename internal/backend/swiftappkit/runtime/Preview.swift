@@ -75,6 +75,7 @@ private func encoded(_ icon: MenuIcon) -> [String: Any] {
     switch icon {
     case .symbol(let name): return ["symbol": name]
     case .asset(let name): return ["asset": name]
+    case .colored(let name, let fg, let bg): return ["symbol": name, "fg": fg, "bg": bg]
     }
 }
 

@@ -16,6 +16,9 @@ import Foundation
 enum MenuIcon {
     case symbol(String)
     case asset(String)
+    /// A menu item's symbol in `fg` on a rounded patch of `bg`. A color that
+    /// names nothing is left out, so both missing is the plain template.
+    case colored(String, fg: String, bg: String)
 
     func image() -> NSImage? {
         // Measured off the bar rather than fixed at the 18pt a menu bar used
@@ -40,7 +43,35 @@ enum MenuIcon {
             guard let image = MenuIcon.load(name), image.size.height > 0 else { return nil }
             image.size = NSSize(width: height * (image.size.width / image.size.height), height: height)
             return image
+        case .colored(let name, let fg, let bg):
+            return MenuIcon.colored(name, fg: Tint.base(fg), bg: Tint.base(bg), side: height)
         }
+    }
+
+    private static func colored(_ name: String, fg: NSColor?, bg: NSColor?, side: CGFloat) -> NSImage? {
+        guard let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil) else { return nil }
+        guard fg != nil || bg != nil else {
+            symbol.isTemplate = true
+            return symbol
+        }
+        let ink = fg ?? bg.map(Tint.ink(on:)) ?? .labelColor
+        let glyph = symbol.withSymbolConfiguration(
+            .init(pointSize: bg == nil ? side * 0.8 : side * 0.6, weight: .medium)
+                .applying(.init(hierarchicalColor: ink))) ?? symbol
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            if let bg {
+                bg.setFill()
+                NSBezierPath(roundedRect: rect, xRadius: side * 0.22, yRadius: side * 0.22).fill()
+            }
+            let g = glyph.size
+            let scale = min(1, rect.width * 0.8 / max(g.width, 1), rect.height * 0.8 / max(g.height, 1))
+            let size = NSSize(width: g.width * scale, height: g.height * scale)
+            glyph.draw(in: NSRect(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2,
+                                  width: size.width, height: size.height))
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 
     /// How faint to draw, approximating the fade macOS gives a template when the
@@ -125,13 +156,19 @@ public struct Tint {
     /// the bar takes the ink that reads on its own color; a fainter one lets
     /// the bar through, so its ink follows the bar.
     var ink: NSColor {
-        guard alpha >= Tint.coversBar, let c = Tint.base(name)?.usingColorSpace(.sRGB) else { return .labelColor }
+        guard alpha >= Tint.coversBar, let c = Tint.base(name) else { return .labelColor }
+        return Tint.ink(on: c)
+    }
+
+    /// White or black, whichever reads on `color`.
+    static func ink(on color: NSColor) -> NSColor {
+        guard let c = color.usingColorSpace(.sRGB) else { return .labelColor }
         return 0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent < 0.6 ? .white : .black
     }
 
     static let coversBar: CGFloat = 0.6
 
-    private static func base(_ name: String) -> NSColor? {
+    static func base(_ name: String) -> NSColor? {
         if name.hasPrefix("#") {
             guard name.count == 7, let v = UInt32(name.dropFirst(), radix: 16) else { return nil }
             return NSColor(srgbRed: CGFloat(v >> 16 & 0xff) / 255, green: CGFloat(v >> 8 & 0xff) / 255,

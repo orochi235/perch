@@ -26,6 +26,8 @@ import (
 type Icon struct {
 	Symbol string `json:"symbol,omitempty"`
 	Asset  string `json:"asset,omitempty"`
+	FG     string `json:"fg,omitempty"`
+	BG     string `json:"bg,omitempty"`
 }
 
 // Face is the status item itself.

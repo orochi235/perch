@@ -570,10 +570,10 @@ Everything else is a mapping:
 | `text` | A string: the label. `{{ }}` holes interpolate expressions. |
 | `field` | A string: the placeholder of a search field drawn in the menu. `{{ }}` holes interpolate expressions. See [`field`](#field). |
 | `toggle` | A string: what the item's checkmark shows and a click flips — `worker.enabled`, or `!worker.enabled` to show it the other way round. It takes no action and no submenu. See [Start at login](#start-at-login). |
-| `icon` | An [SF Symbol](#sf-symbols) name, or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
+| `icon` | An [SF Symbol](#sf-symbols) name, `{symbol: <name>, fg: <color>, bg: <color>}` for a [colored symbol](#colored-symbols), or `{asset: <name>}`, drawn beside the label — perch marks it to show on macOS 27, which otherwise hides menu item images. `{{ }}` holes interpolate expressions, so an `each:` item can take its icon from `it`. A name that resolves to no symbol or file draws no icon. See [Icons](#icons). |
 | `when` | A string: a condition. The item appears only when it holds. |
 | `each` | A string: an expression naming a list. The item repeats, with `it` bound to each element. |
-| `menu` | A list of items, written the same way. |
+| `menu` | A list of items, written the same way. A submenu whose items are all guarded away is drawn as a plain label, so one `each:` can mix rows that open a submenu with rows that don't. |
 
 Then at most one action, which is what activating the item does:
 
@@ -828,6 +828,21 @@ sites:
 The holes are compiled like every other expression; what they produce is a
 name, looked up when the menu is drawn. The status item takes no holes, because
 a name that resolved to nothing would leave it blank.
+
+### Colored symbols
+
+A menu item's symbol can carry its own colors: `fg` draws the symbol, `bg` a
+rounded patch behind it. Each is `#rrggbb` or a system color, and takes `{{ }}`
+holes, so an `each:` row can color itself from its element. With only `bg`, the
+symbol is drawn in white or black, whichever reads on it; a color that resolves
+to nothing is left out, and both left out is the usual template. The status item
+takes [`tint`](#tint) instead.
+
+```yaml
+  - each: m.data.repos
+    text: "{{it.name}}"
+    icon: {symbol: "{{it.icon}}", fg: "{{it.fg}}", bg: "{{it.bg}}"}
+```
 
 ### Icon assets
 

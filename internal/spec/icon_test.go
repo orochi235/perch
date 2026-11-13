@@ -47,10 +47,10 @@ func TestAssetNameCannotEscapeItsDirectory(t *testing.T) {
 	}
 }
 
-func TestIconMappingWantsAnAssetKey(t *testing.T) {
-	doc := "app: {name: onto, id: dev.onto.menubar, icon: {symbol: circle}, interval: 1s}\n" + tail
+func TestIconMappingWantsASymbolOrAnAsset(t *testing.T) {
+	doc := "app: {name: onto, id: dev.onto.menubar, icon: {fg: teal}, interval: 1s}\n" + tail
 	if _, err := Parse([]byte(doc)); err == nil {
-		t.Error("a mapping with no asset: was accepted")
+		t.Error("a mapping with neither symbol: nor asset: was accepted")
 	}
 }
 
@@ -134,5 +134,28 @@ func TestTemplatedAssetStillChecksItsLiteralText(t *testing.T) {
 		"menu: [{text: a, icon: {asset: \"../{{it.zone}}\"}}]\n"))
 	if err == nil || !strings.Contains(err.Error(), "menu[0].icon.asset") {
 		t.Errorf("err = %v, want menu[0].icon.asset refused", err)
+	}
+}
+
+func TestMenuIconTakesColors(t *testing.T) {
+	s := parse(t, "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 1s}\n"+
+		"menu: [{text: a, icon: {symbol: atom, fg: '#000000', bg: teal}}, {text: Quit, quit: true}]\n")
+	if got := s.Menu[0].Icon; got != (Icon{Symbol: "atom", FG: "#000000", BG: "teal"}) {
+		t.Errorf("icon = %+v", got)
+	}
+	parse(t, "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 1s}\n"+
+		"menu: [{text: a, icon: {symbol: atom, fg: '{{x}}'}}, {text: Quit, quit: true}]\n")
+}
+
+func TestIconColorsAreRefusedWhereTheyCannotDraw(t *testing.T) {
+	for name, doc := range map[string]string{
+		"status item": "app: {name: onto, id: dev.onto.menubar, icon: {symbol: atom, bg: teal}, interval: 1s}\n" + tail,
+		"asset":       "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 1s}\nmenu: [{text: a, icon: {asset: o, bg: teal}}, {text: Quit, quit: true}]\n",
+		"bad color":   "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 1s}\nmenu: [{text: a, icon: {symbol: atom, bg: chartreuse}}, {text: Quit, quit: true}]\n",
+		"both":        "app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 1s}\nmenu: [{text: a, icon: {symbol: atom, asset: o}}, {text: Quit, quit: true}]\n",
+	} {
+		if _, err := Parse([]byte(doc)); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
 	}
 }
