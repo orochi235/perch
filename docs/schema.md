@@ -839,9 +839,27 @@ to nothing is left out, and both left out is the usual template. The status item
 takes [`tint`](#tint) instead.
 
 ```yaml
-  - each: m.data.repos
+app: {name: repos, id: dev.example.repos.menubar, icon: folder, interval: 5s}
+
+watch:
+  repos:
+    run: [repos, --json]
+    json: true
+    shape:
+      repos: [{name: string, icon: string, fg: string, bg: string}]
+
+menu:
+  - each: repos.data.repos
     text: "{{it.name}}"
     icon: {symbol: "{{it.icon}}", fg: "{{it.fg}}", bg: "{{it.bg}}"}
+```
+
+```state two repos
+repos:
+  out:
+    repos:
+      - {name: perch, icon: bird, fg: "", bg: teal}
+      - {name: emilia, icon: server.rack, fg: "#25f7c5", bg: ""}
 ```
 
 ### Icon assets
