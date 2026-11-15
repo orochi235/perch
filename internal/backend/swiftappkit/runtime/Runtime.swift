@@ -207,7 +207,7 @@ enum Launchd {
     /// keeps it from loading at login. A label it has no entry for is enabled.
     /// Older macOS writes `=> true` where 27 writes `=> disabled`.
     static func disabled(_ label: String) -> Bool {
-        let printed = Watcher.run(["launchctl", "print-disabled", domain])
+        let printed = Watcher.run(["launchctl", "print-disabled", domain], timeout: 10)
         let key = "\"" + label + "\" => "
         for line in printed.out.split(separator: "\n") {
             let field = line.trimmingCharacters(in: .whitespaces)
@@ -220,40 +220,146 @@ enum Launchd {
 }
 
 enum Watcher {
+    /// Output past this is read and dropped, so a child that never stops
+    /// printing neither stalls on a full pipe nor grows the app without bound.
+    static let outputCap = 4 << 20
+
     /// Runs argv directly — never a shell. /usr/bin/env performs the PATH
     /// lookup, which a LaunchAgent's minimal environment would otherwise miss.
-    static func run(_ argv: [String]) -> RunOutcome {
+    ///
+    /// The child leads its own process group, so a timeout stops everything it
+    /// started. Once it exits, descendants still holding its pipes get a second
+    /// to let go and are then left alone: a poll does not wait on a daemon.
+    static func run(_ argv: [String], timeout: TimeInterval? = nil) -> RunOutcome {
         guard !argv.isEmpty else { return RunOutcome() }
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        task.arguments = argv
-        let outPipe = Pipe()
-        let errPipe = Pipe()
-        task.standardOutput = outPipe
-        task.standardError = errPipe
-        do {
-            try task.run()
-        } catch {
-            return RunOutcome(ok: false, code: -1, out: "", err: "\(error)")
+        var outFDs: [Int32] = [-1, -1]
+        var errFDs: [Int32] = [-1, -1]
+        guard pipe(&outFDs) == 0 else { return failed("pipe: " + String(cString: strerror(errno))) }
+        guard pipe(&errFDs) == 0 else {
+            outFDs.forEach { close($0) }
+            return failed("pipe: " + String(cString: strerror(errno)))
         }
+
+        var actions: posix_spawn_file_actions_t?
+        posix_spawn_file_actions_init(&actions)
+        defer { posix_spawn_file_actions_destroy(&actions) }
+        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
+        posix_spawn_file_actions_adddup2(&actions, outFDs[1], 1)
+        posix_spawn_file_actions_adddup2(&actions, errFDs[1], 2)
+
+        var attr: posix_spawnattr_t?
+        posix_spawnattr_init(&attr)
+        defer { posix_spawnattr_destroy(&attr) }
+        // CLOEXEC_DEFAULT keeps the app's own descriptors out of the child.
+        posix_spawnattr_setflags(&attr, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT
+            | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK))
+        posix_spawnattr_setpgroup(&attr, 0)
+        var all = sigset_t()
+        sigfillset(&all)
+        posix_spawnattr_setsigdefault(&attr, &all)
+        var none = sigset_t()
+        sigemptyset(&none)
+        posix_spawnattr_setsigmask(&attr, &none)
+
+        var cargs: [UnsafeMutablePointer<CChar>?] = (["/usr/bin/env"] + argv).map { strdup($0) } + [nil]
+        defer { cargs.forEach { free($0) } }
+        var pid: pid_t = 0
+        let spawned = posix_spawn(&pid, "/usr/bin/env", &actions, &attr, &cargs, environ)
+        close(outFDs[1])
+        close(errFDs[1])
+        guard spawned == 0 else {
+            close(outFDs[0])
+            close(errFDs[0])
+            return failed(String(cString: strerror(spawned)))
+        }
+
         // Both pipes drain at once. Reading one to EOF and then the other
         // deadlocks a child that fills the second pipe's buffer meanwhile.
-        let stderrBox = Box(Data())
-        let draining = DispatchQueue(label: "perch.run.stderr")
-        draining.async {
-            stderrBox.mutate { $0 = errPipe.fileHandleForReading.readDataToEndOfFile() }
+        var fds = [outFDs[0], errFDs[0]].map { fd -> pollfd in
+            _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
+            return pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
         }
-        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-        draining.sync {}
-        let errData = stderrBox.current
-        task.waitUntilExit()
-        let code = Int(task.terminationStatus)
+        var captured = [Capture(), Capture()]
+        let started = Date()
+        var status: Int32 = 0
+        var exitedAt: Date?
+        var termAt: Date?
+        var killed = false
+        while true {
+            let open = fds.contains { $0.fd >= 0 }
+            if let exitedAt, !open || Date().timeIntervalSince(exitedAt) > 1 { break }
+            if open {
+                _ = poll(&fds, nfds_t(fds.count), 50)
+            } else {
+                usleep(20_000)
+            }
+            for i in fds.indices where fds[i].fd >= 0 && fds[i].revents != 0 {
+                if !captured[i].drain(fds[i].fd) {
+                    close(fds[i].fd)
+                    fds[i].fd = -1
+                }
+            }
+            if exitedAt == nil, waitpid(pid, &status, WNOHANG) == pid { exitedAt = Date() }
+            guard exitedAt == nil, let timeout else { continue }
+            if termAt == nil, Date().timeIntervalSince(started) >= timeout {
+                killpg(pid, SIGTERM)
+                termAt = Date()
+            } else if let termAt, !killed, Date().timeIntervalSince(termAt) >= 2 {
+                killpg(pid, SIGKILL)
+                killed = true
+            }
+        }
+        fds.filter { $0.fd >= 0 }.forEach { close($0.fd) }
+
+        var notes: [String] = []
+        if let timeout, termAt != nil { notes.append("perch: stopped after \(seconds(timeout)), its timeout") }
+        for (i, name) in ["stdout", "stderr"].enumerated() where captured[i].dropped > 0 {
+            notes.append("perch: \(name) cut at \(outputCap) bytes; \(captured[i].dropped) more dropped")
+        }
+        // A wait status: the low seven bits are the signal, zero for an exit.
+        let signal = status & 0x7f
+        let code = termAt != nil ? -1 : Int(signal == 0 ? (status >> 8) & 0xff : signal)
+        var err = String(decoding: captured[1].data, as: UTF8.self)
+        for note in notes {
+            if !err.isEmpty, !err.hasSuffix("\n") { err += "\n" }
+            err += note + "\n"
+        }
         return RunOutcome(
             ok: code == 0,
             code: code,
-            out: String(data: outData, encoding: .utf8) ?? "",
-            err: String(data: errData, encoding: .utf8) ?? ""
+            out: String(decoding: captured[0].data, as: UTF8.self),
+            err: err
         )
+    }
+
+    private static func failed(_ why: String) -> RunOutcome {
+        RunOutcome(ok: false, code: -1, out: "", err: why)
+    }
+
+    private static func seconds(_ t: TimeInterval) -> String {
+        t == t.rounded() ? "\(Int(t))s" : "\(t)s"
+    }
+
+    private struct Capture {
+        var data = Data()
+        var dropped = 0
+
+        /// Reads what the pipe holds now. False once it reaches EOF.
+        mutating func drain(_ fd: Int32) -> Bool {
+            var chunk = [UInt8](repeating: 0, count: 1 << 16)
+            while true {
+                let n = read(fd, &chunk, chunk.count)
+                if n > 0 {
+                    let room = max(0, Watcher.outputCap - data.count)
+                    data.append(contentsOf: chunk[0..<min(n, room)])
+                    dropped += max(0, n - room)
+                } else if n < 0, errno == EINTR {
+                    continue
+                } else {
+                    return n < 0 && errno == EAGAIN
+                }
+            }
+        }
     }
 
     static func http(_ urlString: String) -> HTTPOutcome {
@@ -291,7 +397,7 @@ enum Watcher {
         var o = LaunchAgentOutcome(label: label, plist: Launchd.expand(plist))
         o.installed = FileManager.default.fileExists(atPath: o.plist)
         o.enabled = !Launchd.disabled(label)
-        let printed = run(["launchctl", "print", Launchd.target(label)])
+        let printed = run(["launchctl", "print", Launchd.target(label)], timeout: 10)
         o.loaded = printed.ok
         guard printed.ok else { return o }
         for line in printed.out.split(separator: "\n", omittingEmptySubsequences: false) {
@@ -390,13 +496,13 @@ enum Act {
             case .start:
                 outcome = bootstrap(label: label, plist: plist)
             case .stop:
-                outcome = Watcher.run(["launchctl", "bootout", Launchd.target(label)])
+                outcome = Watcher.run(["launchctl", "bootout", Launchd.target(label)], timeout: 10)
             case .restart:
                 outcome = restart(label: label, plist: plist)
             case .enable:
-                outcome = Watcher.run(["launchctl", "enable", Launchd.target(label)])
+                outcome = Watcher.run(["launchctl", "enable", Launchd.target(label)], timeout: 10)
             case .disable:
-                outcome = Watcher.run(["launchctl", "disable", Launchd.target(label)])
+                outcome = Watcher.run(["launchctl", "disable", Launchd.target(label)], timeout: 10)
             }
             DispatchQueue.main.async {
                 if !outcome.ok { alert(verb.gerund + " " + label, outcome.err) }
@@ -409,9 +515,9 @@ enum Act {
     /// bootstrapping into that gap fails with Input/output error — so this
     /// polls until the label is genuinely gone rather than bootstrapping blind.
     private static func restart(label: String, plist: String) -> RunOutcome {
-        _ = Watcher.run(["launchctl", "bootout", Launchd.target(label)])
+        _ = Watcher.run(["launchctl", "bootout", Launchd.target(label)], timeout: 10)
         for _ in 0..<40 {
-            if !Watcher.run(["launchctl", "print", Launchd.target(label)]).ok {
+            if !Watcher.run(["launchctl", "print", Launchd.target(label)], timeout: 10).ok {
                 return bootstrap(label: label, plist: plist)
             }
             Thread.sleep(forTimeInterval: 0.05)
@@ -427,11 +533,11 @@ enum Act {
     /// it for the bootstrap and disables it again, which leaves it running.
     private static func bootstrap(label: String, plist: String) -> RunOutcome {
         let start = ["launchctl", "bootstrap", Launchd.domain, Launchd.expand(plist)]
-        guard Launchd.disabled(label) else { return Watcher.run(start) }
-        let enabled = Watcher.run(["launchctl", "enable", Launchd.target(label)])
+        guard Launchd.disabled(label) else { return Watcher.run(start, timeout: 10) }
+        let enabled = Watcher.run(["launchctl", "enable", Launchd.target(label)], timeout: 10)
         guard enabled.ok else { return enabled }
-        let outcome = Watcher.run(start)
-        _ = Watcher.run(["launchctl", "disable", Launchd.target(label)])
+        let outcome = Watcher.run(start, timeout: 10)
+        _ = Watcher.run(["launchctl", "disable", Launchd.target(label)], timeout: 10)
         return outcome
     }
 

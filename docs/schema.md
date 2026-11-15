@@ -163,6 +163,7 @@ Three more keys qualify a kind rather than choosing one:
 | `json` | `true` or `false`. Decodes the output and binds `.data`. | `run`, `http` |
 | `shape` | What that output looks like — see [shape](#shape). Needs `json: true`. | `run`, `http` |
 | `plist` | A string: where the LaunchAgent file is. Defaults to `~/Library/LaunchAgents/<label>.plist`. | `launchagent` |
+| `timeout` | A duration, like `2m`: how long the command may run. Defaults to `1m`. | `run` |
 
 `run:` is a list rather than one string because a `{{ }}` hole would otherwise
 decide how many arguments it becomes: splitting `onto kill {{it.id}}` on spaces
@@ -186,6 +187,13 @@ What each `launchagent` field means, and why there is no `.ok`, is in
 
 A watch that fails sets `.ok` false and leaves `.data` null. It never takes the
 app down, and the menu still opens.
+
+A `run` watch still going at its `timeout` is stopped, along with anything it
+started: `.ok` is false, `.code` is -1, and `.err` ends with a line saying so.
+Output past 4 MiB on either stream is dropped, and `.err` says that too. A poll
+that comes due while the last one is still out is skipped, so a slow command
+delays the next update instead of piling up. [Actions](#actions) have no
+timeout, since `brew upgrade` can rightly take ten minutes.
 
 ### `shape`
 

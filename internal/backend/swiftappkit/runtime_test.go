@@ -27,6 +27,34 @@ print("failed ok=\(failed.ok) code=\(failed.code) err=\(failed.err.trimmingChara
 let empty = Watcher.run([])
 print("empty ok=\(empty.ok) code=\(empty.code)")
 
+func timed(_ body: () -> RunOutcome) -> (RunOutcome, Double) {
+    let t = Date()
+    let o = body()
+    return (o, Date().timeIntervalSince(t))
+}
+
+let (hung, hungFor) = timed { Watcher.run(["sleep", "30"], timeout: 0.5) }
+print("hung ok=\(hung.ok) code=\(hung.code) prompt=\(hungFor < 5) said=\(hung.err.contains("stopped after 0.5s"))")
+
+// Ignoring SIGTERM, which the shell's sleep inherits, leaves SIGKILL to end it.
+let (stubborn, stubbornFor) = timed { Watcher.run(["sh", "-c", "trap '' TERM; sleep 30"], timeout: 0.5) }
+print("stubborn code=\(stubborn.code) prompt=\(stubbornFor < 8)")
+
+// The sleep outlives sh and holds both pipes; the watch must not wait for it.
+let (orphan, orphanFor) = timed { Watcher.run(["sh", "-c", "sleep 30 & echo $!"]) }
+let stray = pid_t(orphan.out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+print("orphan ok=\(orphan.ok) left=\(stray > 0 && kill(stray, 0) == 0) prompt=\(orphanFor < 5)")
+if stray > 0 { kill(stray, SIGKILL) }
+
+// A timeout stops the whole group, not only the process it spawned.
+let tree = Watcher.run(["sh", "-c", "sleep 31 & echo $!; wait"], timeout: 0.5)
+let child = pid_t(tree.out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+usleep(200_000)
+print("tree code=\(tree.code) child gone=\(child > 0 && kill(child, 0) != 0)")
+
+let flood = Watcher.run(["sh", "-c", "head -c 5000000 /dev/zero | tr '\\0' 'x'"])
+print("flood ok=\(flood.ok) out=\(flood.out.count) said=\(flood.err.contains("stdout cut at"))")
+
 // Whatever a watch prints reaches these, so neither may trap.
 print("huge int=\(JSONValue.parse("1e30").asInt)")
 print("huge string=\(JSONValue.parse("{\"v\": 1e30}")["v"].asString)")
@@ -82,6 +110,11 @@ func TestRuntimeBehavior(t *testing.T) {
 		"noisy ok=true out=done err=300000",
 		"failed ok=false code=3 err=oops",
 		"empty ok=false code=-1",
+		"hung ok=false code=-1 prompt=true said=true",
+		"stubborn code=-1 prompt=true",
+		"orphan ok=true left=true prompt=true",
+		"tree code=-1 child gone=true",
+		"flood ok=true out=4194304 said=true",
 		"huge int=0",
 		"huge string=1e+30",
 		"round string=2",

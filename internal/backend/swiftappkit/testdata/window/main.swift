@@ -8,6 +8,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate, WindowA
     fileprivate var results = Results()
     private var timer: Timer?
     private var menuOpen = false
+    private var polling = false
+    private var pollQueued = false
 
     private let window = WebWindow(
         url: "http://localhost:4747/",
@@ -29,12 +31,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate, WindowA
         refresh()
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
-            self?.poll()
+            self?.poll(queueIfBusy: false)
         }
         setUpWindow()
     }
 
-    fileprivate func poll() {
+    fileprivate func poll(queueIfBusy: Bool = true) {
         refresh()
     }
 

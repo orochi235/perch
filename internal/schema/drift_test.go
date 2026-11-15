@@ -174,21 +174,27 @@ func TestSchemaClosesEveryMappingTheParserCloses(t *testing.T) {
 	}
 }
 
-// app.interval is a Go duration, which the schema restates as a pattern. The
-// pattern can only check the spelling: perch additionally requires the duration
-// to be positive, which no pattern of this shape can express.
-func TestSchemaIntervalPatternMatchesWhatGoParsesAsADuration(t *testing.T) {
-	rule := nameRule(t, "properties", "app", "properties", "interval")
-	for _, v := range []string{"5s", "1m30s", "500ms", "1.5h", "1\u00b5s", "1us", "0s", "1ns", "2h45m", "5", "s", "5 s", "", "5sec", "1d"} {
-		_, err := time.ParseDuration(v)
-		if parses, matches := err == nil, rule(v); parses != matches {
-			t.Errorf("%q: Go parses it = %v, the schema takes it = %v", v, parses, matches)
+// app.interval and a watch's timeout are Go durations, which the schema
+// restates as a pattern. The pattern can only check the spelling: perch
+// additionally requires the duration to be positive, which no pattern of this
+// shape can express.
+func TestSchemaDurationPatternsMatchWhatGoParsesAsADuration(t *testing.T) {
+	for name, path := range map[string][]string{
+		"app.interval":  {"properties", "app", "properties", "interval"},
+		"watch.timeout": {"properties", "watch", "additionalProperties", "properties", "timeout"},
+	} {
+		rule := nameRule(t, path...)
+		for _, v := range []string{"5s", "1m30s", "500ms", "1.5h", "1\u00b5s", "1us", "0s", "1ns", "2h45m", "5", "s", "5 s", "", "5sec", "1d"} {
+			_, err := time.ParseDuration(v)
+			if parses, matches := err == nil, rule(v); parses != matches {
+				t.Errorf("%s %q: Go parses it = %v, the schema takes it = %v", name, v, parses, matches)
+			}
 		}
-	}
-	// Negative durations spell correctly and are still refused, so the pattern
-	// is deliberately narrower than time.ParseDuration here.
-	if rule("-1s") {
-		t.Error("the schema takes a negative interval")
+		// Negative durations spell correctly and are still refused, so the
+		// pattern is deliberately narrower than time.ParseDuration here.
+		if rule("-1s") {
+			t.Errorf("%s: the schema takes a negative duration", name)
+		}
 	}
 }
 

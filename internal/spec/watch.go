@@ -2,6 +2,7 @@ package spec
 
 import (
 	"fmt"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -30,6 +31,9 @@ func (k WatchKind) String() string {
 	return "unknown"
 }
 
+// DefaultRunTimeout is how long a run watch may take when it does not say.
+const DefaultRunTimeout = time.Minute
+
 // Watch is one polled source. Its results bind under its name in expressions.
 type Watch struct {
 	Name   string
@@ -41,6 +45,8 @@ type Watch struct {
 	Plist  string // WatchLaunchAgent: the LaunchAgents file, defaulted from Label
 	JSON   bool
 	Shape  *Type
+	// Timeout is how long a run watch may take before it is stopped.
+	Timeout time.Duration
 	// Scope is the use this watch belongs to, or "" for the file's own.
 	Scope string
 }
@@ -51,6 +57,7 @@ type rawWatch struct {
 	Exists      string    `yaml:"exists"`
 	LaunchAgent string    `yaml:"launchagent"`
 	Plist       string    `yaml:"plist"`
+	Timeout     string    `yaml:"timeout"`
 	JSON        bool      `yaml:"json"`
 	Shape       yaml.Node `yaml:"shape"`
 }
@@ -110,6 +117,22 @@ func watchFromRaw(name string, raw rawWatch) (Watch, error) {
 	}
 	if raw.Plist != "" && raw.LaunchAgent == "" {
 		return w, fmt.Errorf("watch.%s: plist says where a launchagent watch reads its file, so it needs launchagent:", name)
+	}
+	if raw.Timeout != "" && raw.Run == nil {
+		return w, fmt.Errorf("watch.%s: timeout bounds a run watch, so it needs run:", name)
+	}
+	if raw.Run != nil {
+		w.Timeout = DefaultRunTimeout
+		if raw.Timeout != "" {
+			d, err := time.ParseDuration(raw.Timeout)
+			if err != nil {
+				return w, fmt.Errorf("watch.%s.timeout: %w", name, err)
+			}
+			if d <= 0 {
+				return w, fmt.Errorf("watch.%s.timeout: must be positive, got %v", name, d)
+			}
+			w.Timeout = d
+		}
 	}
 	switch len(kinds) {
 	case 0:

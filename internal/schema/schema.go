@@ -84,6 +84,7 @@ const body = `{
           "exists": {"type": "string", "description": "Path; binds .ok only."},
           "launchagent": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$", "description": "A launchd label, e.g. dev.example.worker. Binds .installed, .loaded, .running, .enabled, .pid, .label, .plist, .domain, .target."},
           "plist": {"type": "string", "description": "Where the LaunchAgent file is; defaults to ~/Library/LaunchAgents/<label>.plist. Needs launchagent."},
+          "timeout": {"type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|\u00b5s|ms|s|m|h))+$", "description": "How long the command may run before it is stopped, e.g. 2m. Defaults to 1m. Needs run."},
           "json": {"type": "boolean", "description": "Decode the output into .data."},
           "shape": {"$ref": "#/definitions/shape"}
         }

@@ -8,6 +8,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     fileprivate var results = Results()
     private var timer: Timer?
     private var menuOpen = false
+    private var polling = false
+    private var pollQueued = false
 
     override init() {
         super.init()
@@ -21,18 +23,23 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refresh()
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            self?.poll()
+            self?.poll(queueIfBusy: false)
         }
     }
 
-    fileprivate func poll() {
+    fileprivate func poll(queueIfBusy: Bool = true) {
+        guard !polling else {
+            if queueIfBusy { pollQueued = true }
+            return
+        }
+        polling = true
         let group = DispatchGroup()
         let sync = DispatchQueue(label: "dev.example.looks.menubar.results")
         var next = Results()
 
         group.enter()
         DispatchQueue.global(qos: .utility).async {
-            let r = MResult(Watcher.run(["echo", "{}"]))
+            let r = MResult(Watcher.run(["echo", "{}"], timeout: 60.0))
             sync.async {
                 next.m = r
                 group.leave()
@@ -44,6 +51,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.results = sync.sync { next }
             self.refresh()
             if let menu = self.statusItem.menu, menu.numberOfItems > 0 { self.menuNeedsUpdate(menu) }
+            self.polling = false
+            if self.pollQueued {
+                self.pollQueued = false
+                self.poll()
+            }
         }
     }
 

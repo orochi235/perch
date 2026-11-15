@@ -1,6 +1,9 @@
 package spec
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 const watchDoc = `
 app: {name: onto, id: dev.onto.menubar, icon: circle, interval: 5s}
@@ -82,5 +85,33 @@ menu: [{text: Quit, quit: true}]
 `))
 	if err == nil {
 		t.Fatal("want error for a watch with no kind, got nil")
+	}
+}
+
+func TestRunWatchTimeout(t *testing.T) {
+	doc := func(watch string) string {
+		return "app: {name: a, id: dev.a, icon: circle, interval: 5s}\nwatch:\n  w: " + watch + "\nmenu:\n  - {text: Quit, quit: true}\n"
+	}
+	for watch, want := range map[string]time.Duration{
+		"{run: [true]}":               DefaultRunTimeout,
+		"{run: [true], timeout: 90s}": 90 * time.Second,
+	} {
+		s, err := Parse([]byte(doc(watch)))
+		if err != nil {
+			t.Fatalf("%s: %v", watch, err)
+		}
+		if got := s.Watches[0].Timeout; got != want {
+			t.Errorf("%s: timeout %v, want %v", watch, got, want)
+		}
+	}
+	for _, watch := range []string{
+		"{run: [true], timeout: soon}",
+		"{run: [true], timeout: 0s}",
+		"{run: [true], timeout: -1s}",
+		"{http: 'http://x', timeout: 5s}",
+	} {
+		if _, err := Parse([]byte(doc(watch))); err == nil {
+			t.Errorf("%s: parsed, want an error", watch)
+		}
 	}
 }

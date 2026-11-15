@@ -33,6 +33,8 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("fileprivate var results = Results()")
 	b.line("private var timer: Timer?")
 	b.line("private var menuOpen = false")
+	b.line("private var polling = false")
+	b.line("private var pollQueued = false")
 	if s.App.Hotkey.IsSet() {
 		b.line("private var hotkey: Hotkey?")
 	}
@@ -57,7 +59,7 @@ func emitMain(s *spec.Spec, n structNames) string {
 	b.line("poll()")
 	b.line("timer = Timer.scheduledTimer(withTimeInterval: %s, repeats: true) { [weak self] _ in", swiftDouble(s.App.Interval.Seconds()))
 	b.in()
-	b.line("self?.poll()")
+	b.line("self?.poll(queueIfBusy: false)")
 	b.out()
 	b.line("}")
 	if s.Window != nil {
@@ -86,7 +88,9 @@ func emitMain(s *spec.Spec, n structNames) string {
 }
 
 func emitPoll(b *buf, s *spec.Spec, n structNames) {
-	b.line("fileprivate func poll() {")
+	// A tick that finds the last poll still out is dropped rather than stacked
+	// behind it; anything else asking, an action, gets one poll once it is in.
+	b.line("fileprivate func poll(queueIfBusy: Bool = true) {")
 	b.in()
 	if len(s.AllWatches()) == 0 {
 		b.line("refresh()")
@@ -96,6 +100,13 @@ func emitPoll(b *buf, s *spec.Spec, n structNames) {
 		return
 	}
 
+	b.line("guard !polling else {")
+	b.in()
+	b.line("if queueIfBusy { pollQueued = true }")
+	b.line("return")
+	b.out()
+	b.line("}")
+	b.line("polling = true")
 	b.line("let group = DispatchGroup()")
 	b.line("let sync = DispatchQueue(label: %s)", celswift.SwiftString(s.App.ID+".results"))
 	b.line("var next = Results()")
@@ -121,6 +132,13 @@ func emitPoll(b *buf, s *spec.Spec, n structNames) {
 	b.line("self.results = sync.sync { next }")
 	b.line("self.refresh()")
 	b.line("if let menu = self.statusItem.menu, menu.numberOfItems > 0 { self.menuNeedsUpdate(menu) }")
+	b.line("self.polling = false")
+	b.line("if self.pollQueued {")
+	b.in()
+	b.line("self.pollQueued = false")
+	b.line("self.poll()")
+	b.out()
+	b.line("}")
 	b.out()
 	b.line("}")
 	b.out()
@@ -139,7 +157,7 @@ func watchCall(w spec.Watch, n structNames) string {
 		return fmt.Sprintf("%s(Watcher.launchAgent(label: %s, plist: %s))",
 			n.resultTypeName(w), celswift.SwiftString(w.Label), celswift.SwiftString(w.Plist))
 	default:
-		return fmt.Sprintf("%s(Watcher.run(%s))", n.resultTypeName(w), swiftArray(w.Run))
+		return fmt.Sprintf("%s(Watcher.run(%s, timeout: %s))", n.resultTypeName(w), swiftArray(w.Run), swiftDouble(w.Timeout.Seconds()))
 	}
 }
 
