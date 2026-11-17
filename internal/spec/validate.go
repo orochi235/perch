@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-func (s *Spec) validate() error {
+// validateIdentity checks the two values install paths are built from.
+func (s *Spec) validateIdentity() error {
 	if s.App.Name == "" {
 		return fmt.Errorf("app.name: required")
 	}
@@ -16,7 +17,11 @@ func (s *Spec) validate() error {
 	if s.App.ID == "" {
 		return fmt.Errorf("app.id: required (the bundle identifier, e.g. dev.example.menubar)")
 	}
-	if err := checkAppID(s.App.ID); err != nil {
+	return checkAppID(s.App.ID)
+}
+
+func (s *Spec) validate() error {
+	if err := s.validateIdentity(); err != nil {
 		return err
 	}
 	if s.App.Icon.IsZero() {

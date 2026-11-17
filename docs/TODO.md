@@ -11,3 +11,12 @@ committed output came from an older generator, or that its `Sources/` used a run
 since changed. Stamping the version in the header means deciding how golden files
 (`testdata/`) stay stable across releases; a clean-project build fixture against an installed perch
 would cover the consumer side. (filed 2026-11-15 from automated review)
+
+## The quit prompt's own path has no test
+
+`Quit.should` (`internal/backend/swiftappkit/runtime/Actions.swift`) now replies with the chosen
+button's result, so a failed action cancels the quit. The completion results it relies on are probed
+headlessly in `runtime_test.go`, but the prompt runs an `NSAlert` modal, so nothing drives
+`Quit.should` itself end to end: a regression that drops or inverts its `finish` reply would pass.
+Covering it means a seam for the modal, like `Act.alert`, or a GUI test beside the window ones
+behind `PERCH_WINDOW_TESTS`. (filed 2026-11-17)

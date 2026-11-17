@@ -2,7 +2,7 @@
 
 import Foundation
 
-struct FleetData: Decodable {
+struct FleetData: Decodable, Equatable, Blank {
     var nodes: [FleetDataNodes] = []
     var jobs: [FleetDataJobs] = []
 
@@ -20,7 +20,7 @@ struct FleetData: Decodable {
     }
 }
 
-struct FleetDataNodes: Decodable {
+struct FleetDataNodes: Decodable, Equatable, Blank {
     var name: String = ""
     var up: Bool = false
 
@@ -38,7 +38,7 @@ struct FleetDataNodes: Decodable {
     }
 }
 
-struct FleetDataJobs: Decodable {
+struct FleetDataJobs: Decodable, Equatable, Blank {
     var id: String = ""
     var node: String = ""
     var cmd: String = ""

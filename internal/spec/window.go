@@ -89,6 +89,14 @@ func (w *Window) validate() error {
 		return fmt.Errorf("window.size: both values must be positive, got %dx%d", w.Width, w.Height)
 	}
 	if z := w.Zoom; z != nil {
+		for _, f := range []struct {
+			key string
+			v   float64
+		}{{"min", z.Min}, {"max", z.Max}, {"step", z.Step}} {
+			if err := finite("window.zoom."+f.key, f.v); err != nil {
+				return err
+			}
+		}
 		if z.Min <= 0 || z.Max <= 0 || z.Step <= 0 {
 			return fmt.Errorf("window.zoom: min, max and step must all be positive, got %v/%v/%v", z.Min, z.Max, z.Step)
 		}

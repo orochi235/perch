@@ -2,7 +2,7 @@
 
 import Foundation
 
-struct MData: Decodable {
+struct MData: Decodable, Equatable, Blank {
     var rows: [MDataRows] = []
 
     init() {}
@@ -17,7 +17,7 @@ struct MData: Decodable {
     }
 }
 
-struct MDataRows: Decodable {
+struct MDataRows: Decodable, Equatable, Blank {
     var text: String = ""
     var header: Bool = false
     var depth: Int = 0

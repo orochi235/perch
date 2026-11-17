@@ -73,7 +73,7 @@ let elapsed = Date().timeIntervalSince(started)
 print("slow ok=\(slow.ok) status=\(slow.status) under9=\(elapsed < 9)")
 
 var posted = false
-Act.post(base + "/post", body: "{\"source\":\"probe\"}") { posted = true }
+Act.post(base + "/post", body: "{\"source\":\"probe\"}") { _ in posted = true }
 let deadline = Date().addingTimeInterval(20)
 while !posted && Date() < deadline {
     RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))

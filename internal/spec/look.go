@@ -2,6 +2,7 @@ package spec
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -91,8 +92,22 @@ func parseNumber(n *yaml.Node, path string, lo, hi float64, what string) (string
 	if n.Kind != yaml.ScalarNode || strings.TrimSpace(n.Value) == "" {
 		return "", fmt.Errorf("%s: want %s, or a CEL expression giving one", path, what)
 	}
-	if v, err := strconv.ParseFloat(n.Value, 64); err == nil && (v < lo || v > hi) {
-		return "", fmt.Errorf("%s: %v is outside %v to %v", path, v, lo, hi)
+	if v, err := strconv.ParseFloat(n.Value, 64); err == nil {
+		if err := finite(path, v); err != nil {
+			return "", err
+		}
+		if v < lo || v > hi {
+			return "", fmt.Errorf("%s: %v is outside %v to %v", path, v, lo, hi)
+		}
 	}
 	return n.Value, nil
+}
+
+// finite refuses NaN and the infinities ahead of a range check, which NaN
+// passes: every comparison with it is false.
+func finite(path string, v float64) error {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return fmt.Errorf("%s: want a finite number, got %v", path, v)
+	}
+	return nil
 }

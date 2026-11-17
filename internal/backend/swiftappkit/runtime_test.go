@@ -52,6 +52,20 @@ let child = pid_t(tree.out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
 usleep(200_000)
 print("tree code=\(tree.code) child gone=\(child > 0 && kill(child, 0) != 0)")
 
+// The child exits on SIGTERM but its own child ignores it, so the group still
+// needs the SIGKILL after the child is gone.
+let survivor = Watcher.run(["sh", "-c", "trap 'exit 0' TERM; (trap '' TERM; exec sleep 32) & echo $!; wait"], timeout: 0.3)
+let kept = pid_t(survivor.out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+usleep(200_000)
+print("survivor code=\(survivor.code) gone=\(kept > 0 && kill(kept, 0) != 0)")
+if kept > 0 { kill(kept, SIGKILL) }
+
+let ordered = ["2", "2.5", "\"b\"", "true"].map { JSONValue.parse($0) }
+print("order=\(ordered[0].order(ordered[1]) ?? 9)|\(ordered[1].order(ordered[0]) ?? 9)|\(ordered[2].order(ordered[2]) ?? 9)|\(ordered[0].order(ordered[2]) ?? 9)|\(ordered[3].order(ordered[3]) ?? 9)")
+let keyed = JSONValue.parse("{\"k\": [10, 20]}")
+print("dynamic=\(keyed[JSONValue("k")][JSONValue(1)].asInt)|\(keyed[JSONValue("k")][JSONValue(1.0)].asInt)|\(keyed[JSONValue(true)].exists)")
+print("past end=\([String]().at(0))|\([1, 2].at(-1))|\([[3]].at(5).count)|\([1, 2].at(1))")
+
 let flood = Watcher.run(["sh", "-c", "head -c 5000000 /dev/zero | tr '\\0' 'x'"])
 print("flood ok=\(flood.ok) out=\(flood.out.count) said=\(flood.err.contains("stdout cut at"))")
 
@@ -84,12 +98,28 @@ print("item title=\(item.title) fired=\(fired)")
 
 // run dispatches and repolls, so acting on the menu visibly changes it.
 var repolled = false
-Act.run(["echo", "hi"]) { repolled = true }
+Act.run(["echo", "hi"]) { _ in repolled = true }
 let until = Date().addingTimeInterval(20)
 while !repolled && Date() < until {
     RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
 }
 print("run repolled=\(repolled)")
+
+// Every action completes exactly once with whether it worked, which is what
+// lets a failed quit-button action cancel the quit.
+var alerted: [String] = []
+Act.alert = { command, _ in alerted.append(command) }
+func outcome(_ action: MenuAction) -> String {
+    var results: [Bool] = []
+    Act.perform(action) { results.append($0) }
+    let until = Date().addingTimeInterval(10)
+    while results.isEmpty && Date() < until {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+    return results.map(String.init).joined(separator: ",")
+}
+print("done run=\(outcome(.run(["true"]))) fail=\(outcome(.run(["false"]))) open=\(outcome(.open("/no/such/perch/path"))) badurl=\(outcome(.post(url: "", body: "{}"))) alerts=\(alerted.count)")
 `
 
 func TestRuntimeBehavior(t *testing.T) {
@@ -114,6 +144,10 @@ func TestRuntimeBehavior(t *testing.T) {
 		"stubborn code=-1 prompt=true",
 		"orphan ok=true left=true prompt=true",
 		"tree code=-1 child gone=true",
+		"survivor code=-1 gone=true",
+		"order=-1|1|0|9|9",
+		"dynamic=20|20|false",
+		"past end=|0|0|2",
 		"flood ok=true out=4194304 said=true",
 		"huge int=0",
 		"huge string=1e+30",
@@ -138,6 +172,7 @@ func TestRuntimeBehavior(t *testing.T) {
 		"contains=true|false|false",
 		"item title=Go fired=1",
 		"run repolled=true",
+		"done run=true fail=false open=false badurl=false alerts=3",
 	}
 	got := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
 	if len(got) != len(want) {

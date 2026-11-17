@@ -25,6 +25,13 @@ func TestLowerRefusesIllTypedOperands(t *testing.T) {
 		{"string(fleet.data.jobs)", "no text form"},
 		{"fleet.data.label.startsWith(fleet.data.jobs)", "no text form"},
 		{"fleet.ok.field", "cannot select"},
+		{"fleet.ok > true", "not bools"},
+		{"raw.data.up <= fleet.ok", "not bools"},
+		{"fleet.ok ? fleet.data.jobs : fleet.data.tags", "a list of object {id} and a list of string"},
+		{"fleet.data.jobs[0] in raw.data.xs", "single value"},
+		{"fleet.data.tags in raw.data.xs", "single value"},
+		{"raw.data.xs[true]", "int or a string"},
+		{"raw.data.xs[1.5]", "int or a string"},
 	}
 	for _, c := range cases {
 		got, err := e.LowerExpr(c.cel)

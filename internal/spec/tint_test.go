@@ -48,6 +48,9 @@ func TestTintRefusesWhatItCannotDraw(t *testing.T) {
 		`{color: red, wrap: all}`:                "what a chip covers",
 		`{color: red, style: chip, wrap: badge}`: "not one of",
 		`{color: red, opacity: 1.5}`:             "outside 0 to 1",
+		`{color: red, opacity: NaN}`:             "want a finite number",
+		`{color: red, opacity: +Inf}`:            "want a finite number",
+		`{color: red, opacity: -Inf}`:            "want a finite number",
 		`{color: "#ff000080", opacity: 0.5}`:     "give one",
 		`{color: red, opacity: [1]}`:             "want a number",
 	} {

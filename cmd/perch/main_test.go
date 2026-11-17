@@ -321,6 +321,18 @@ func TestUninstallSucceedsWhenNothingWasLoaded(t *testing.T) {
 	}
 }
 
+// Removing an app needs only where it went, so source artwork that has moved
+// since the install does not keep it on the machine.
+func TestUninstallSurvivesMissingSourceArtwork(t *testing.T) {
+	h := newHarness(t, "app: {name: onto, id: dev.onto.menubar, icon: {asset: gone}, interval: 5s}\nuse: [{template: nowhere}]\n")
+	if got := h.run("uninstall"); got != 0 {
+		t.Fatalf("status = %d, want 0\n%s", got, h.stderr())
+	}
+	if !strings.Contains(h.stdout(), "onto is uninstalled") {
+		t.Errorf("stdout = %q", h.stdout())
+	}
+}
+
 type notLoaded struct{}
 
 func (notLoaded) Print(string) error     { return errors.New("could not find service") }

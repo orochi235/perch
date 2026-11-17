@@ -154,6 +154,9 @@ func parseTint(n *yaml.Node, path string) (Tint, error) {
 		}
 		t.Opacity = raw.Opacity.Value
 		if f, err := strconv.ParseFloat(t.Opacity, 64); err == nil {
+			if err := finite(path+".opacity", f); err != nil {
+				return Tint{}, err
+			}
 			if f < 0 || f > 1 {
 				return Tint{}, fmt.Errorf("%s.opacity: %v is outside 0 to 1", path, f)
 			}

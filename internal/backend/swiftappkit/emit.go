@@ -13,6 +13,9 @@ import (
 //go:embed runtime/Runtime.swift
 var runtimeSwift []byte
 
+//go:embed runtime/Actions.swift
+var actionsSwift []byte
+
 //go:embed runtime/Icon.swift
 var iconSwift []byte
 
@@ -32,6 +35,7 @@ var lookSwift []byte
 func runtimeFiles() []backend.File {
 	return []backend.File{
 		{Name: "Runtime.swift", Body: runtimeSwift},
+		{Name: "Actions.swift", Body: actionsSwift},
 		{Name: "Icon.swift", Body: iconSwift},
 		{Name: "Field.swift", Body: fieldSwift},
 		{Name: "Menu.swift", Body: menuSwift},

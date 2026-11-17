@@ -699,11 +699,19 @@ The supported subset is field selection and indexing, literals,
 is refused with the offending expression quoted. perch does not claim to
 implement CEL; it claims to reject what it has not implemented.
 
-Four things the typing settles:
+What the typing settles:
 
 - An `int` compared against a `double` is refused rather than quietly widened.
-- Both arms of a `? :` must have the same type.
-- `in` against a declared list requires the element type to match.
+- `< <= > >=` order numbers and strings, never bools. Two untyped values order
+  only when both are numbers or both are strings; any other pair compares false.
+- Both arms of a `? :` must have the same type. Two objects match only when they
+  are the same declaration: `w.data.a` and `w.data.b` differ even with the same
+  fields.
+- `in` against a declared list requires the element type to match. Against an
+  untyped list, it looks for a single value, not an object or a list.
+- Indexing a declared list past its end gives the element's zero value, the
+  same as a field the output left out. Every declared list is empty until the
+  first poll lands. An untyped value takes an int or a string index.
 - `has()` on a field a shape declares is a build-time constant, because the
   shape has already said the field is there.
 

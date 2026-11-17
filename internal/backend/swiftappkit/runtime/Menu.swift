@@ -101,12 +101,12 @@ enum Draw {
                 Draw.enable(item, acts: false, look: look)
                 menu.addItem(item)
             case .item(let title, let action?, let look):
-                let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
+                let item = ActionItem(title: title) { Act.perform(action) { _ in repoll() } }
                 Draw.look(look, on: item)
                 Draw.enable(item, acts: true, look: look)
                 menu.addItem(item)
             case .toggle(let title, let on, let action, let look):
-                let item = ActionItem(title: title) { Act.perform(action, then: repoll) }
+                let item = ActionItem(title: title) { Act.perform(action) { _ in repoll() } }
                 item.state = on ? .on : .off
                 Draw.look(look, on: item)
                 Draw.enable(item, acts: true, look: look)
@@ -121,7 +121,7 @@ enum Draw {
                 menu.addItem(item)
             case .field(let placeholder, let make):
                 let item = FieldItem(placeholder: placeholder) { text in
-                    Act.perform(make(text), then: repoll)
+                    Act.perform(make(text)) { _ in repoll() }
                 }
                 item.isEnabled = true
                 menu.addItem(item)

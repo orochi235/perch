@@ -154,7 +154,7 @@ func settled() -> LaunchAgentOutcome {
 func restart(_ what: String) {
     let before = Watcher.launchAgent(label: label, plist: plist)
     var repolled = false
-    Act.agent(label: label, plist: plist, verb: .restart) { repolled = true }
+    Act.agent(label: label, plist: plist, verb: .restart) { _ in repolled = true }
     let until = Date().addingTimeInterval(30)
     while !repolled && Date() < until {
         RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
@@ -234,7 +234,7 @@ let plist = CommandLine.arguments[2]
 
 func act(_ verb: LaunchAgentVerb) {
     var repolled = false
-    Act.agent(label: label, plist: plist, verb: verb) { repolled = true }
+    Act.agent(label: label, plist: plist, verb: verb) { _ in repolled = true }
     let until = Date().addingTimeInterval(30)
     while !repolled && Date() < until {
         RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))

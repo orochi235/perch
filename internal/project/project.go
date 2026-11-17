@@ -38,6 +38,22 @@ func Load(root string) (*Project, error) {
 	return p, nil
 }
 
+// LoadIdentity reads only the app's name and id from root/menubar.yaml: enough
+// to find an install, and nothing a build needs.
+func LoadIdentity(root string) (*Project, error) {
+	p := &Project{Root: root}
+	src, err := os.ReadFile(p.SpecPath())
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", p.SpecPath(), err)
+	}
+	s, err := spec.ParseIdentity(src)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", p.SpecPath(), err)
+	}
+	p.Spec = s
+	return p, nil
+}
+
 // SpecPath is the file every build error is reported against.
 func (p *Project) SpecPath() string { return filepath.Join(p.Root, SpecFile) }
 

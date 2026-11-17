@@ -435,11 +435,15 @@ func jsonFromNode(n *yaml.Node) (string, error) {
 	if err := n.Decode(&v); err != nil {
 		return "", err
 	}
-	b, err := json.Marshal(v)
-	if err != nil {
+	// No HTML escaping: the docs site shows the body, and \u003c is not what
+	// anyone wrote.
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
 		return "", err
 	}
-	return string(b), nil
+	return strings.TrimSuffix(b.String(), "\n"), nil
 }
 
 // decodeStrict rejects keys the target struct does not declare, so a typo is a

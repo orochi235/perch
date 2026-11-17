@@ -42,7 +42,7 @@ func TestLowerSupportedSubset(t *testing.T) {
 		{"size(fleet.data.jobs) == 0", "(fleet.data.jobs.count == 0)"},
 		{"fleet.data.label.size() > 0", "(fleet.data.label.count > 0)"},
 		// indexing
-		{`fleet.data.jobs[0].id == "x"`, `(fleet.data.jobs[0].id == "x")`},
+		{`fleet.data.jobs[0].id == "x"`, `(fleet.data.jobs.at(0).id == "x")`},
 		// string functions
 		{`fleet.data.label.startsWith("id")`, `fleet.data.label.hasPrefix("id")`},
 		{`fleet.data.label.contains("dl")`, `fleet.data.label.contains("dl")`},

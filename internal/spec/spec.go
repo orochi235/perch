@@ -64,6 +64,26 @@ type rawApp struct {
 // templates and no repo's.
 func Parse(src []byte) (*Spec, error) { return ParseWith(src, TemplatesIn("")) }
 
+// ParseIdentity reads only app.name and app.id, which say where an install
+// went. Removing an app must not depend on artwork, templates or anything else
+// a build needs.
+func ParseIdentity(src []byte) (*Spec, error) {
+	var raw struct {
+		App struct {
+			Name string `yaml:"name"`
+			ID   string `yaml:"id"`
+		} `yaml:"app"`
+	}
+	if err := yaml.Unmarshal(src, &raw); err != nil {
+		return nil, err
+	}
+	s := &Spec{App: App{Name: raw.App.Name, ID: raw.App.ID}}
+	if err := s.validateIdentity(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
 // ParseWith reads a menubar.yaml document into a Spec, finding the templates its
 // use: block names in ts.
 func ParseWith(src []byte, ts TemplateSource) (*Spec, error) {

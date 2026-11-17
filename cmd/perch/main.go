@@ -274,7 +274,7 @@ func runUninstall(args []string, e *env) error {
 	if err := parse(fs, args); err != nil {
 		return err
 	}
-	p, err := project.Load(*dir)
+	p, err := project.LoadIdentity(*dir)
 	if err != nil {
 		return err
 	}

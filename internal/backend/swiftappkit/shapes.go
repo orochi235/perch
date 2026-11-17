@@ -131,15 +131,27 @@ func emitObjects(b *buf, t *spec.Type, n structNames) {
 		return
 	}
 
-	b.line("struct %s: Decodable {", n.shape[t])
+	b.line("struct %s: Decodable, Equatable, Blank {", n.shape[t])
 	b.in()
 	for _, f := range t.Fields {
 		b.line("var %s: %s = %s", decl(f.Name), n.swiftType(f.Type), n.swiftZero(f.Type))
 	}
-	b.line("")
+	if len(t.Fields) > 0 {
+		b.line("")
+	}
 	b.line("init() {}")
 	b.line("")
-	b.line("private enum CodingKeys: String, CodingKey {")
+	// Swift refuses a raw type on an enum with no cases, so an empty object
+	// decodes from nothing.
+	if len(t.Fields) == 0 {
+		b.line("init(from decoder: Decoder) throws {}")
+		b.out()
+		b.line("}")
+		b.line("")
+		return
+	}
+	keys := keysName(t)
+	b.line("private enum %s: String, CodingKey {", keys)
 	b.in()
 	for _, f := range t.Fields {
 		b.line("case %s", decl(f.Name))
@@ -149,7 +161,7 @@ func emitObjects(b *buf, t *spec.Type, n structNames) {
 	b.line("")
 	b.line("init(from decoder: Decoder) throws {")
 	b.in()
-	b.line("let c = try decoder.container(keyedBy: CodingKeys.self)")
+	b.line("let c = try decoder.container(keyedBy: %s.self)", keys)
 	for _, f := range t.Fields {
 		// Qualified with self. because a field named self binds to the instance
 		// otherwise, backticks and all, and the assignment stops compiling.
@@ -165,6 +177,16 @@ func emitObjects(b *buf, t *spec.Type, n structNames) {
 	for _, f := range t.Fields {
 		emitObjects(b, f.Type, n)
 	}
+}
+
+// keysName is the struct's CodingKey enum, named so no field of the struct
+// shadows it: a field named CodingKeys makes CodingKeys.self ambiguous.
+func keysName(t *spec.Type) string {
+	taken := map[string]bool{}
+	for _, f := range t.Fields {
+		taken[f.Name] = true
+	}
+	return unique("CodingKeys", taken)
 }
 
 // resultTypeName is the struct holding one watch's poll outcome.

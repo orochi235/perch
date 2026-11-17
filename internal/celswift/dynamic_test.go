@@ -31,6 +31,11 @@ func TestLowerCoercesDynamicOperandsToTheConcreteSide(t *testing.T) {
 	e := mixed(t)
 	cases := []struct{ cel, want string }{
 		{`raw.data.n == 3`, `(raw.data["n"].asInt == 3)`},
+		{`raw.data.a > raw.data.b`, `(raw.data["a"].order(raw.data["b"]).map { $0 > 0 } ?? false)`},
+		{`raw.data.xs[raw.data.i]`, `raw.data["xs"][raw.data["i"]]`},
+		{`fleet.data.tags[raw.data.i]`, `fleet.data.tags.at(raw.data["i"].asInt)`},
+		{`fleet.data.jobs[0] in fleet.data.jobs`, `fleet.data.jobs.contains(fleet.data.jobs.at(0))`},
+		{`(fleet.ok ? fleet.data.jobs[0] : fleet.data.jobs[1]).id`, `(fleet.ok ? fleet.data.jobs.at(0) : fleet.data.jobs.at(1)).id`},
 		{`3 == raw.data.n`, `(3 == raw.data["n"].asInt)`},
 		{`raw.data.f > 1.5`, `(raw.data["f"].asDouble > 1.5)`},
 		{`raw.data.s == "x"`, `(raw.data["s"].asString == "x")`},

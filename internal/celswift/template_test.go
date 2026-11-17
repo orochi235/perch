@@ -104,3 +104,40 @@ func TestLowerJSONEscapesEveryHole(t *testing.T) {
 		t.Errorf("\n got %q\nwant %q", got, want)
 	}
 }
+
+// A }} inside a CEL string literal is text in the string, not the hole's end.
+func TestLowerTemplateSkipsClosersInsideStrings(t *testing.T) {
+	for src, want := range map[string]string{
+		`{{"a}}b"}}`:      `"\("a}}b")"`,
+		`{{'}}'}} x`:      `"\("}}") x"`,
+		`{{"q\"}}"}}`:     `"\("q\"}}")"`,
+		`{{r"\}}"}}`:      `"\("\\}}")"`,
+		`{{"""a"}}b"""}}`: `"\("a\"}}b")"`,
+		`{{fleet.out.contains("}}") ? "y" : "n"}}`: `"\((fleet.out.contains("}}") ? "y" : "n"))"`,
+	} {
+		got, err := runWatch(t).LowerTemplate(src)
+		if err != nil {
+			t.Errorf("%s: %v", src, err)
+			continue
+		}
+		if got != want {
+			t.Errorf("%s\n got %s\nwant %s", src, got, want)
+		}
+	}
+	if _, err := runWatch(t).LowerTemplate(`{{"a}}`); err == nil {
+		t.Error(`{{"a}} lowered; its string never closes, so neither does the hole`)
+	}
+}
+
+// A post: body arrives as JSON, so a hole's quotes and operators are JSON-escaped
+// until the string holding them is decoded.
+func TestLowerJSONReadsHolesAsWritten(t *testing.T) {
+	got, err := runWatch(t).LowerJSON(`{"m":"{{fleet.ok ? \"up\" : \"down\"}}","h":"{{fleet.code < 2 && fleet.ok}} <\n"}`)
+	if err != nil {
+		t.Fatalf("LowerJSON: %v", err)
+	}
+	want := `"{\"m\":\"\(Act.jsonEscaped((fleet.ok ? "up" : "down")))\",\"h\":\"\(Act.jsonEscaped(String(((fleet.code < 2) && fleet.ok)))) <\\n\"}"`
+	if got != want {
+		t.Errorf("\n got %s\nwant %s", got, want)
+	}
+}

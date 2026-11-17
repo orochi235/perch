@@ -68,6 +68,9 @@ func TestWindowRefusals(t *testing.T) {
 		"zoom min over max": `window: {url: "http://x/", zoom: {min: 2.0, max: 0.5, step: 0.1}}`,
 		"zoom step zero":    `window: {url: "http://x/", zoom: {min: 0.5, max: 2.0, step: 0}}`,
 		"unknown key":       `window: {url: "http://x/", widht: 10}`,
+		"zoom min nan":      `window: {url: "http://x/", zoom: {min: .nan, max: 2.0, step: 0.1}}`,
+		"zoom max inf":      `window: {url: "http://x/", zoom: {min: 0.5, max: .inf, step: 0.1}}`,
+		"zoom step -inf":    `window: {url: "http://x/", zoom: {min: 0.5, max: 2.0, step: -.inf}}`,
 	}
 	for name, block := range cases {
 		t.Run(name, func(t *testing.T) {
