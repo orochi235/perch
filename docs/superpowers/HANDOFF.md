@@ -1,11 +1,15 @@
-# Handoff — 2026-10-20
+# Handoff — 2026-11-19
 
 Branch `main` in `~/src/perch`, released as
-[`v2.5.0`](https://github.com/orochi235/perch/releases/tag/v2.5.0), with the
+[`v2.6.0`](https://github.com/orochi235/perch/releases/tag/v2.6.0), with the
 Homebrew tap bumped to match.
 
 ## Landed
 
+- **Badges and menu-item looks** (v2.6.0): `badges:`, `size:`, `weight:`,
+  `indent:`, `subtitle:`, `key:`, `header:`, `separator:`, `enabled:`,
+  `gutter:`, colored item symbols, and a `timeout:` (default `1m`) on `run`
+  watches; see [Badges](../schema.md#badges).
 - **`toggle:` and Start at Login** (v2.5.0): a checkmark item over a
   `launchagent` watch's `.enabled`, `agent:` gains `enable`/`disable`, and
   `service` ends its controls with `Start <noun> at Login`; see
@@ -117,7 +121,7 @@ list` fields all match. The `http:` recipes name example URLs nothing serves.
 
 ## Traps
 
-- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.5.0), not
+- **The perch on PATH is brew's** (`/opt/homebrew/bin/perch`, 2.6.0), not
   this checkout. Run a local build by path.
 - **macOS 27 needed the Xcode license re-accepted** before `swiftc` would run;
   every Swift-compiling test fails with exit 69 until it is.
